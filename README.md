@@ -14,4 +14,5 @@ node less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT
    
 * Currently only compiles files with .less extension
 * Scripts that starts with an underscore (_style.css) or period (.style.css) are ignored. This can be changed in the `filterFiles()` function.
+
 * Github location: https://github.com/jonycheung/less-watch-compiler
