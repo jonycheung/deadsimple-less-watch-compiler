@@ -18,9 +18,9 @@ node less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT
 ###Example 
 `"node less-watch-compiler.js less css"` will watch the `./less` folder and compile the LESS CSS files into `./css` when they are added/changed.
    
-* Currently only compiles files with `.less` extension. This can be changed by modifying the `allowedExtensions` array.
-* Scripts that starts with an underscore `_style.css` or period `.style.css` are ignored. This can be changed in the `filterFiles()` function.
+* This script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array.
+* Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed in the `filterFiles()` function.
 
-* Github location: https://github.com/jonycheung/less-watch-compiler
+* Github location: https://github.com/jonycheung/Dead-Simple-LESS-Watch-Compiler
 
 
