@@ -7,7 +7,9 @@ Always give credit where it's due. Parts of this script is modified from Mikeal 
 
 ###Prerequisites
 Install LESS (http://www.lesscss.org/) and make sure the `lessc` binary is accessible to the script. Installing LESS with the `--global` flag will make the binary accessible to your system.
-```npm install less --global```
+```
+npm install less --global
+```
 
 ###Usage 
 ```
