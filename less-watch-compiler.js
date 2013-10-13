@@ -142,16 +142,19 @@ function getFileExtension(string){
 
 // Here's where we run the less compiler
 function compileCSS(file){
-	  var filename = getFilenameWithoutExtention(file);
-    var command = "lessc "+file.replace(/\s+/g,"\\ ")+" "+argvs[1]+"/"+filename.replace(/\s+/g,"\\ ")+".css";
-	  console.log("Command: '"+command+"'");
+    var filename = getFilenameWithoutExtention(file);
+
+    // Updated the command to properly out put to a file
+    var command = "lessc "+file.replace(/\s+/g,"\\ ")+" > "+argvs[1]+"/"+filename.replace(/\s+/g,"\\ ")+".css";
+
+    console.log("Command: '"+command+"'");
     // Run the command
-	  exec(command, function (error, stdout, stderr){
-	  if (error !== null) {
-	    console.log('exec error: ' + error);
+    exec(command, function (error, stdout, stderr){
+    if (error !== null) {
+      console.log('exec error: ' + error);
       console.log("stdout : "+stdout)
       console.log("stderr : "+stderr)
-	  }
+    }
   });
 }
 
@@ -192,3 +195,4 @@ watchTree(
   compileCSS(f);
   }
 );
+
