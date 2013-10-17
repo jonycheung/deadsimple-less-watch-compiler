@@ -1,20 +1,19 @@
 #!/usr/bin/env node
 
-
-/* Copyright 2012, Jonathan Cheung Licensed and released under the MIT 
+/* Copyright 2012, Jonathan Cheung Licensed and released under the MIT
    license. Refer to MIT-LICENSE.txt.
-   
-   A nodejs script that allows you to watch a folder for changes and 
+
+   A nodejs script that allows you to watch a folder for changes and
    compile the less css files into another folder.
 
-   Always give credit where it's due. Parts of this script is modified 
+   Always give credit where it's due. Parts of this script is modified
    from Mikeal Rogers's watch script (https://github.com/mikeal/watch)
 
    Usage:     node less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT
-   Example:   "node less-watch-compiler.js less css" will watch ./less folder 
+   Example:   'node less-watch-compiler.js less css' will watch ./less folder
               and compile the less css files into ./css when they are added/changed
 */
-var allowedExtensions = ["less"];
+var allowedExtensions = ['less'];
 var sys = require('util')
   , fs = require('fs')
   , path = require('path')
@@ -24,9 +23,8 @@ var sys = require('util')
 // Check to see if we have the correct number of arguments
 var argvs = process.argv.slice(2);
 if (!argvs[0] || !argvs[1]){
-  console.log("Missing arguements");
-  console.log("\tnode less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT");
-  console.log("\tExample:");
+  console.log('Missing arguments. Example:');
+    console.log('\tnode less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT');
   process.exit(1);
 }
 
@@ -131,30 +129,28 @@ var watchTree = function ( root, options, watchCallback, initCallback ) {
 function getFilenameWithoutExtention(string){
   //extract filename (xxx.less)
   //strip out the extension
-  var filename = string.replace(/^.*[\\\/]/, '').split(".")[0];
+  var filename = string.replace(/^.*[\\\/]/, '').split('.')[0];
   return filename
 }
 
 // String function to retrieve the file's extension
 function getFileExtension(string){
-  var extension = string.split(".").pop();
-  if (extension == string) return ""
+  var extension = string.split('.').pop();
+  if (extension == string) return ''
   else
   return extension;
 }
 
 // Here's where we run the less compiler
 function compileCSS(file){
-	  var filename = getFilenameWithoutExtention(file);
-    var command = "lessc "+file.replace(/\s+/g,"\\ ")+" "+argvs[1]+"/"+filename.replace(/\s+/g,"\\ ")+".css";
-	  console.log("Command: '"+command+"'");
+    var filename = getFilenameWithoutExtention(file);
+    var command = 'lessc --yui-compress '+file.replace(/\s+/g,'\\ ')+' '+argvs[1]+'/'+filename.replace(/\s+/g,'\\ ')+'.css';
     // Run the command
-	  exec(command, function (error, stdout, stderr){
-	  if (error !== null) {
-	    console.log('exec error: ' + error);
-      console.log("stdout : "+stdout)
-      console.log("stderr : "+stderr)
-	  }
+    exec(command, function (error, stdout, stderr){
+      if (error !== null)
+        console.log(error);
+      if(stdout)
+          console.error(stdout);
   });
 }
 
@@ -162,36 +158,55 @@ function compileCSS(file){
 function filterFiles(f, stat){
   var filename = getFilenameWithoutExtention(f);
   var extension = getFileExtension(f);
-  if (filename.substr(0,1) == "_" || 
-      filename.substr(0,1) == "." || 
-      filename == "" ||
+  if (filename.substr(0,1) == '_' ||
+      filename.substr(0,1) == '.' ||
+      filename == '' ||
       allowedExtensions.indexOf(extension) == -1
       )
     return true;
   else{
     return false;
-  }   
+  }
 }
 
-// Here's where we setup the watch function 
+function getDateTime() {
+
+    var date = new Date();
+    var hour = date.getHours();
+    hour = (hour < 10 ? "0" : "") + hour;
+    var min  = date.getMinutes();
+    min = (min < 10 ? "0" : "") + min;
+    var sec  = date.getSeconds();
+    sec = (sec < 10 ? "0" : "") + sec;
+    var year = date.getFullYear();
+    var month = date.getMonth() + 1;
+    month = (month < 10 ? "0" : "") + month;
+    var day  = date.getDate();
+    day = (day < 10 ? "0" : "") + day;
+    return hour + ":" + min + ":" + sec + " on " + day + '/' + month + "/" + year;
+
+}
+
+// Here's where we setup the watch function
+console.log('Watching directory for file changes.');
+console.log('');
 watchTree(
-  argvs[0], 
-  {interval: 500, ignoreDotFiles:true,filter:filterFiles}, 
+  argvs[0],
+  {interval: 200, ignoreDotFiles: true, filter:filterFiles},
   function (f, curr, prev) {
-    if (typeof f == "object" && prev === null && curr === null) {
+    if (typeof f == 'object' && prev === null && curr === null) {
       // Finished walking the tree
       return;
     } else if (curr.nlink === 0) {
       // f was removed
-      console.log(f +" was removed.")
-    }else {
+      console.log(f +' was removed.')
+    } else {
       // f is a new file or changed
-      console.log("The file: "+f+ " was changed.")
-      console.log("Recompiling CSS.. "+Date());
+      console.log('The file: ' + f + ' was changed. Recompiling CSS at ' + getDateTime());
       compileCSS(f);
     }
   },
   function(f){
-  compileCSS(f);
+     compileCSS(f);
   }
 );
