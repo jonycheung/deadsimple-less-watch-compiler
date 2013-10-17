@@ -1,3 +1,6 @@
+#!/usr/bin/env node
+
+
 /* Copyright 2012, Jonathan Cheung Licensed and released under the MIT 
    license. Refer to MIT-LICENSE.txt.
    
