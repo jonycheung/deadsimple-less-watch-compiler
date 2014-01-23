@@ -144,7 +144,7 @@ function getFileExtension(string){
 // Here's where we run the less compiler
 function compileCSS(file){
     var filename = getFilenameWithoutExtention(file);
-    var command = 'lessc --yui-compress '+file.replace(/\s+/g,'\\ ')+' '+argvs[1]+'/'+filename.replace(/\s+/g,'\\ ')+'.css';
+    var command = 'lessc -x '+file.replace(/\s+/g,'\\ ')+' '+argvs[1]+'/'+filename.replace(/\s+/g,'\\ ')+'.css';
     // Run the command
     exec(command, function (error, stdout, stderr){
       if (error !== null)
