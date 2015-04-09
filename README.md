@@ -6,24 +6,31 @@ A nodejs script that watches folders(and subfolders) for changes and automatical
 Always give credit where it is due. Parts of this script is modified from Mikeal Rogers's watch script (https://github.com/mikeal/watch)
 
 ## Prerequisites
-Install LESS (http://www.lesscss.org/) and make sure the `lessc` binary is accessible to the script. Installing LESS with the `--global` flag will make the binary accessible to your system.
+Install LESS (http://www.lesscss.org/) and make sure the `lessc` binary is accessible to the script. Installing LESS with the `-g`(global) flag will make the binary accessible to your system.
 
 ```
 (sudo) npm install -g less
 ```
 
+## Installation
+Install the `less-watch-compiler` command globally.
+
+```
+(sudo) npm install -g less-watch-compiler
+```
+
 ## Usage 
 ```
-node less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT
+less-watch-compiler FOLDER_TO_WATCH FOLDER_TO_OUTPUT
 ```
 ####Example #1
 ```
-node less-watch-compiler.js tests/less tests/css
+less-watch-compiler tests/less tests/css
 ```
 The above command will watch the `tests/less` folder and compile the LESS CSS files into `tests/css` folder as soon as they are added/updated.
 
 ####Example #2
-Setup `config.json` with default folders
+Add `less-watch-compiler.config.json` as follows in your project folder
 
 ```
 {
@@ -38,7 +45,7 @@ Setup `config.json` with default folders
 The above will do the same as in example 1. But you can just run the following without passing the folders everytime.
 
 ```
-node less-watch-compiler.js
+less-watch-compiler
 ```
 
 ## Extras:
@@ -46,4 +53,11 @@ node less-watch-compiler.js
 * Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed in the `filterFiles()` function.
 * Github location: https://github.com/jonycheung/Dead-Simple-LESS-Watch-Compiler
 
+### Using the source files
+Alternativelly, you can checkout the code nad run things locally like this:
 
+```
+node less-watch-compiler.js [options]
+```
+
+To run unit tests: `npm test` (see tests/test.js)

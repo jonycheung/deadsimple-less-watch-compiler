@@ -1,0 +1,47 @@
+{
+  "name": "less-watch-compiler",
+  "version": "1.0.0",
+  "description": "A nodejs script that watches folders(and subfolders) for changes and automatically compile the less css files into css.",
+  "main": "less-watch-compiler.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "cd tests && mocha"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jonycheung/Dead-Simple-LESS-Watch-Compiler.git"
+  },
+  "bin": {
+        "less-watch-compiler": "./less-watch-compiler.js"
+  },
+  "dependencies": {
+    "shelljs": ">= 0.4.0",
+    "extend": ">= 2.0.0",
+    "amdefine": ">= 0.1.0"
+  },
+  "engine": "node 0.10.26",
+  "devDependencies": {
+    "mocha": "2.x.x"
+  },
+  "preferGlobal" : "true",
+  "keywords": [
+    "less",
+    "lessc",
+    "compiler",
+    "watcher",
+    "watch",
+    "compile",
+    "folder",
+    "directory",
+    "files",
+    "css"
+  ],
+  "author": "Jony Cheung",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/jonycheung/Dead-Simple-LESS-Watch-Compiler/issues"
+  },
+  "homepage": "https://github.com/jonycheung/Dead-Simple-LESS-Watch-Compiler"
+}

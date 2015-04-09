@@ -1,2 +1,5 @@
 .DS_Store
+*.log
 /test/
+
+node_modules
