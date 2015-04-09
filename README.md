@@ -12,13 +12,6 @@ Install LESS (http://www.lesscss.org/) and make sure the `lessc` binary is acces
 npm install -g less
 ```
 
-## Installing via Bower
-Instead of checking out this repo, you could install the package through bower(http://bower.io/).
-
-```
-bower install less-watch-compiler
-```
-
 ## Usage 
 ```
 node less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT
