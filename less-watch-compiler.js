@@ -77,12 +77,12 @@ function walk (dir, options, callback, initCallback) {
           callback.pending -= 1;
           done = callback.pending === 0;
           if (!enoent) {
-            if (options.ignoreDotFiles && path.basename(f)[0] === '.') return done && callback(null, callback.files);
-            if (options.filter && options.filter(f, stat)) return done && callback(null, callback.files);
             callback.files[f] = stat;
             if (stat.isDirectory()) {
               walk(f, options, callback);
             }else{
+            if (options.ignoreDotFiles && path.basename(f)[0] === '.') return done && callback(null, callback.files);
+            if (options.filter && options.filter(f, stat)) return done && callback(null, callback.files);
               initCallback&&initCallback(f);
             }
 
