@@ -23,13 +23,13 @@ Install the `less-watch-compiler` command globally.
 ```
 less-watch-compiler FOLDER_TO_WATCH FOLDER_TO_OUTPUT
 ```
-####Example #1
+###Example #1
 ```
 less-watch-compiler tests/less tests/css
 ```
 The above command will watch the `tests/less` folder and compile the LESS CSS files into `tests/css` folder as soon as they are added/updated.
 
-####Example #2
+###Example #2
 Add `less-watch-compiler.config.json` as follows in your project folder
 
 ```
