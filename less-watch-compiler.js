@@ -38,8 +38,8 @@ try{
 }
 catch(e){}
 
-// console.log(watchFolder)
-// console.log(outputFolder)
+// console.log("Watch Folder: "+watchFolder)
+// console.log("Output Folder: "+outputFolder)
 if ( !watchFolder || !outputFolder ){
   console.log('Missing arguments. Example:');
   console.log('\tnode less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT');
