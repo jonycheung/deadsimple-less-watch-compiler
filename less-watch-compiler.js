@@ -150,9 +150,9 @@ var watchTree = function ( root, options, watchCallback, initCallback ) {
 function compileCSS(file){
     var dirname = path.dirname(file).replace(watchFolder, "") + "/";
     var filename = dirname +path.basename(file, path.extname(file));
-    var command = 'lessc -x '+file.replace(/\s+/g,'\\ ')+' '+outputFolder+filename.replace(/\s+/g,'\\ ')+'.css';
+    var command = 'lessc'+' '+file.replace(/\s+/g,'\\ ')+' > '+outputFolder+filename.replace(/\s+/g,'\\ ')+'.css';
     // Run the command
-    // console.log(command)
+    console.log(command)
     exec(command, function (error, stdout, stderr){
       if (error !== null)
         console.log(error);

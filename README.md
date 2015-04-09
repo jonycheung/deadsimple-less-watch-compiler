@@ -9,7 +9,7 @@ Always give credit where it is due. Parts of this script is modified from Mikeal
 Install LESS (http://www.lesscss.org/) and make sure the `lessc` binary is accessible to the script. Installing LESS with the `--global` flag will make the binary accessible to your system.
 
 ```
-npm install -g less
+(sudo) npm install -g less
 ```
 
 ## Usage 
@@ -18,9 +18,9 @@ node less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT
 ```
 ####Example #1
 ```
-node less-watch-compiler.js less css
+node less-watch-compiler.js tests/less tests/css
 ```
-The above command will watch the `less` folder and compile the LESS CSS files into `css` folder as soon as they are added/updated.
+The above command will watch the `tests/less` folder and compile the LESS CSS files into `tests/css` folder as soon as they are added/updated.
 
 ####Example #2
 Setup `config.json` with default folders
@@ -29,8 +29,8 @@ Setup `config.json` with default folders
 {
     "allowedExtensions":["less"],
     "defaults": {
-        "watchFolder": "less",
-        "outputFolder": "css"
+        "watchFolder": "tests/less",
+        "outputFolder": "tests/css"
     }
 }
 ```
