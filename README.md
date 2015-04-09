@@ -1,9 +1,9 @@
-Dead Simple LESS Watch Compiler
+Dead Simple LESS CSS Watch Compiler
 ===================
 
-A nodejs script that watches folders(and subfolders) for changes and automatically compile the less css files into css.
+A command that watches folders(and subfolders) for file changes and automatically compile the less css files into css. This is a file system watcher and compiler.
 
-Always give credit where it is due. Parts of this script is modified from Mikeal Rogers's watch script (https://github.com/mikeal/watch)
+Parts of this script is modified from Mikeal Rogers's watch script (https://github.com/mikeal/watch)
 
 ## Prerequisites
 Install LESS (http://www.lesscss.org/) and make sure the `lessc` binary is accessible to the script. Installing LESS with the `-g`(global) flag will make the binary accessible to your system.
@@ -51,7 +51,7 @@ less-watch-compiler
 ## Extras:
 * By default, this script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array in `config.json`.
 * Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed in the `filterFiles()` function.
-* Github location: https://github.com/jonycheung/Dead-Simple-LESS-Watch-Compiler
+* Github location: https://github.com/jonycheung/deadsimple-less-watch-compiler
 
 ### Using the source files
 Alternativelly, you can checkout the code nad run things locally like this:
