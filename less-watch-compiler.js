@@ -13,18 +13,38 @@
    Example:   'node less-watch-compiler.js less css' will watch ./less folder
               and compile the less css files into ./css when they are added/changed
 */
-var allowedExtensions = ['less'];
 var sys = require('util')
   , fs = require('fs')
   , path = require('path')
   , events = require('events')
-  , exec = require('child_process').exec;
+  , exec = require('child_process').exec
+  , data = fs.readFileSync('config.json')
+  , config = {};
 
+// Check if we could load config.json
+try {
+  config = JSON.parse(data);
+}
+catch (err) {
+  console.log('There was an error parsing config.json.')
+  console.log(err);
+}
 // Check to see if we have the correct number of arguments
 var argvs = process.argv.slice(2);
-if (!argvs[0] || !argvs[1]){
+var watchFolder, outputFolder;
+try{
+  watchFolder = argvs[0] || config.defaults.watchFolder;
+  outputFolder = argvs[1] || config.defaults.outputFolder;  
+}
+catch(e){}
+
+// console.log(watchFolder)
+// console.log(outputFolder)
+if ( !watchFolder || !outputFolder ){
   console.log('Missing arguments. Example:');
-    console.log('\tnode less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT');
+  console.log('\tnode less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT');
+  console.log('\tExample 1: To watch all files under the folder "less" and compile all into a folder "css".');
+  console.log('\t\t node less-watch-compiler.js less css');
   process.exit(1);
 }
 
@@ -144,7 +164,7 @@ function getFileExtension(string){
 // Here's where we run the less compiler
 function compileCSS(file){
     var filename = getFilenameWithoutExtention(file);
-    var command = 'lessc -x '+file.replace(/\s+/g,'\\ ')+' '+argvs[1]+'/'+filename.replace(/\s+/g,'\\ ')+'.css';
+    var command = 'lessc -x '+file.replace(/\s+/g,'\\ ')+' '+outputFolder+'/'+filename.replace(/\s+/g,'\\ ')+'.css';
     // Run the command
     exec(command, function (error, stdout, stderr){
       if (error !== null)
@@ -161,7 +181,7 @@ function filterFiles(f, stat){
   if (filename.substr(0,1) == '_' ||
       filename.substr(0,1) == '.' ||
       filename == '' ||
-      allowedExtensions.indexOf(extension) == -1
+      config.allowedExtensions.indexOf(extension) == -1
       )
     return true;
   else{
@@ -191,7 +211,7 @@ function getDateTime() {
 console.log('Watching directory for file changes.');
 console.log('');
 watchTree(
-  argvs[0],
+  watchFolder,
   {interval: 200, ignoreDotFiles: true, filter:filterFiles},
   function (f, curr, prev) {
     if (typeof f == 'object' && prev === null && curr === null) {
