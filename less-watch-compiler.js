@@ -21,7 +21,7 @@ var sys = require('util')
   , data;
 
 // See if folder cwd contains 
-data = fs.readFileSync('config.json');
+data = fs.readFileSync('less-watch-compiler.config.json');
 extend(true, lessWatchCompilerUtils.config, JSON.parse(data));
 fs.exists(cwd+'/less-watch-compiler.config.json', function(exists) {
   if (exists) {
