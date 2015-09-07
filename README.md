@@ -34,7 +34,7 @@ Add `less-watch-compiler.config.json` as follows in your project folder
 
 ```
 {
-    "allowedExtensions":["less"],
+    "allowedExtensions":[".less"],
     "defaults": {
         "watchFolder": "tests/less",
         "outputFolder": "tests/css"
