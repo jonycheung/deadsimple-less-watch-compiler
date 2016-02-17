@@ -18,7 +18,8 @@ var sys = require('util')
   , exec = require('child_process').exec
   , lessWatchCompilerUtils = require('./lib/lessWatchCompilerUtils.js')
   , cwd = sh.pwd()
-  , data;
+  , data
+  , mainFilePath = undefined;
 
 // See if folder cwd contains 
 fs.exists(cwd+'/less-watch-compiler.config.json', function(exists) {
@@ -37,7 +38,8 @@ function init(){
   // Here's where we setup the watch function
   try{
     lessWatchCompilerUtils.config.watchFolder = argvs[0] || lessWatchCompilerUtils.config.defaults.watchFolder;
-    lessWatchCompilerUtils.config.outputFolder = argvs[1] || lessWatchCompilerUtils.config.defaults.outputFolder;  
+    lessWatchCompilerUtils.config.outputFolder = argvs[1] || lessWatchCompilerUtils.config.defaults.outputFolder;
+    lessWatchCompilerUtils.config.mainFile = argvs[2] || lessWatchCompilerUtils.config.defaults.mainFile;  
   }
   catch(e){}
 
@@ -45,12 +47,39 @@ function init(){
 
   // console.log("Watch Folder: "+lessWatchCompilerUtils.config.watchFolder)
   // console.log("Output Folder: "+lessWatchCompilerUtils.config.outputFolder)
+  /*
+    3rd parameter is optional, but once you define it, then we will just compile 
+    the main and generate as "{main_file_name}.css". All the files that has been 
+    referenced from the main one will be minified into it.
+    Assuming the 3rd is "main.less"
+    - input folder: src
+    src
+        main.less (import aux.less)
+        aux.less
+    - output folder: dist
+    dist
+        main.css
+        
+    Otherwise, it will behave as previously:
+    Assuming the 3rd is empty
+    - input folder: src
+    src
+        main.less (import aux.less)
+        aux.less
+    - output folder: dist
+    dist
+        main.css
+        aux.css
+  */
   if ( !lessWatchCompilerUtils.config.watchFolder || !lessWatchCompilerUtils.config.outputFolder ){
     console.log('Missing arguments. Example:');
     console.log('\tnode less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT');
     console.log('\tExample 1: To watch all files under the folder "less" and compile all into a folder "css".');
     console.log('\t\t less-watch-compiler less css');
     process.exit(1);
+  }
+  if (lessWatchCompilerUtils.config.mainFile) {
+      mainFilePath = [lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile].join('/');
   }
   console.log('Watching directory for file changes.');
   console.log('');
@@ -67,11 +96,11 @@ function init(){
       } else {
         // f is a new file or changed
         console.log('The file: ' + f + ' was changed. Recompiling CSS at ' + lessWatchCompilerUtils.getDateTime());
-        lessWatchCompilerUtils.compileCSS(f);
+        lessWatchCompilerUtils.compileCSS(mainFilePath || f);
       }
     },
     function(f){
-       lessWatchCompilerUtils.compileCSS(f);
+       lessWatchCompilerUtils.compileCSS(mainFilePath || f);
     }
   );
 }

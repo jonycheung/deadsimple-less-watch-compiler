@@ -19,9 +19,39 @@ Install the `less-watch-compiler` command globally.
 (sudo) npm install -g less-watch-compiler
 ```
 
-## Usage 
+## Usage
+### With no main file 
 ```
 less-watch-compiler FOLDER_TO_WATCH FOLDER_TO_OUTPUT
+```
+### With main file
+```
+less-watch-compiler FOLDER_TO_WATCH FOLDER_TO_OUTPUT MAIN_FILE_DOT_LESS
+```
+The 3rd parameter is optional, but once you define it, then, we will just compile the main and generate it as "{main_file_name}.css". All the files that has been referenced from the main one will be minified into it.
+Assuming the 3rd is "main.less" 
+- input folder: src
+    src
+        main.less (import aux.less)
+        aux.less
+- output folder: dist
+    dist
+        main.css
+        
+Otherwise, it will behave as previously:
+Assuming the 3rd is empty
+- input folder: src
+    src
+        main.less (import aux.less)
+        aux.less
+- output folder: dist
+    dist
+        main.css
+        aux.css
+
+Real usage:
+```
+less-watch-compiler src dist main.less
 ```
 ###Example #1
 ```
