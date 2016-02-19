@@ -1,5 +1,4 @@
-[![NPM version](https://badge.fury.io/js/less-watch-compiler.svg)](http://badge.fury.io/js/less-watch-compiler) [![Dependencies](https://david-dm.org/less/less-watch-compiler.svg)](https://david-dm.org/less/less-watch-compiler) [![devDependency Status](https://david-dm.org/less/less-watch-compiler/dev-status.svg)](https://david-dm.org/less/less-watch-compiler#info=devDependencies) [![optionalDependency Status](https://david-dm.org/less/less-watch-compiler/optional-status.svg)](https://david-dm.org/less/less-watch-compiler#info=optionalDependencies)
-
+[![npm version](https://badge.fury.io/js/less-watch-compiler.svg)](https://badge.fury.io/js/less-watch-compiler) [![Dependencies](https://david-dm.org/jonycheung/deadsimple-less-watch-compiler.svg)](https://david-dm.org/jonycheung/less-watch-compiler) [![devDependency Status](https://david-dm.org/jonycheung/deadsimple-less-watch-compiler/dev-status.svg)](https://david-dm.org/jonycheung/less-watch-compiler#info=devDependencies) 
 
 Dead Simple LESS CSS Watch Compiler
 ===================
