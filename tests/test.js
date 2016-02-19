@@ -47,7 +47,7 @@ describe('lessWatchCompilerUtils Module API', function(){
         it('should run the correct command with minified flag', function(){
             lessWatchCompilerUtils.config.outputFolder = "testFolder";
             lessWatchCompilerUtils.config.minified = true;
-            assert.equal("lessc -x test > testFolder./test.css", lessWatchCompilerUtils.compileCSS("test"));
+            assert.equal("lessc -x test > testFolder./test.css", lessWatchCompilerUtils.compileCSS("test", true));
         });
     })
     describe('filterFiles()', function(){
