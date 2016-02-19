@@ -1,3 +1,6 @@
+[![NPM version](https://badge.fury.io/js/less-watch-compiler.svg)](http://badge.fury.io/js/less-watch-compiler) [![Dependencies](https://david-dm.org/less/less-watch-compiler.svg)](https://david-dm.org/less/less-watch-compiler) [![devDependency Status](https://david-dm.org/less/less-watch-compiler/dev-status.svg)](https://david-dm.org/less/less-watch-compiler#info=devDependencies) [![optionalDependency Status](https://david-dm.org/less/less-watch-compiler/optional-status.svg)](https://david-dm.org/less/less-watch-compiler#info=optionalDependencies)
+
+
 Dead Simple LESS CSS Watch Compiler
 ===================
 
@@ -35,6 +38,7 @@ Add `less-watch-compiler.config.json` as follows in your project folder
 ```
 {
     "allowedExtensions":[".less"],
+    "minified": false,
     "defaults": {
         "watchFolder": "tests/less",
         "outputFolder": "tests/css"
@@ -49,6 +53,7 @@ less-watch-compiler
 ```
 
 ## Extras:
+* By default, "minified" is turned on to always compress/minify output. You can set the minification to false by adding `"minified":false` in the config file.
 * By default, this script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array in `config.json`.
 * Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed in the `filterFiles()` function.
 * Github location: https://github.com/jonycheung/deadsimple-less-watch-compiler

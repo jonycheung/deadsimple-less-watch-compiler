@@ -44,6 +44,11 @@ describe('lessWatchCompilerUtils Module API', function(){
         it('compileCSS() function should be there', function(){
             assert.equal("function", typeof(lessWatchCompilerUtils.compileCSS));
         });
+        it('should run the correct command with minified flag', function(){
+            lessWatchCompilerUtils.config.outputFolder = "testFolder";
+            lessWatchCompilerUtils.config.minified = true;
+            assert.equal("lessc -x test > testFolder./test.css", lessWatchCompilerUtils.compileCSS("test"));
+        });
     })
     describe('filterFiles()', function(){
         it('filterFiles() function should be there', function(){
@@ -56,7 +61,6 @@ describe('lessWatchCompilerUtils Module API', function(){
         it('filterFiles() function should return "true" for non-allowed files', function(){
             assert.equal(true, lessWatchCompilerUtils.filterFiles("file.js"));
         });
-
         
     })
     describe('getDateTime()', function(){
