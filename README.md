@@ -23,33 +23,30 @@ Install the `less-watch-compiler` command globally.
 
 ## Usage
 ### With no main file 
+You need to pass in the minimum 2 parameters. First parameter is the source folder to watch for changes and second is the output folder in which the css files will be compiled
+
+Usage:
 ```
 less-watch-compiler FOLDER_TO_WATCH FOLDER_TO_OUTPUT
 ```
 ### With main file
-```
-less-watch-compiler FOLDER_TO_WATCH FOLDER_TO_OUTPUT MAIN_FILE_DOT_LESS
-```
-The 3rd parameter is optional, but once you define it, then, we will just compile the main and generate it as "{main_file_name}.css". All the files that has been referenced from the main one will be minified into it.
+If you pass in the 3rd optional parameter, Any file change will trigger only to compile the main file specified in the 3rd parameter.
 Assuming the 3rd is "main.less" 
-- input folder: src
-    src
-        main.less (import aux.less)
-        aux.less
-- output folder: dist
-    dist
-        main.css
+
+Usage:
+```
+less-watch-compiler FOLDER_TO_WATCH FOLDER_TO_OUTPUT MAIN_FILE_DOT_LESS[Optional]
+```
+
+		
+		input folder: src
+		|____ src
+		|________ main.less (import aux.less)
+		|________ aux.less
+		 output folder: dist
+		|____ dist
+		|________ main.css
         
-Otherwise, it will behave as previously:
-Assuming the 3rd is empty
-- input folder: src
-    src
-        main.less (import aux.less)
-        aux.less
-- output folder: dist
-    dist
-        main.css
-        aux.css
 
 Real usage:
 ```
