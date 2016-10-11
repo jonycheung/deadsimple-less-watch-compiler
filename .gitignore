@@ -1,5 +1,5 @@
 .DS_Store
 *.log
-/test/
+./test/css
 
 node_modules
