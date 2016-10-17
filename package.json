@@ -7,7 +7,8 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "tests/test.sh"
+    "test": "tests/test.sh",
+    "commit": "git-cz -n"
   },
   "repository": {
     "url": "https://github.com/jonycheung/deadsimple-less-watch-compiler.git",
@@ -27,6 +28,7 @@
   },
   "engine": "node 0.10.26",
   "devDependencies": {
+    "cz-conventional-changelog": "^1.2.0",
     "mocha": "^3.1.2"
   },
   "preferGlobal": "true",
@@ -48,5 +50,10 @@
   "bugs": {
     "url": "https://github.com/jonycheung/deadsimple-less-watch-compiler/issues"
   },
-  "homepage": "https://github.com/jonycheung/deadsimple-less-watch-compiler"
+  "homepage": "https://github.com/jonycheung/deadsimple-less-watch-compiler",
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
 }
