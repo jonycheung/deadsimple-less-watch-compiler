@@ -7,23 +7,27 @@
     "test": "tests"
   },
   "scripts": {
-    "test": "cd tests && mocha"
+    "test": "tests/test.sh"
   },
   "repository": {
-    "type": "git",
-    "url": "https://github.com/jonycheung/deadsimple-less-watch-compiler.git"
+    "url": "https://github.com/jonycheung/deadsimple-less-watch-compiler.git",
+    "type": "git"
   },
   "bin": {
     "less-watch-compiler": "./less-watch-compiler.js"
   },
   "dependencies": {
-    "shelljs": ">= 0.4.0",
+    "amdefine": ">= 0.1.0",
     "extend": ">= 2.0.0",
-    "amdefine": ">= 0.1.0"
+    "global": "^4.3.1",
+    "less": "^2.7.1",
+    "less-watch-compiler": "^1.2.3",
+    "mocha": "^3.1.2",
+    "shelljs": ">= 0.4.0"
   },
   "engine": "node 0.10.26",
   "devDependencies": {
-    "mocha": "2.x.x"
+    "mocha": "^3.1.2"
   },
   "preferGlobal": "true",
   "keywords": [
