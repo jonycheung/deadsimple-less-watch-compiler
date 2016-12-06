@@ -20,10 +20,12 @@ var sys = require('util')
   , cwd = sh.pwd()
   , data
   , mainFilePath = undefined
-  , program = require('commander');
+  , program = require('commander')
+  , packagejson = require('./package.json');
 
 program
-  .usage('[options] <source_dir> [destination_dir]')
+  .version(packagejson.version)
+  .usage('[options] <source_dir> <destination_dir> [main_file_name]')
   .option('--source-map', "Generate source map for css files")
   .parse(process.argv);
 
