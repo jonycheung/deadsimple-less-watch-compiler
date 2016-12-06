@@ -13,6 +13,7 @@
 */
 var sys = require('util')
   , fs = require('fs')
+  , path= require('path')
   , sh = require('shelljs')
   , extend = require('extend')
   , exec = require('child_process').exec
@@ -27,6 +28,8 @@ program
   .version(packagejson.version)
   .usage('[options] <source_dir> <destination_dir> [main_file_name]')
   .option('--source-map', "Generate source map for css files")
+  .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'")
+  // .option('-p, --plugins <plugin-a>,<plugin-b>', 'List of plugins separated by commas', plugins)
   .parse(process.argv);
 
 // See if folder cwd contains 
@@ -36,7 +39,6 @@ fs.exists(cwd+'/less-watch-compiler.config.json', function(exists) {
     var customConfig = JSON.parse(data);
     extend(true, lessWatchCompilerUtils.config, customConfig) 
   }
-  
   init();
 });
 
@@ -44,6 +46,7 @@ function init(){
   if (program.args[0])   lessWatchCompilerUtils.config.watchFolder =  program.args[0];
   if (program.args[1])   lessWatchCompilerUtils.config.outputFolder =  program.args[1];
   if (program.args[2])   lessWatchCompilerUtils.config.mainFile =  program.args[2];
+  if (program.mainFile)   lessWatchCompilerUtils.config.mainFile =  program.mainFile;
   if (program.sourceMap) lessWatchCompilerUtils.config.sourceMap = program.sourceMap;
 
   /*
@@ -80,7 +83,14 @@ function init(){
   }
   if (lessWatchCompilerUtils.config.mainFile) {
       mainFilePath = [lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile].join('/');
+      fs.exists(mainFilePath, function(exists) {
+        if (!exists){
+          console.log("Main file " + mainFilePath+" does not exist.");
+          process.exit();
+        }
+      });
   }
+  
   console.log('Watching directory for file changes.');
   lessWatchCompilerUtils.watchTree(
     lessWatchCompilerUtils.config.watchFolder,

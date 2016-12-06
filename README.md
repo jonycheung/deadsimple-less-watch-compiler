@@ -81,6 +81,7 @@ less-watch-compiler
 
     -h, --help    		output usage information
     --source-map  		Generate source map for css files
+	--main-file <file> 	Specify <file> as the file to always re-compile e.g. '--main-file style.less'
 
 ## Extras:
 * By default, "minified" is turned on to always compress/minify output. You can set the minification to false by adding `"minified":false` in the config file.
