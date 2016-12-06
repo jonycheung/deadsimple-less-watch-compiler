@@ -8,6 +8,7 @@
   },
   "scripts": {
     "test": "tests/test.sh",
+    "postversion": "git push && git push --tags",
     "commit": "git-cz -n"
   },
   "repository": {
