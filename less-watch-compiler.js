@@ -95,7 +95,7 @@ function init(){
   lessWatchCompilerUtils.watchTree(
     lessWatchCompilerUtils.config.watchFolder,
     {interval: 200, ignoreDotFiles: true, filter:lessWatchCompilerUtils.filterFiles},
-    function (f, curr, prev) {
+    function (f, curr, prev, fileimportlist) {
       if (typeof f == 'object' && prev === null && curr === null) {
         // Finished walking the tree
         return;
@@ -104,8 +104,21 @@ function init(){
         console.log(f +' was removed.')
       } else {
         // f is a new file or changed
-        console.log('The file: ' + f + ' was changed. Recompiling CSS at ' + lessWatchCompilerUtils.getDateTime());
-        lessWatchCompilerUtils.compileCSS(mainFilePath || f);
+        var importedFile = false;
+        for (var i in fileimportlist){
+          for (var k in fileimportlist[i]){
+            if (f.substring(lessWatchCompilerUtils.config.watchFolder.length+1) == fileimportlist[i][k]){
+              var compileResult = lessWatchCompilerUtils.compileCSS(i);
+              console.log('The file: ' + i + ' was changed because '+f+' is specified as an import.  Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
+              importedFile = true;
+            }
+          } 
+        }
+        if (!importedFile){
+          
+          var compileResult = lessWatchCompilerUtils.compileCSS(mainFilePath || f);
+          console.log('The file: ' + f + ' was changed. Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
+        }
       }
     },
     function(f){
