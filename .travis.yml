@@ -6,4 +6,3 @@ deploy:
   api_key: NPM_API_KEY
   on:
     branch: master
-    tags: true
