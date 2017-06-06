@@ -1,3 +1,6 @@
+language: node_js
+node_js:
+  - "6"
 deploy:
   provider: npm
-  api_key: "dbf27b74-1158-45a5-b024-13638d10ac09"
+  api_key: NPM_API_KEY
