@@ -1,0 +1,3 @@
+deploy:
+  provider: npm
+  api_key: "dbf27b74-1158-45a5-b024-13638d10ac09"
