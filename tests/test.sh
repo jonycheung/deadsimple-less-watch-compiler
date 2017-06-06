@@ -1,3 +1,3 @@
 #!/bin/bash
 
-mocha tests/test.js
+mocha tests
