@@ -55,10 +55,26 @@ describe('lessWatchCompilerUtils Module API', function(){
             lessWatchCompilerUtils.config.sourceMap = true;
             assert.equal("lessc --source-map test testFolder/test.css", lessWatchCompilerUtils.compileCSS("test", true).command);
         });
+        it('should run the correct command with 1 plugin', function(){
+            lessWatchCompilerUtils.config.outputFolder = "testFolder";
+            lessWatchCompilerUtils.config.minified = false;
+            lessWatchCompilerUtils.config.sourceMap = false;
+            lessWatchCompilerUtils.config.plugins = "plugin1";
+            assert.equal("lessc --plugin1 test testFolder/test.css", lessWatchCompilerUtils.compileCSS("test", true).command);
+        });
+        it('should run the correct command with 2 plugins', function(){
+            lessWatchCompilerUtils.config.outputFolder = "testFolder";
+            lessWatchCompilerUtils.config.minified = false;
+            lessWatchCompilerUtils.config.sourceMap = false;
+            lessWatchCompilerUtils.config.plugins = "plugin1,plugin2";
+            assert.equal("lessc --plugin1 --plugin2 test testFolder/test.css", lessWatchCompilerUtils.compileCSS("test", true).command);
+        });
+        
         it('should run the correct command with minified flag', function(){
             lessWatchCompilerUtils.config.outputFolder = "testFolder";
             lessWatchCompilerUtils.config.minified = true;
             lessWatchCompilerUtils.config.sourceMap = false;
+            lessWatchCompilerUtils.config.plugins = false;
             assert.equal("lessc -x test testFolder/test.min.css", lessWatchCompilerUtils.compileCSS("test", true).command);
         });
     })
