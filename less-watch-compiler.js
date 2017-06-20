@@ -29,7 +29,7 @@ program
   .usage('[options] <source_dir> <destination_dir> [main_file_name]')
   .option('--source-map', "Generate source map for css files")
   .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'")
-  .option('-p, --plugins <plugin-a>,<plugin-b>', 'List of plugins separated by commas')
+  .option('--plugins <plugin-a>,<plugin-b>', 'List of plugins separated by commas')
   .parse(process.argv);
 
 // See if folder cwd contains 
