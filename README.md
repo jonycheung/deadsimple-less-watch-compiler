@@ -7,17 +7,21 @@ A command that watches folders(and subfolders) for file changes and automaticall
 Parts of this script is modified from Mikeal Rogers's watch script (https://github.com/mikeal/watch)
 
 ## Prerequisites
-Install LESS (http://www.lesscss.org/) and make sure the `lessc` binary is accessible to the script. Installing LESS with the `-g`(global) flag will make the binary accessible to your system.
+Install [LESS](http://www.lesscss.org/) and make sure the `lessc` binary is accessible to the script. Installing LESS with the `-g`(global) flag will make the binary accessible to your system.
+
+Use [yarn](https://yarnpkg.com/) or replace `yarn` commands with `npm`.
 
 ```
-(sudo) npm install -g less
+(sudo) yarn install -g less
 ```
+
+
 
 ## Installation
 Install the `less-watch-compiler` command globally.
 
 ```
-(sudo) npm install -g less-watch-compiler
+(sudo) yarn install -g less-watch-compiler
 ```
 
 ## Usage
@@ -28,14 +32,6 @@ Usage:
 ```
 less-watch-compiler [options] <source_dir> <destination_dir> [main_file_name]
 ```
-
-  Options:
-
-    -h, --help                       output usage information
-    -V, --version                    output the version number
-    --source-map                     Generate source map for css files
-    --main-file <file>               Specify <file> as the file to always re-compile e.g. '--main-file style.less'
-    --plugins <plugin-a>,<plugin-b>  List of plugins separated by commas
 
 ### With main file
 If you pass in the 3rd optional parameter, Any file change will trigger only to compile the main file specified in the 3rd parameter.
@@ -88,15 +84,18 @@ less-watch-compiler
 
 ## Options:
 
-    -h, --help    		output usage information
-    --source-map  		Generate source map for css files
-	--main-file <file> 	Specify <file> as the file to always re-compile e.g. '--main-file style.less'
+    -h, --help                       output usage information
+    -V, --version                    output the version number
+    --source-map                     Generate source map for css files
+    --main-file <file>               Specify <file> as the file to always re-compile e.g. '--main-file style.less'
+    --plugins <plugin-a>,<plugin-b>  List of plugins separated by commas
 
 ## Extras:
 * By default, "minified" is turned on to always compress/minify output. You can set the minification to false by adding `"minified":false` in the config file.
 * By default, "sourceMap" is turned off. You can generating sourcemap to true by adding `"sourceMap":true` in the config file.
 * By default, this script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array in `config.json`.
 * Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed in the `filterFiles()` function.
+
 
 ### Using the source files
 Alternativelly, you can checkout the code nad run things locally like this:
@@ -105,4 +104,4 @@ Alternativelly, you can checkout the code nad run things locally like this:
 node less-watch-compiler.js [options]
 ```
 
-To run unit tests: `npm test` (see tests/test.js)
+To run unit tests: `yarn test` (see tests/test.js). (Use [yarn](https://yarnpkg.com/))
