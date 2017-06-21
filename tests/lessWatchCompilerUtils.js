@@ -18,11 +18,7 @@ describe('lessWatchCompilerUtils Module API', function(){
                 for (var i in files) {
                     assert.equal("object", typeof(files[i]));
                 } 
-                //Hacky: walk() is calling back multiple times. This should be fixed.
-                if (timeout) clearTimeout(timeout);
-                timeout = setTimeout(function(){
-                    done();
-                },5)        
+                done();
             }, function(){});
         });
     })
