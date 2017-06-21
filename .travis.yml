@@ -4,7 +4,8 @@ node_js:
 deploy:
   provider: npm
   email: EMAIL
-  api_key: "YOUR_API_KEY"
+  api_key:
+    secure: Htn5ZBEOzZiD0JngVM5Z5kzwiQSsEMom6YFsfqKIifE+ce9qdW1rDMAM46mwDf9tPeBUZHSwitNu/nAO0rjCLuJmOEEUDM5L7fRcLqra4qiUJR7s3HVURsatw66tV5z8LD2ZDgqEM4R69KNDZqlVwhjw1fRxT05A/v2Tr4dVrL2utYnlJqd4dy+6P1tB7U5tYfW8oyVWNvvNhEpeqcm0q0T1lRtoenWLsvRQ7hGg41VuLDXcloXstoczzkpTvSKOSGv+VPFHGXmcO3fa6XkkPipVYaTxObGuqyEuC/6b2oymiWVjK34RqcgNCRJVTFN7HBjMicMW7BGWqGhAM+1uSy9GNkLvopPMuEVZl4uzyKyYoLdDvhXOiWkwq22/r4IKKdi93JL9pG/Zflagwzb/aFYxj9GzFj2Fqvts3XNMA6pdiTbo9dfhbpTpaf0O5nySxtU6I+advG3F64cZ2Mj0tHde5YgSkKCSUNZ9DLwySWpEcvn9jzLpF42f+vat0YCzlJChxw+3vd8aeg78hw9ARIKVYFRbrLNQHfB3J8S8XWZBehSOhS4MmyVxaF8XRqmj8Ttrw4BXWmr9l6BjxpguRgMEmSAYeqtNX7KlRgITrlUYben9U7nPzCpuLm73PU2w/ro80g7J4R97C1dlZOMeNPEbAVo354HWSxrcVWk6h+k=
   on:
     branch: master
     tags: true
