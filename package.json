@@ -30,7 +30,7 @@
   },
   "engine": "node 0.10.26",
   "devDependencies": {
-    "cz-conventional-changelog": "^1.2.0",
+    "cz-conventional-changelog": "^2.0.0",
     "mocha": "^3.4.2"
   },
   "preferGlobal": "true",
