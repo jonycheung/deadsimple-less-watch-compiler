@@ -9,10 +9,15 @@ Parts of this script is modified from Mikeal Rogers's watch script (https://gith
 ## Prerequisites
 Install [LESS](http://www.lesscss.org/) and make sure the `lessc` binary is accessible to the script. Installing LESS with the `-g`(global) flag will make the binary accessible to your system.
 
-Use [yarn](https://yarnpkg.com/) or replace `yarn` commands with `npm`.
+Use [yarn](https://yarnpkg.com/) 
 
 ```
-(sudo) yarn install -g less
+(sudo) yarn global add less
+```
+or npm
+
+```
+(sudo) npm install -g less
 ```
 
 
@@ -20,8 +25,15 @@ Use [yarn](https://yarnpkg.com/) or replace `yarn` commands with `npm`.
 ## Installation
 Install the `less-watch-compiler` command globally.
 
+Use [yarn](https://yarnpkg.com/) 
+
 ```
-(sudo) yarn install -g less-watch-compiler
+(sudo) yarn global add
+```
+or npm
+
+```
+(sudo) npm install -g less-watch-compiler
 ```
 
 ## Usage
@@ -104,4 +116,4 @@ Alternativelly, you can checkout the code nad run things locally like this:
 node less-watch-compiler.js [options]
 ```
 
-To run unit tests: `yarn test` (see tests/test.js). (Use [yarn](https://yarnpkg.com/))
+To run unit tests: `yarn test` or `npm test` (see tests/test.js).
