@@ -2,7 +2,7 @@
 Dead Simple LESS CSS Watch Compiler
 ===================
 
-A command that watches folders(and subfolders) for file changes and automatically compile the less css files into css. This is a file system watcher and compiler.
+A command that watches folders(and subfolders) for file changes and automatically compile the less css files into css. This is a file system watcher and compiler. It also keep track of a dependency tree and recompiles the parent if an imported (child) LESS file is changed.
 
 Parts of this script is modified from Mikeal Rogers's watch script (https://github.com/mikeal/watch)
 
@@ -22,12 +22,21 @@ Install the `less-watch-compiler` command globally.
 
 ## Usage
 ### With no main file 
-You need to pass in the minimum 2 parameters. First parameter is the source folder to watch for changes and second is the output folder in which the css files will be compiled
+You need to pass in the minimum 2 parameters - <source_dir> and <destination_dir> . First parameter is the source folder to watch for changes and second is the output folder in which the css files will be compiled
 
 Usage:
 ```
-less-watch-compiler FOLDER_TO_WATCH FOLDER_TO_OUTPUT
+less-watch-compiler [options] <source_dir> <destination_dir> [main_file_name]
 ```
+
+  Options:
+
+    -h, --help                       output usage information
+    -V, --version                    output the version number
+    --source-map                     Generate source map for css files
+    --main-file <file>               Specify <file> as the file to always re-compile e.g. '--main-file style.less'
+    --plugins <plugin-a>,<plugin-b>  List of plugins separated by commas
+
 ### With main file
 If you pass in the 3rd optional parameter, Any file change will trigger only to compile the main file specified in the 3rd parameter.
 Assuming the 3rd is "main.less" 
@@ -65,6 +74,7 @@ Add `less-watch-compiler.config.json` as follows in your project folder
     "allowedExtensions":[".less"],
     "minified": false,
     "sourceMap": false,
+    "plugins": "less_plugin1,less_plugin2",
     "watchFolder": "tests/less",
     "outputFolder": "tests/css"
 }
