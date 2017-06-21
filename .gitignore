@@ -4,3 +4,4 @@ tests/css
 .idea/
 node_modules
 .vscode/
+less-watch-compiler.config.json
