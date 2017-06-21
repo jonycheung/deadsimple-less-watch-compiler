@@ -18,6 +18,7 @@ describe('filesearch Module', function(){
             var file = "./tests/less/test.less";
             var result = ['lvl1.less', 'lvl2/lvl2.less', 'lvl2/lvl3/lvl3.less'],
                 filesearchresult = filesearch.findLessImportsInFile(file);
+                console.log( filesearchresult)
             assert.equal(result.toString(), filesearchresult.toString());
             done();
         });
