@@ -3,6 +3,7 @@ node_js:
 - '6'
 deploy:
   provider: npm
+  email: EMAIL
   api_key: "YOUR_API_KEY"
   on:
     branch: master
