@@ -2,21 +2,23 @@
   "name": "less-watch-compiler",
   "version": "1.6.10",
   "description": "A command that watches folders(and subfolders) for file changes and automatically compile the less css files into css. This is a file system watcher and compiler.",
-  "main": "less-watch-compiler.js",
+  "main": "dist/less-watch-compiler.js",
   "directories": {
     "test": "tests"
   },
   "scripts": {
-    "test": "tests/test.sh",
+    "test": "babel src --out-dir dist && tests/test.sh",
     "postversion": "git push && git push --tags",
-    "commit": "git-cz -n"
+    "commit": "git-cz -n",
+    "build": "babel src --out-dir dist",
+    "start": "babel src --out-dir dist && node ./dist/less-watch-compiler.js"
   },
   "repository": {
     "url": "https://github.com/jonycheung/deadsimple-less-watch-compiler.git",
     "type": "git"
   },
   "bin": {
-    "less-watch-compiler": "./less-watch-compiler.js"
+    "less-watch-compiler": "./dist/less-watch-compiler.js"
   },
   "dependencies": {
     "amdefine": ">= 0.1.0",
@@ -29,8 +31,11 @@
   },
   "engine": "node 0.10.26",
   "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-env": "^1.6.0",
     "cz-conventional-changelog": "^2.0.0",
-    "mocha": "^3.4.2"
+    "mocha": "^3.4.2",
+    "webpack": "^3.5.4"
   },
   "preferGlobal": "true",
   "keywords": [
