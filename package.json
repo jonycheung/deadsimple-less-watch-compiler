@@ -12,7 +12,7 @@
   "scripts": {
     "test": "yarn run build && tests/test.sh",
     "postversion": "git push && git push --tags",
-    "prepublish": "yarn run build",
+    "prepublishOnly": "yarn run build",
     "commit": "git-cz -n",
     "build": "babel src --out-dir dist",
     "start": "yarn run build && node ./dist/less-watch-compiler.js"
