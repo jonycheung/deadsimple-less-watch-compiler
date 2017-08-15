@@ -6,12 +6,14 @@
   "directories": {
     "test": "tests"
   },
+  "files": [ "dist" ],
   "scripts": {
-    "test": "babel src --out-dir dist && tests/test.sh",
+    "test": "yarn run build && tests/test.sh",
     "postversion": "git push && git push --tags",
+    "prepublish": "yarn run build",
     "commit": "git-cz -n",
     "build": "babel src --out-dir dist",
-    "start": "babel src --out-dir dist && node ./dist/less-watch-compiler.js"
+    "start": "yarn run build && node ./dist/less-watch-compiler.js"
   },
   "repository": {
     "url": "https://github.com/jonycheung/deadsimple-less-watch-compiler.git",
