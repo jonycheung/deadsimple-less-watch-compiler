@@ -18,11 +18,12 @@ describe('lessWatchCompilerUtils Module API', function(){
                 for (var i in files) {
                     assert.equal("object", typeof(files[i]));
                 } 
-                if (timeout) clearTimeout(timeout);
-                timeout = setTimeout(function(){
-                    done();
-                },2);
             }, function(){});
+            if (timeout) clearTimeout(timeout);
+            timeout = setTimeout(function(){
+                //`fs` is notorious for multiple callbacks so we have to do this.
+                done();
+            },30);
         });
     })
      describe('watchTree()', function(){
@@ -35,7 +36,7 @@ describe('lessWatchCompilerUtils Module API', function(){
                 if (timeout) clearTimeout(timeout);
                 timeout = setTimeout(function(){
                     done();
-                },2);
+                },20);
             });
         });
     })
