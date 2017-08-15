@@ -22,7 +22,7 @@ var sys = require('util')
   , data
   , mainFilePath = undefined
   , program = require('commander')
-  , packagejson = require('./package.json');
+  , packagejson = require('../package.json');
 
 program
   .version(packagejson.version)
@@ -37,6 +37,7 @@ fs.exists(cwd+'/less-watch-compiler.config.json', function(exists) {
   if (exists) {
     data = fs.readFileSync(cwd+'/less-watch-compiler.config.json')
     var customConfig = JSON.parse(data);
+    console.log('Config file '+cwd+'/less-watch-compiler.config.json is loaded.');
     extend(true, lessWatchCompilerUtils.config, customConfig) 
   }
   init();

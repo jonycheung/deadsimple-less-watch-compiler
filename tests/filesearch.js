@@ -1,5 +1,5 @@
 var assert = require("assert")
-, filesearch = require('../lib/filesearch.js')
+, filesearch = require('../dist/lib/filesearch.js')
 , sh = require('shelljs')
 , cwd = sh.pwd().toString();
 

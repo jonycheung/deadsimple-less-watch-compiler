@@ -1,5 +1,5 @@
 var assert = require("assert")
-, lessWatchCompilerUtils = require('../lib/lessWatchCompilerUtils.js')
+, lessWatchCompilerUtils = require('../dist/lib/lessWatchCompilerUtils.js')
 , sh = require('shelljs')
 , cwd = sh.pwd().toString();
 
@@ -18,7 +18,10 @@ describe('lessWatchCompilerUtils Module API', function(){
                 for (var i in files) {
                     assert.equal("object", typeof(files[i]));
                 } 
-                done();
+                if (timeout) clearTimeout(timeout);
+                timeout = setTimeout(function(){
+                    done();
+                },2);
             }, function(){});
         });
     })

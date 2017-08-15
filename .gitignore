@@ -5,3 +5,4 @@ tests/css
 node_modules
 .vscode/
 less-watch-compiler.config.json
+build/
