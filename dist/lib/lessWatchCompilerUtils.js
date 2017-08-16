@@ -20,14 +20,13 @@ define(function (require) {
       fileSearch = require('./filesearch'),
       filelist = [],
       fileimportlist = {};
-  // create your module here
 
   var lessWatchCompilerUtilsModule = {
     config: {},
-
     walk: function walk(dir, options, callback, initCallback) {
       if (!callback) {
-        callback = options;options = {};
+        callback = options;
+        options = {};
       }
       if (!callback.files) callback.files = {};
       if (!callback.pending) callback.pending = 0;
@@ -74,72 +73,17 @@ define(function (require) {
         if (callback.pending === 0) callback(null, callback.files);
       });
     },
-
     //Setup fs.watchFile() for each file.
     watchTree: function watchTree(root, options, watchCallback, initCallback) {
       if (!watchCallback) {
-        watchCallback = options;options = {};
+        watchCallback = options;
+        options = {};
       }
       lessWatchCompilerUtilsModule.walk(root, options, function (err, files) {
         if (err) throw err;
-        var fileWatcher = function fileWatcher(f) {
-          if (filelist.indexOf(f) !== -1) return;
-          filelist[filelist.length] = f;
-
-          if (f.indexOf('.') !== -1) {
-            fileimportlist[f] = fileSearch.findLessImportsInFile(f);
-          }
-
-          fs.watchFile(f, options, function (c, p) {
-            // Check if anything actually changed in stat
-            if (files[f] && !files[f].isDirectory() && c.nlink !== 0 && files[f].mtime.getTime() == c.mtime.getTime()) return;
-            files[f] = c;
-            if (!files[f].isDirectory()) {
-              if (options.ignoreDotFiles && path.basename(f)[0] === '.') return;
-              if (options.filter && options.filter(f)) return;
-              fs.exists(f, function (exists) {
-                if (!exists) {
-                  console.log("Does not exist : " + f);
-                } else {
-                  fileimportlist[f] = fileSearch.findLessImportsInFile(f);
-                  watchCallback(f, c, p, fileimportlist);
-                }
-              });
-            } else {
-              fs.readdir(f, function (err, nfiles) {
-                if (err) return;
-                nfiles.forEach(function (b) {
-                  var file = path.join(f, b);
-                  if (!files[file]) {
-                    fs.stat(file, function (err, stat) {
-                      if (options.ignoreDotFiles && path.basename(b)[0] === '.') return;
-                      if (options.filter && options.filter(b)) return;
-                      fs.exists(file, function (exists) {
-                        if (!exists) {
-                          console.log("Does not exist : " + f);
-                        } else {
-                          fileimportlist[file] = fileSearch.findLessImportsInFile(file);
-                          watchCallback(file, stat, null, fileimportlist);
-                          files[file] = stat;
-                          fileWatcher(file);
-                        }
-                      });
-                    });
-                  }
-                });
-              });
-            }
-            if (c.nlink === 0) {
-              // unwatch removed files.
-              delete files[f];
-              fs.unwatchFile(f);
-            }
-          });
-        };
-
-        fileWatcher(root);
+        lessWatchCompilerUtilsModule.fileWatcher(root, files, options, filelist, fileimportlist, watchCallback);
         for (var i in files) {
-          fileWatcher(i);
+          lessWatchCompilerUtilsModule.fileWatcher(i, files, options, filelist, fileimportlist, watchCallback);
         }
         watchCallback(files, null, null, fileimportlist);
       }, initCallback);
@@ -187,9 +131,68 @@ define(function (require) {
       var day = date.getDate();
       day = (day < 10 ? "0" : "") + day;
       return hour + ":" + min + ":" + sec + " on " + day + '/' + month + "/" + year;
+    },
+    setupWatcher: function setupWatcher(f, files, options, watchCallback) {
+      fs.watchFile(f, options, function (c, p) {
+        // Check if anything actually changed in stat
+        if (files[f] && !files[f].isDirectory() && c.nlink !== 0 && files[f].mtime.getTime() == c.mtime.getTime()) return;
+        files[f] = c;
+        if (!files[f].isDirectory()) {
+          if (options.ignoreDotFiles && path.basename(f)[0] === '.') return;
+          if (options.filter && options.filter(f)) return;
+          fs.exists(f, function (exists) {
+            if (!exists) {
+              console.log("Does not exist : " + f);
+            } else {
+              fileimportlist[f] = fileSearch.findLessImportsInFile(f);
+              watchCallback(f, c, p, fileimportlist);
+            }
+          });
+        } else {
+          fs.readdir(f, function (err, nfiles) {
+            if (err) return;
+            nfiles.forEach(function (b) {
+              var file = path.join(f, b);
+              if (!files[file]) {
+                fs.stat(file, function (err, stat) {
+                  if (options.ignoreDotFiles && path.basename(b)[0] === '.') return;
+                  if (options.filter && options.filter(b)) return;
+                  fs.exists(file, function (exists) {
+                    if (!exists) {
+                      console.log("Does not exist : " + f);
+                    } else {
+                      fileimportlist[file] = fileSearch.findLessImportsInFile(file);
+                      watchCallback(file, stat, null, fileimportlist);
+                      files[file] = stat;
+                      fileWatcher(file);
+                    }
+                  });
+                });
+              }
+            });
+          });
+        }
+        if (c.nlink === 0) {
+          // unwatch removed files.
+          delete files[f];
+          fs.unwatchFile(f);
+        }
+      });
+    },
+    fileWatcher: function fileWatcher(f, files, options, filelist, fileimportlist, watchCallback) {
+      if (filelist.indexOf(f) !== -1) return;
+      filelist[filelist.length] = f;
+
+      if (f.indexOf('.') !== -1) {
+        fileimportlist[f] = fileSearch.findLessImportsInFile(f);
+      }
+      lessWatchCompilerUtilsModule.setupWatcher(f, files, options, watchCallback);
+      for (var i in fileimportlist[f]) {
+        if (filelist.indexOf(fileimportlist[f][i]) === -1) {
+          lessWatchCompilerUtilsModule.setupWatcher(path.normalize(path.dirname(f) + '/' + fileimportlist[f][i]), files, options, watchCallback);
+        }
+      }
     }
-
   };
-
   return lessWatchCompilerUtilsModule;
 });
