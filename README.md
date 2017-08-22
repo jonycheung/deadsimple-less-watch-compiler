@@ -111,7 +111,7 @@ less-watch-compiler
 
 
 ### Using the source files
-Alternativelly, you can checkout the code nad run things locally like this:
+Alternativelly, you can checkout the code and run things locally like this:
 
 ```
 node less-watch-compiler.js [options]
