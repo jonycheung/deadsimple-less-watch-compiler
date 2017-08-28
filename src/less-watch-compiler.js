@@ -30,6 +30,7 @@ program
   .option('--source-map', "Generate source map for css files")
   .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'")
   .option('--plugins <plugin-a>,<plugin-b>', 'List of plugins separated by commas')
+  .option('--runonce', 'This will effectively skip the watch part for CLI usages.')
   .parse(process.argv);
 
 // See if folder cwd contains 
@@ -38,7 +39,7 @@ fs.exists(cwd+'/less-watch-compiler.config.json', function(exists) {
     data = fs.readFileSync(cwd+'/less-watch-compiler.config.json')
     var customConfig = JSON.parse(data);
     console.log('Config file '+cwd+'/less-watch-compiler.config.json is loaded.');
-    extend(true, lessWatchCompilerUtils.config, customConfig) 
+    extend(true, lessWatchCompilerUtils.config, customConfig);
   }
   init();
 });
@@ -50,6 +51,7 @@ function init(){
   if (program.mainFile)   lessWatchCompilerUtils.config.mainFile =  program.mainFile;
   if (program.sourceMap) lessWatchCompilerUtils.config.sourceMap = program.sourceMap;
   if (program.plugins) lessWatchCompilerUtils.config.plugins = program.plugins;
+  if (program.runonce) lessWatchCompilerUtils.config.runonce = program.runonce;
 
   /*
     3rd parameter is optional, but once you define it, then we will just compile 
@@ -93,7 +95,10 @@ function init(){
       });
   }
   
-  console.log('Watching directory for file changes.');
+  if (lessWatchCompilerUtils.config.runonce === true)
+    console.log('Running less-watch-compiler once.');
+  else
+    console.log('Watching directory for file changes.');
   lessWatchCompilerUtils.watchTree(
     lessWatchCompilerUtils.config.watchFolder,
     {interval: 200, ignoreDotFiles: true, filter:lessWatchCompilerUtils.filterFiles},
@@ -117,7 +122,6 @@ function init(){
           } 
         }
         if (!importedFile){
-          
           var compileResult = lessWatchCompilerUtils.compileCSS(mainFilePath || f);
           console.log('The file: ' + f + ' was changed. Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
         }
