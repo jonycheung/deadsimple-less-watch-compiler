@@ -113,7 +113,7 @@ define(function (require) {
       var filename = path.basename(f);
       var extension = path.extname(f),
           allowedExtensions = lessWatchCompilerUtilsModule.config.allowedExtensions || defaultAllowedExtensions;
-      if (filename.substr(0, 1) == '_' || filename.substr(0, 1) == '.' || filename == '' || allowedExtensions.indexOf(extension) == -1) return true;else {
+      if (filename.substr(0, 1) == '.' || filename == '' || allowedExtensions.indexOf(extension) == -1) return true;else {
         return false;
       }
     },
