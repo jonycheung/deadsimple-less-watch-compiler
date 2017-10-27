@@ -35,7 +35,7 @@ program
   .parse(process.argv);
 
 // Check if configuration file exists
-var configPath = program.config = path.isAbsolute(program.config) ? program.config : (cwd + '/' + program.config);
+var configPath = path.isAbsolute(program.config) ? program.config : (cwd + '/' + program.config);
 fs.exists(configPath, function(exists) {
   if (exists) {
     data = fs.readFileSync(configPath);
