@@ -30,15 +30,17 @@ program
   .option('--source-map', "Generate source map for css files")
   .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'")
   .option('--plugins <plugin-a>,<plugin-b>', 'List of plugins separated by commas')
+  .option('--config <file>', 'Custom configuration file path (default less-watch-compiler.config.json)', 'less-watch-compiler.config.json')
   .option('--runonce', 'This will effectively skip the watch part for CLI usages.')
   .parse(process.argv);
 
-// See if folder cwd contains 
-fs.exists(cwd+'/less-watch-compiler.config.json', function(exists) {
+// Check if configuration file exists
+var configPath = program.config = path.isAbsolute(program.config) ? program.config : (cwd + '/' + program.config);
+fs.exists(configPath, function(exists) {
   if (exists) {
-    data = fs.readFileSync(cwd+'/less-watch-compiler.config.json')
+    data = fs.readFileSync(configPath);
     var customConfig = JSON.parse(data);
-    console.log('Config file '+cwd+'/less-watch-compiler.config.json is loaded.');
+    console.log('Config file ' + configPath + ' is loaded.');
     extend(true, lessWatchCompilerUtils.config, customConfig);
   }
   init();
@@ -86,15 +88,15 @@ function init(){
     process.exit(1);
   }
   if (lessWatchCompilerUtils.config.mainFile) {
-      mainFilePath = [lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile].join('/');
-      fs.exists(mainFilePath, function(exists) {
-        if (!exists){
-          console.log("Main file " + mainFilePath+" does not exist.");
-          process.exit();
-        }
-      });
+    mainFilePath = [lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile].join('/');
+    fs.exists(mainFilePath, function(exists) {
+      if (!exists){
+        console.log("Main file " + mainFilePath+" does not exist.");
+        process.exit();
+      }
+    });
   }
-  
+
   if (lessWatchCompilerUtils.config.runonce === true)
     console.log('Running less-watch-compiler once.');
   else
@@ -119,7 +121,7 @@ function init(){
               console.log('The file: ' + i + ' was changed because '+f+' is specified as an import.  Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
               importedFile = true;
             }
-          } 
+          }
         }
         if (!importedFile){
           var compileResult = lessWatchCompilerUtils.compileCSS(mainFilePath || f);
@@ -128,7 +130,7 @@ function init(){
       }
     },
     function(f){
-       lessWatchCompilerUtils.compileCSS(mainFilePath || f);
+      lessWatchCompilerUtils.compileCSS(mainFilePath || f);
     }
   );
 }
