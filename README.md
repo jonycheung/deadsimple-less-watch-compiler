@@ -41,16 +41,15 @@ You need to pass in the minimum 2 parameters - <source_dir> and <destination_dir
 
 #### Usage:
 ```bash
-less-watch-compiler [options] <source_dir> <destination_dir> [main_file_name]
+less-watch-compiler [options] <source_dir> <destination_dir>
 ```
 ### With main file
 If you pass in the 3rd optional parameter, Any file change will trigger only to compile the main file specified in the 3rd parameter.
 Assuming the 3rd is "main.less" 
 
 #### Usage:
-```
-less-watch-compiler <input_folder> <output_folder> 
-    [<main-file>] [--source-map] [--plugins <pulgin,plugin...>] [--config <file>] [--run-once]
+```bash
+less-watch-compiler [options] <source_dir> <destination_dir> [main-file]
 ```
 ## Real world example		
     project root
