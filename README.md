@@ -22,35 +22,26 @@ or npm
 ```
 
 ## Installation
-Install the `less-watch-compiler` command globally.
+Install the `less-watch-compiler` command globally. 
+* These commands may need to be prefixed with 'sudo ' depending upon your system
 
-Use [yarn](https://yarnpkg.com/) 
+### [yarn](https://yarnpkg.com/) 
+```yarn global add less```
 
-```bash
-(sudo) yarn global add
-```
-or npm
-
-```bash
-(sudo) npm install -g less-watch-compiler
-```
+### [npm](https://www.npmjs.com/) 
+```npm install -g less-watch-compiler```
 
 ## Usage
 ### With no main file 
 You need to pass in the minimum 2 parameters - <source_dir> and <destination_dir> . First parameter is the source folder to watch for changes and second is the output folder in which the css files will be compiled
 
-#### Usage:
-```bash
-less-watch-compiler [options] <source_dir> <destination_dir>
-```
+Usage: ```less-watch-compiler [options] <source_dir> <destination_dir>```
+
 ### With main file
 If you pass in the 3rd optional parameter, Any file change will trigger only to compile the main file specified in the 3rd parameter.
 Assuming the 3rd is "main.less" 
 
-#### Usage:
-```bash
-less-watch-compiler [options] <source_dir> <destination_dir> [main-file]
-```
+Usage: ```less-watch-compiler [options] <source_dir> <destination_dir> [main-file]```
 ## Real world example		
     project root
 	  |____ src
