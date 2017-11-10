@@ -25,14 +25,15 @@ var sys = require('util'),
     program = require('commander'),
     packagejson = require('../package.json');
 
-program.version(packagejson.version).usage('[options] <source_dir> <destination_dir> [main_file_name]').option('--source-map', "Generate source map for css files").option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'").option('--plugins <plugin-a>,<plugin-b>', 'List of plugins separated by commas').parse(process.argv);
+program.version(packagejson.version).usage('[options] <source_dir> <destination_dir> [main_file_name]').option('--source-map', "Generate source map for css files").option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'").option('--plugins <plugin-a>,<plugin-b>', 'List of plugins separated by commas').option('--config <file>', 'Custom configuration file path (default less-watch-compiler.config.json)', 'less-watch-compiler.config.json').option('--runonce', 'This will effectively skip the watch part for CLI usages.').parse(process.argv);
 
-// See if folder cwd contains 
-fs.exists(cwd + '/less-watch-compiler.config.json', function (exists) {
+// Check if configuration file exists
+var configPath = program.config = path.isAbsolute(program.config) ? program.config : cwd + '/' + program.config;
+fs.exists(configPath, function (exists) {
   if (exists) {
-    data = fs.readFileSync(cwd + '/less-watch-compiler.config.json');
+    data = fs.readFileSync(configPath);
     var customConfig = JSON.parse(data);
-    console.log('Config file ' + cwd + '/less-watch-compiler.config.json is loaded.');
+    console.log('Config file ' + configPath + ' is loaded.');
     extend(true, lessWatchCompilerUtils.config, customConfig);
   }
   init();
@@ -45,6 +46,7 @@ function init() {
   if (program.mainFile) lessWatchCompilerUtils.config.mainFile = program.mainFile;
   if (program.sourceMap) lessWatchCompilerUtils.config.sourceMap = program.sourceMap;
   if (program.plugins) lessWatchCompilerUtils.config.plugins = program.plugins;
+  if (program.runonce) lessWatchCompilerUtils.config.runonce = program.runonce;
 
   /*
     3rd parameter is optional, but once you define it, then we will just compile 
@@ -88,7 +90,7 @@ function init() {
     });
   }
 
-  console.log('Watching directory for file changes.');
+  if (lessWatchCompilerUtils.config.runonce === true) console.log('Running less-watch-compiler once.');else console.log('Watching directory for file changes.');
   lessWatchCompilerUtils.watchTree(lessWatchCompilerUtils.config.watchFolder, { interval: 200, ignoreDotFiles: true, filter: lessWatchCompilerUtils.filterFiles }, function (f, curr, prev, fileimportlist) {
     if (typeof f == 'object' && prev === null && curr === null) {
       // Finished walking the tree
@@ -109,7 +111,6 @@ function init() {
         }
       }
       if (!importedFile) {
-
         var compileResult = lessWatchCompilerUtils.compileCSS(mainFilePath || f);
         console.log('The file: ' + f + ' was changed. Recompiling ' + compileResult.outputFilePath + ' at ' + lessWatchCompilerUtils.getDateTime());
       }
