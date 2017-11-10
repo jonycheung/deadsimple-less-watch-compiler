@@ -12,28 +12,26 @@ Install [LESS](http://www.lesscss.org/) and make sure the `lessc` binary is acce
 
 Use [yarn](https://yarnpkg.com/) 
 
-```
+```bash
 (sudo) yarn global add less
 ```
 or npm
 
-```
+```bash
 (sudo) npm install -g less
 ```
-
-
 
 ## Installation
 Install the `less-watch-compiler` command globally.
 
 Use [yarn](https://yarnpkg.com/) 
 
-```
+```bash
 (sudo) yarn global add
 ```
 or npm
 
-```
+```bash
 (sudo) npm install -g less-watch-compiler
 ```
 
@@ -41,58 +39,51 @@ or npm
 ### With no main file 
 You need to pass in the minimum 2 parameters - <source_dir> and <destination_dir> . First parameter is the source folder to watch for changes and second is the output folder in which the css files will be compiled
 
-Usage:
-```
+#### Usage:
+```bash
 less-watch-compiler [options] <source_dir> <destination_dir> [main_file_name]
 ```
-
 ### With main file
 If you pass in the 3rd optional parameter, Any file change will trigger only to compile the main file specified in the 3rd parameter.
 Assuming the 3rd is "main.less" 
 
-Usage:
+#### Usage:
 ```
-less-watch-compiler FOLDER_TO_WATCH FOLDER_TO_OUTPUT MAIN_FILE_DOT_LESS[Optional]
+less-watch-compiler <input_folder> <output_folder> 
+    [<main-file>] [--source-map] [--plugins <pulgin,plugin...>] [--config <file>] [--run-once]
 ```
-
-		
-		input folder: src
-		|____ src
-		|________ main.less (import aux.less)
-		|________ aux.less
-		 output folder: dist
-		|____ dist
-		|________ main.css
+## Real world example		
+    project root
+	  |____ src
+	  |________ main.less (import aux.less)
+	  |________ aux.less
+	  |____ dist
+	  |________ main.css
         
+The project can be compiled with ```watch-less-compiler src dist main.less```
+## Configuration File
+By default the the configuration file is loaded from ./less-watch-compiler.config.json but can also be specified by the --config <file> option.
+#### Example using the project tree laid out in the previous example.
 
-Real usage:
-```
-less-watch-compiler src dist main.less
-```
-###Example #1
-```
-less-watch-compiler tests/less tests/css
-```
-The above command will watch the `tests/less` folder and compile the LESS CSS files into `tests/css` folder as soon as they are added/updated.
-
-###Example #2
-Add `less-watch-compiler.config.json` as follows in your project folder
-
-```
+less-watch-compiler.config.json
+```json
 {
-    "allowedExtensions":[".less"],
-    "minified": false,
-    "sourceMap": false,
-    "plugins": "less_plugin1,less_plugin2",
-    "watchFolder": "tests/less",
-    "outputFolder": "tests/css"
+    "watchFolder": "src",
+    "outputFolder": "dist",
+    "mainFile": "main.less"
 }
 ```
-
-The above will do the same as in example 1. But you can just run the following without passing the folders everytime.
-
-```
-less-watch-compiler
+The project can then be compiled with ```watch-less-compiler``` and no arguments
+## All configuration file options
+```json
+{
+    "watchFolder": "<input_folder>",   
+    "outputFolder": "<output_folder>",
+    "mainFile": "<main-file>",   
+    "sourceMap": false,
+    "plugins": "plugin1,plugin2",
+    "runOnce": false
+}
 ```
 
 ## Options:
@@ -102,6 +93,8 @@ less-watch-compiler
     --source-map                     Generate source map for css files
     --main-file <file>               Specify <file> as the file to always re-compile e.g. '--main-file style.less'
     --plugins <plugin-a>,<plugin-b>  List of plugins separated by commas
+    --config <file>                  Custom configuration file path (default less-watch-compiler.config.json)
+    --run-once                       Run the compiler once without waiting for additional changes
 
 ## Extras:
 * By default, "minified" is turned on to always compress/minify output. You can set the minification to false by adding `"minified":false` in the config file.
@@ -109,11 +102,10 @@ less-watch-compiler
 * By default, this script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array in `config.json`.
 * Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed in the `filterFiles()` function.
 
-
 ### Using the source files
 Alternativelly, you can checkout the code and run things locally like this:
 
-```
+```bash
 node less-watch-compiler.js [options]
 ```
 
