@@ -15,7 +15,7 @@ Use [yarn](https://yarnpkg.com/)
 ```bash
 (sudo) yarn global add less
 ```
-or npm
+or [npm](https://www.npmjs.com/)
 
 ```bash
 (sudo) npm install -g less
