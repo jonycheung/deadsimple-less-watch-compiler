@@ -14,12 +14,12 @@ Parts of this script is modified from Mikeal Rogers's watch script (https://gith
 Install [LESS](http://www.lesscss.org/) and make sure the `lessc` binary is accessible to the script. Installing LESS with the `-g`(global) flag will make the binary accessible to your system.
 
 ### [yarn](https://yarnpkg.com/) 
-```commandline
+```bash
 yarn global add less
 ```
 
 ### [npm](https://www.npmjs.com/)
-```commandline
+```bash
 npm install -g less
 ```
 
@@ -29,12 +29,12 @@ npm install -g less
 Install the `less-watch-compiler` command globally. 
 
 ### [yarn](https://yarnpkg.com/) 
-```commandline
+```bash
 yarn global add less-watch-compiler
 ```
 
 ### [npm](https://www.npmjs.com/) 
-```commandline
+```bash
 npm install -g less-watch-compiler
 ```
 
@@ -43,7 +43,7 @@ npm install -g less-watch-compiler
 You need to pass in the minimum 2 parameters - <source_dir> and <destination_dir> . First parameter is the source folder to watch for changes and second is the output folder in which the css files will be compiled
 
 Usage: 
-```commandline
+```bash
 less-watch-compiler [options] <source_dir> <destination_dir>
 ```
 
@@ -52,7 +52,7 @@ If you pass in the 3rd optional parameter, Any file change will trigger only to 
 Assuming the 3rd is "main.less" 
 
 Usage: 
-```commandline
+```bash
 less-watch-compiler [options] <source_dir> <destination_dir> [main-file]
 ```
 
@@ -67,7 +67,7 @@ less-watch-compiler [options] <source_dir> <destination_dir> [main-file]
 ```
 
 The project can be compiled with the following command:
-```commandline
+```bash
 watch-less-compiler src dist main.less
 ```
 
@@ -85,7 +85,7 @@ less-watch-compiler.config.json
 }
 ```
 The project can be compiled with the following command:
-```commandline
+```bash
 watch-less-compiler
 ```
 
@@ -120,7 +120,7 @@ watch-less-compiler
 ### Using the source files
 Alternativelly, you can checkout the code and run things locally like this:
 
-```commandline
+```bash
 node less-watch-compiler.js [options]
 ```
 
