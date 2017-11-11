@@ -7,53 +7,74 @@ A command that watches folders(and subfolders) for file changes and automaticall
 
 Parts of this script is modified from Mikeal Rogers's watch script (https://github.com/mikeal/watch)
 
+
 ## Prerequisites
+>The commands below may need to be prefixed with `sudo` depending upon your system
+
 Install [LESS](http://www.lesscss.org/) and make sure the `lessc` binary is accessible to the script. Installing LESS with the `-g`(global) flag will make the binary accessible to your system.
 
-Use [yarn](https://yarnpkg.com/) 
-
-```bash
-(sudo) yarn global add less
+### [yarn](https://yarnpkg.com/) 
+```commandline
+yarn global add less
 ```
-or [npm](https://www.npmjs.com/)
 
-```bash
-(sudo) npm install -g less
+### [npm](https://www.npmjs.com/)
+```commandline
+npm install -g less
 ```
 
 ## Installation
+>The commands below may need to be prefixed with `sudo` depending upon your system
+
 Install the `less-watch-compiler` command globally. 
-* These commands may need to be prefixed with 'sudo ' depending upon your system
 
 ### [yarn](https://yarnpkg.com/) 
-```yarn global add less```
+```commandline
+yarn global add less-watch-compiler
+```
 
 ### [npm](https://www.npmjs.com/) 
-```npm install -g less-watch-compiler```
+```commandline
+npm install -g less-watch-compiler
+```
 
 ## Usage
 ### With no main file 
 You need to pass in the minimum 2 parameters - <source_dir> and <destination_dir> . First parameter is the source folder to watch for changes and second is the output folder in which the css files will be compiled
 
-Usage: ```less-watch-compiler [options] <source_dir> <destination_dir>```
+Usage: 
+```commandline
+less-watch-compiler [options] <source_dir> <destination_dir>
+```
 
 ### With main file
 If you pass in the 3rd optional parameter, Any file change will trigger only to compile the main file specified in the 3rd parameter.
 Assuming the 3rd is "main.less" 
 
-Usage: ```less-watch-compiler [options] <source_dir> <destination_dir> [main-file]```
-## Real world example		
-    project root
-	  |____ src
-	  |________ main.less (import aux.less)
-	  |________ aux.less
-	  |____ dist
-	  |________ main.css
-        
-The project can be compiled with ```watch-less-compiler src dist main.less```
+Usage: 
+```commandline
+less-watch-compiler [options] <source_dir> <destination_dir> [main-file]
+```
+
+## Basic example
+```		
+ root 
+ └──src
+ │    └── main.less
+ │    └── aux.less
+ └──dist
+      └── main.css
+```
+
+The project can be compiled with the following command:
+```commandline
+watch-less-compiler src dist main.less
+```
+
 ## Configuration File
 By default the the configuration file is loaded from ./less-watch-compiler.config.json but can also be specified by the --config <file> option.
-#### Example using the project tree laid out in the previous example.
+
+#### Example using the project tree laid out in the previous example
 
 less-watch-compiler.config.json
 ```json
@@ -63,7 +84,11 @@ less-watch-compiler.config.json
     "mainFile": "main.less"
 }
 ```
-The project can then be compiled with ```watch-less-compiler``` and no arguments
+The project can be compiled with the following command:
+```commandline
+watch-less-compiler
+```
+
 ## All configuration file options
 ```json
 {
@@ -95,7 +120,7 @@ The project can then be compiled with ```watch-less-compiler``` and no arguments
 ### Using the source files
 Alternativelly, you can checkout the code and run things locally like this:
 
-```bash
+```commandline
 node less-watch-compiler.js [options]
 ```
 
