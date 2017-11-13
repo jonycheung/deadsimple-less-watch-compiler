@@ -68,7 +68,7 @@ less-watch-compiler [options] <source_dir> <destination_dir> [main-file]
 
 The project can be compiled with the following command:
 ```bash
-watch-less-compiler src dist main.less
+less-watch-compiler src dist main.less
 ```
 
 ## Configuration File
@@ -86,7 +86,7 @@ less-watch-compiler.config.json
 ```
 The project can be compiled with the following command:
 ```bash
-watch-less-compiler
+less-watch-compiler
 ```
 
 ## All configuration file options
