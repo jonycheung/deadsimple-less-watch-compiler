@@ -133,7 +133,7 @@ define(function (require) {
       return hour + ":" + min + ":" + sec + " on " + day + '/' + month + "/" + year;
     },
     setupWatcher: function setupWatcher(f, files, options, watchCallback) {
-      if (lessWatchCompilerUtilsModule.config.runonce === true) return;
+      if (lessWatchCompilerUtilsModule.config.runOnce === true) return;
       fs.watchFile(f, options, function (c, p) {
         // Check if anything actually changed in stat
         if (files[f] && !files[f].isDirectory() && c.nlink !== 0 && files[f].mtime.getTime() == c.mtime.getTime()) return;

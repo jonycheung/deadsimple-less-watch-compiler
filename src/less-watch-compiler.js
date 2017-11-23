@@ -31,7 +31,7 @@ program
   .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'")
   .option('--plugins <plugin-a>,<plugin-b>', 'List of plugins separated by commas')
   .option('--config <file>', 'Custom configuration file path (default less-watch-compiler.config.json)', 'less-watch-compiler.config.json')
-  .option('--runonce', 'This will effectively skip the watch part for CLI usages.')
+  .option('--run-once', 'Run the compiler once without waiting for additional changes')
   .parse(process.argv);
 
 // Check if configuration file exists
@@ -53,7 +53,7 @@ function init(){
   if (program.mainFile)   lessWatchCompilerUtils.config.mainFile =  program.mainFile;
   if (program.sourceMap) lessWatchCompilerUtils.config.sourceMap = program.sourceMap;
   if (program.plugins) lessWatchCompilerUtils.config.plugins = program.plugins;
-  if (program.runonce) lessWatchCompilerUtils.config.runonce = program.runonce;
+  if (program.runOnce) lessWatchCompilerUtils.config.runOnce = program.runOnce;
 
   /*
     3rd parameter is optional, but once you define it, then we will just compile 
@@ -97,7 +97,7 @@ function init(){
     });
   }
 
-  if (lessWatchCompilerUtils.config.runonce === true)
+  if (lessWatchCompilerUtils.config.runOnce === true)
     console.log('Running less-watch-compiler once.');
   else
     console.log('Watching directory for file changes.');
