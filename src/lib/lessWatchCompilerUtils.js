@@ -89,12 +89,13 @@ define(function (require) {
     },
     // Here's where we run the less compiler
     compileCSS: function (file, test) {
-      var dirname = path.dirname(file).replace(lessWatchCompilerUtilsModule.config.watchFolder, "") + "/";
+      var dirname = path.dirname(file).replace(lessWatchCompilerUtilsModule.config.watchFolder, "")
+      dirname = dirname === '.'? '' : dirname;
       var filename = path.basename(file, path.extname(file));
       var minifiedFlag = lessWatchCompilerUtilsModule.config.minified ? ' -x' : '';
       var sourceMap = (lessWatchCompilerUtilsModule.config.sourceMap) ? ' --source-map' : '';
       var plugins = (lessWatchCompilerUtilsModule.config.plugins) ? ' --' + lessWatchCompilerUtilsModule.config.plugins.split(',').join(' --') : '';
-      var outputFilePath = lessWatchCompilerUtilsModule.config.outputFolder + '/' + filename.replace(/\s+/g, '\\ ') +
+      var outputFilePath = lessWatchCompilerUtilsModule.config.outputFolder  + dirname + '/' + filename.replace(/\s+/g, '\\ ') +
         (lessWatchCompilerUtilsModule.config.minified ? '.min' : '') + '.css';
       var command = 'lessc' + sourceMap + minifiedFlag + plugins + ' ' + file.replace(/\s+/g, '\\ ') + ' ' + outputFilePath;
       // Run the command
