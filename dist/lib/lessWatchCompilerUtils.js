@@ -92,7 +92,7 @@ define(function (require) {
     compileCSS: function compileCSS(file, test) {
       var dirname = path.dirname(file).replace(lessWatchCompilerUtilsModule.config.watchFolder, "") + "/";
       var filename = path.basename(file, path.extname(file));
-      var minifiedFlag = lessWatchCompilerUtilsModule.config.minified === false ? '' : ' -x';
+      var minifiedFlag = lessWatchCompilerUtilsModule.config.minified ? ' -x' : '';
       var sourceMap = lessWatchCompilerUtilsModule.config.sourceMap ? ' --source-map' : '';
       var plugins = lessWatchCompilerUtilsModule.config.plugins ? ' --' + lessWatchCompilerUtilsModule.config.plugins.split(',').join(' --') : '';
       var outputFilePath = lessWatchCompilerUtilsModule.config.outputFolder + '/' + filename.replace(/\s+/g, '\\ ') + (lessWatchCompilerUtilsModule.config.minified ? '.min' : '') + '.css';
@@ -165,7 +165,7 @@ define(function (require) {
                       fileimportlist[file] = fileSearch.findLessImportsInFile(file);
                       watchCallback(file, stat, null, fileimportlist);
                       files[file] = stat;
-                      fileWatcher(file);
+                      lessWatchCompilerUtilsModule.fileWatcher(file, files, options, filelist, fileimportlist, watchCallback);
                     }
                   });
                 });
