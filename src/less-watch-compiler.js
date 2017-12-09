@@ -30,6 +30,7 @@ program
   .option('--source-map', "Generate source map for css files")
   .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'")
   .option('--plugins <plugin-a>,<plugin-b>', 'List of plugins separated by commas')
+  .option('--minified', 'Minify the css output')
   .option('--config <file>', 'Custom configuration file path (default less-watch-compiler.config.json)', 'less-watch-compiler.config.json')
   .option('--run-once', 'Run the compiler once without waiting for additional changes')
   .parse(process.argv);
@@ -50,6 +51,7 @@ function init(){
   if (program.args[0])   lessWatchCompilerUtils.config.watchFolder =  program.args[0];
   if (program.args[1])   lessWatchCompilerUtils.config.outputFolder =  program.args[1];
   if (program.args[2])   lessWatchCompilerUtils.config.mainFile =  program.args[2];
+  if (program.minified)   lessWatchCompilerUtils.config.minified =  program.minified;
   if (program.mainFile)   lessWatchCompilerUtils.config.mainFile =  program.mainFile;
   if (program.sourceMap) lessWatchCompilerUtils.config.sourceMap = program.sourceMap;
   if (program.plugins) lessWatchCompilerUtils.config.plugins = program.plugins;
