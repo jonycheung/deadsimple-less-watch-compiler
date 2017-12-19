@@ -3,6 +3,7 @@ var assert = require("assert"),
     sh = require('shelljs'),
     cwd = sh.pwd().toString(),
     testfile = '/tests/less/test.less';
+    testRelative = './tests/less';
 
 describe('lessWatchCompilerUtils Module API', function () {
     describe('Should have the following API\'s', function () {
@@ -109,6 +110,10 @@ describe('lessWatchCompilerUtils Module API', function () {
             });
             it('fileWatcher() function should take the correct parameters', function (done) {
                 lessWatchCompilerUtils.fileWatcher(cwd, {}, {}, [], [],function () {});
+                done();
+            });
+            it('fileWatcher() function should not fail for relative paths', function (done) {
+                lessWatchCompilerUtils.fileWatcher(testRelative, {}, {}, [], [],function () {});
                 done();
             });
         })

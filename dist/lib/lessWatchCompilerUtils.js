@@ -185,7 +185,7 @@ define(function (require) {
       if (filelist.indexOf(f) !== -1) return;
       filelist[filelist.length] = f;
 
-      if (f.indexOf('.') !== -1) {
+      if (fs.statSync(f).isFile()) {
         fileimportlist[f] = fileSearch.findLessImportsInFile(f);
       }
       lessWatchCompilerUtilsModule.setupWatcher(f, files, options, watchCallback);
