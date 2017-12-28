@@ -21,6 +21,13 @@ describe('filesearch Module', function () {
                 assert.equal(result.toString(), filesearchresult.toString());
                 done();
             });
+            it('should return empty array if argument isn\'t a file ', function (done) {
+                var file = "./tests/less";
+                var result = [],
+                    filesearchresult = filesearch.findLessImportsInFile(file);
+                assert.equal(result.toString(), filesearchresult.toString());
+                done();
+            });
         })
 
     })

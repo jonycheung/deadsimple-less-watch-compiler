@@ -2,7 +2,8 @@ var assert = require("assert"),
     lessWatchCompilerUtils = require('../dist/lib/lessWatchCompilerUtils.js'),
     sh = require('shelljs'),
     cwd = sh.pwd().toString(),
-    testfile = '/tests/less/test.less';
+    testroot = cwd+'/tests/less/',
+    testRelative = './tests/less';
 
 describe('lessWatchCompilerUtils Module API', function () {
     describe('Should have the following API\'s', function () {
@@ -12,7 +13,7 @@ describe('lessWatchCompilerUtils Module API', function () {
             });
             it('walk() function should return an object of files ', function (done) {
                 var timeout;
-                lessWatchCompilerUtils.walk(cwd, {}, function (err, files) {
+                lessWatchCompilerUtils.walk(testroot, {}, function (err, files) {
                     for (var i in files) {
                         assert.equal("object", typeof (files[i]));
                     }
@@ -30,7 +31,7 @@ describe('lessWatchCompilerUtils Module API', function () {
             });
             it('watchTree() function should complete and call a callback ', function (done) {
                 var timeout;
-                lessWatchCompilerUtils.watchTree(cwd, {}, function () {}, function () {
+                lessWatchCompilerUtils.watchTree(testroot, {}, function () {}, function () {
                     if (timeout) clearTimeout(timeout);
                     timeout = setTimeout(function () {
                         done();
@@ -109,6 +110,10 @@ describe('lessWatchCompilerUtils Module API', function () {
             });
             it('fileWatcher() function should take the correct parameters', function (done) {
                 lessWatchCompilerUtils.fileWatcher(cwd, {}, {}, [], [],function () {});
+                done();
+            });
+            it('fileWatcher() function should not fail for relative paths', function (done) {
+                lessWatchCompilerUtils.fileWatcher(testRelative, {}, {}, [], [],function () {});
                 done();
             });
         })
