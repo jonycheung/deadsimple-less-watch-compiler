@@ -7,14 +7,18 @@ define(function (require){
     const fs = require('fs');
     const filesearch = {
         findLessImportsInFile: function(f){
-            let m, files = [];
+            if (fs.statSync(f) && fs.statSync(f).isFile() === false) 
+                return []
+            else{
+                let m, files = [];
                 const fileContent = fs.readFileSync(f, 'utf8');
                 const re = /@import ['"](.*?)['"];/g;
                 while (m = re.exec(fileContent)){
                     let [ , filename ] = m;
                     if (m) files.push(filename);
                 }
-            return files;
+                return files;
+            }
         }
     }
     return filesearch;

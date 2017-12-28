@@ -10,18 +10,20 @@ define(function (require) {
     var fs = require('fs');
     var filesearch = {
         findLessImportsInFile: function findLessImportsInFile(f) {
-            var m = void 0,
-                files = [];
-            var fileContent = fs.readFileSync(f, 'utf8');
-            var re = /@import ['"](.*?)['"];/g;
-            while (m = re.exec(fileContent)) {
-                var _m = m,
-                    _m2 = _slicedToArray(_m, 2),
-                    filename = _m2[1];
+            if (fs.statSync(f) && fs.statSync(f).isFile() === false) return [];else {
+                var m = void 0,
+                    files = [];
+                var fileContent = fs.readFileSync(f, 'utf8');
+                var re = /@import ['"](.*?)['"];/g;
+                while (m = re.exec(fileContent)) {
+                    var _m = m,
+                        _m2 = _slicedToArray(_m, 2),
+                        filename = _m2[1];
 
-                if (m) files.push(filename);
+                    if (m) files.push(filename);
+                }
+                return files;
             }
-            return files;
         }
     };
     return filesearch;
