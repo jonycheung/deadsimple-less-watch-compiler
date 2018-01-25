@@ -55,7 +55,7 @@ define(function (require) {
               if (!enoent) {
                 callback.files[f] = stat;
                 if (stat.isDirectory()) {
-                  lessWatchCompilerUtilsModule.walk(f, options, callback);
+                  lessWatchCompilerUtilsModule.walk(f, options, callback, initCallback);
                 } else {
                   if (options.ignoreDotFiles && path.basename(f)[0] === '.') return done && callback(null, callback.files);
                   if (options.filter && options.filter(f)) return done && callback(null, callback.files);

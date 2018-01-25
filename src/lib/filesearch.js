@@ -12,9 +12,10 @@ define(function (require){
             else{
                 let m, files = [];
                 const fileContent = fs.readFileSync(f, 'utf8');
-                const re = /@import ['"](.*?)['"];/g;
+                const re = /@import (\(reference\) )?['"](.*?)['"];/g;
                 while (m = re.exec(fileContent)){
-                    let [ , filename ] = m;
+                    let [ , , filename ] = m;
+                    // console.log('found import ' + filename);
                     if (m) files.push(filename);
                 }
                 return files;
