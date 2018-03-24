@@ -99,7 +99,7 @@ define(function (require) {
         (lessWatchCompilerUtilsModule.config.minified ? '.min' : '') + '.css';
       var command = 'lessc' + sourceMap + minifiedFlag + plugins + ' ' + file.replace(/\s+/g, '\\ ') + ' ' + outputFilePath;
       // Run the command
-      // console.log(command)
+      //  console.log(command)
       if (!test)
         exec(command, function (error, stdout, stderr) {
           if (error !== null)
