@@ -12,7 +12,7 @@
   "scripts": {
     "test": "yarn run build && yarn run clean && tests/test.sh",
     "postversion": "git push && git push --tags",
-    "clean": "rm -R ./tests/css && mkdir ./tests/css",
+    "clean": "rm -R ./tests/css || true && mkdir ./tests/css",
     "prepublishOnly": "yarn run build",
     "commit": "git-cz -n",
     "build": "babel src --out-dir dist",
