@@ -113,7 +113,7 @@ function init(){
         console.log(f +' was removed.')
       } else {
         // f is a new file or changed
-        console.log(f)
+        // console.log(f)
         var importedFile = false;
         var filename = f.substring(lessWatchCompilerUtils.config.watchFolder.length+1)
         for (var i in fileimportlist){
@@ -138,7 +138,7 @@ function init(){
       }
     },
     function(f){
-      console.log("mainFilePath :" +mainFilePath)
+      // console.log("mainFilePath :" +mainFilePath)
       lessWatchCompilerUtils.compileCSS(mainFilePath || f);
     }
   );
