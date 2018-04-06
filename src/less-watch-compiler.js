@@ -113,16 +113,18 @@ function init(){
         console.log(f +' was removed.')
       } else {
         // f is a new file or changed
+        // console.log(f)
         var importedFile = false;
         var filename = f.substring(lessWatchCompilerUtils.config.watchFolder.length+1)
         for (var i in fileimportlist){
           for (var k in fileimportlist[i]){
             var hasExtension = fileimportlist[i][k].substring(fileimportlist[i][k].lastIndexOf('/') + 1).indexOf('.') != -1;
             var importFile = '' +fileimportlist[i][k] + (hasExtension ? '' : '.less');
-            var normalized = path.normalize(path.dirname(i) + '/' + importFile);
+            var normalizedPath = path.normalize(path.dirname(i) + '/' + importFile);
 
             // console.log('compare ' + f + ' with import #' + k + ' in ' + i + ' value ' + normalized);
-            if (f == normalized) {
+            if (f == normalizedPath && !mainFilePath) {
+              // Compile changed file only if a main file is there.
               var compileResult = lessWatchCompilerUtils.compileCSS(i);
               console.log('The file: ' + i + ' was changed because '+f+' is specified as an import.  Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
               importedFile = true;
@@ -136,6 +138,7 @@ function init(){
       }
     },
     function(f){
+      // console.log("mainFilePath :" +mainFilePath)
       lessWatchCompilerUtils.compileCSS(mainFilePath || f);
     }
   );
