@@ -116,6 +116,7 @@ less-watch-compiler
 * By default, "sourceMap" is turned off. You can generating sourcemap to true by adding `"sourceMap":true` in the config file.
 * By default, this script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array in `config.json`.
 * Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed in the `filterFiles()` function.
+* When `--run-once` used, compilation will fail on first error
 
 ### Using the source files
 Alternativelly, you can checkout the code and run things locally like this:

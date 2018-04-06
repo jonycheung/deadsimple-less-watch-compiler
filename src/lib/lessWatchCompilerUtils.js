@@ -102,8 +102,11 @@ define(function (require) {
       // console.log(command)
       if (!test)
         exec(command, function (error, stdout, stderr) {
-          if (error !== null)
+          if (error !== null) {
             console.log(error);
+            if (lessWatchCompilerUtilsModule.config.runOnce)
+              process.exit(1);
+          }
           if (stdout)
             console.error(stdout);
         });
