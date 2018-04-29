@@ -97,7 +97,8 @@ less-watch-compiler
     "mainFile": "<main-file>",   
     "sourceMap": false,
     "plugins": "plugin1,plugin2",
-    "runOnce": false
+    "runOnce": false,
+    "inlineJs": true
 }
 ```
 
