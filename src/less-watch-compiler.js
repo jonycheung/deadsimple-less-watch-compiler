@@ -32,6 +32,7 @@ program
   .option('--plugins <plugin-a>,<plugin-b>', 'List of plugins separated by commas')
   .option('--config <file>', 'Custom configuration file path (default less-watch-compiler.config.json)', 'less-watch-compiler.config.json')
   .option('--run-once', 'Run the compiler once without waiting for additional changes')
+  .option('--enable-js', 'Enables inline JavaScript in less files')
   .parse(process.argv);
 
 // Check if configuration file exists
@@ -54,6 +55,7 @@ function init(){
   if (program.sourceMap) lessWatchCompilerUtils.config.sourceMap = program.sourceMap;
   if (program.plugins) lessWatchCompilerUtils.config.plugins = program.plugins;
   if (program.runOnce) lessWatchCompilerUtils.config.runOnce = program.runOnce;
+  if (program.enableJs) lessWatchCompilerUtils.config.enableJs = program.enableJs;
 
   /*
     3rd parameter is optional, but once you define it, then we will just compile 
