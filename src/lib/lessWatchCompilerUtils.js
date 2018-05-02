@@ -92,12 +92,13 @@ define(function (require) {
       var dirname = path.dirname(file).replace(lessWatchCompilerUtilsModule.config.watchFolder, "")
       dirname = dirname === '.'? '' : dirname;
       var filename = path.basename(file, path.extname(file));
+      var enableJsFlag = lessWatchCompilerUtilsModule.config.enableJs ? ' --js' : '';
       var minifiedFlag = lessWatchCompilerUtilsModule.config.minified ? ' -x' : '';
       var sourceMap = (lessWatchCompilerUtilsModule.config.sourceMap) ? ' --source-map' : '';
       var plugins = (lessWatchCompilerUtilsModule.config.plugins) ? ' --' + lessWatchCompilerUtilsModule.config.plugins.split(',').join(' --') : '';
       var outputFilePath = lessWatchCompilerUtilsModule.config.outputFolder  + dirname + '/' + filename.replace(/\s+/g, '\\ ') +
         (lessWatchCompilerUtilsModule.config.minified ? '.min' : '') + '.css';
-      var command = 'lessc' + sourceMap + minifiedFlag + plugins + ' ' + file.replace(/\s+/g, '\\ ') + ' ' + outputFilePath;
+      var command = 'lessc' + sourceMap + enableJsFlag + minifiedFlag + plugins + ' ' + file.replace(/\s+/g, '\\ ') + ' ' + outputFilePath;
       // Run the command
       //  console.log(command)
       if (!test)

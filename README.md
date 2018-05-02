@@ -97,7 +97,8 @@ less-watch-compiler
     "mainFile": "<main-file>",   
     "sourceMap": false,
     "plugins": "plugin1,plugin2",
-    "runOnce": false
+    "runOnce": false,
+    "enableJs": true
 }
 ```
 
@@ -110,6 +111,7 @@ less-watch-compiler
     --plugins <plugin-a>,<plugin-b>  List of plugins separated by commas
     --config <file>                  Custom configuration file path (default less-watch-compiler.config.json)
     --run-once                       Run the compiler once without waiting for additional changes
+    --enable-js                      Enables inline JavaScript in less files
 
 ## Extras:
 * By default, "minified" is turned on to always compress/minify output. You can set the minification to false by adding `"minified":false` in the config file.
