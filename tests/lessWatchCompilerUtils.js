@@ -87,7 +87,33 @@ describe('lessWatchCompilerUtils Module API', function () {
                 lessWatchCompilerUtils.config.plugins = false;
                 assert.equal("lessc -x test.less testFolder/test.min.css", lessWatchCompilerUtils.compileCSS("test.less", true).command);
             });
-        })
+        });
+        describe('resolveOutputPath()', function () {	
+            it('should resolve filepaths correctly', function () {
+                lessWatchCompilerUtils.config.watchFolder = "./inputFolder/inner";
+                lessWatchCompilerUtils.config.outputFolder = "./testFolder/nested";
+                lessWatchCompilerUtils.config.minified = true;
+                lessWatchCompilerUtils.config.enableJs = false;
+                lessWatchCompilerUtils.config.sourceMap = false;
+                lessWatchCompilerUtils.config.plugins = false;
+
+                // Walker will always paths relative to watchFolder
+                assert.equal(lessWatchCompilerUtils.resolveOutputPath('inputFolder/inner/evenmore/afile.less'), 'testFolder/nested/evenmore/afile.min.css');
+            });
+
+            it('should resolve always put output files in output folder', function () {
+                lessWatchCompilerUtils.config.watchFolder = "./inputFolder/inner";
+                lessWatchCompilerUtils.config.outputFolder = "./testFolder/nested";
+                lessWatchCompilerUtils.config.minified = true;
+                lessWatchCompilerUtils.config.enableJs = false;
+                lessWatchCompilerUtils.config.sourceMap = false;
+                lessWatchCompilerUtils.config.plugins = false;
+
+                // Main file is relative to watchFolder as well, but can be a relative path
+                // it should however always land in the destination folder
+                assert.equal(lessWatchCompilerUtils.resolveOutputPath('inputFolder/inner/../afile.less'), 'testFolder/nested/afile.min.css');
+            });
+        });
         describe('filterFiles()', function () {
             it('filterFiles() function should be there', function () {
                 assert.equal("function", typeof (lessWatchCompilerUtils.filterFiles));
