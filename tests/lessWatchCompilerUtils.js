@@ -97,7 +97,7 @@ describe('lessWatchCompilerUtils Module API', function () {
                 lessWatchCompilerUtils.config.sourceMap = false;
                 lessWatchCompilerUtils.config.plugins = false;
 
-                // Walker will always paths relative to watchFolder
+                // Walker will always return paths relative to watchFolder
                 assert.equal(lessWatchCompilerUtils.resolveOutputPath('inputFolder/inner/evenmore/afile.less'), 'testFolder/nested/evenmore/afile.min.css');
             });
 
