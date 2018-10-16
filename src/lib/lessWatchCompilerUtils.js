@@ -95,7 +95,7 @@ define(function (require) {
       var minifiedFlag = lessWatchCompilerUtilsModule.config.minified ? ' -x' : '';
       var sourceMap = (lessWatchCompilerUtilsModule.config.sourceMap) ? ' --source-map' : '';
       var plugins = (lessWatchCompilerUtilsModule.config.plugins) ? ' --' + lessWatchCompilerUtilsModule.config.plugins.split(',').join(' --') : '';
-      var command = 'lessc' + sourceMap + enableJsFlag + minifiedFlag + plugins + ' ' + file.replace(/\s+/g, '\\ ') + ' ' + outputFilePath;
+      var command = 'lessc' + sourceMap + enableJsFlag + minifiedFlag + plugins + ' ' + JSON.stringify(file) + ' ' + outputFilePath;
       // Run the command
       //  console.log(command)
       if (!test)
@@ -127,7 +127,7 @@ define(function (require) {
       } else {
         dirname = path.dirname(filePath);
       }
-      var filename = parsedPath.name.replace(/\s+/g, '\\ ').trim();
+      var filename = parsedPath.name;
 
       var formatted = path.format({
         dir: dirname,
@@ -141,7 +141,7 @@ define(function (require) {
       var finalFullPath = path.resolve(lessWatchCompilerUtilsModule.config.outputFolder, formatted);
       var shortPath = path.relative(cwd, finalFullPath);
 
-      return shortPath;
+      return JSON.stringify(shortPath);
     },
     // This is the function we use to filter the files to watch.
     filterFiles: function (f) {
@@ -231,7 +231,7 @@ define(function (require) {
       for (var i in fileimportlist[f]) {
         if (filelist.indexOf(fileimportlist[f][i]) === -1) {
           lessWatchCompilerUtilsModule.setupWatcher(
-            path.normalize(path.dirname(f) + '/' + fileimportlist[f][i]),
+            path.normalize(path.dirname(f) + path.sep + fileimportlist[f][i]),
             files,
             options,
             watchCallback
