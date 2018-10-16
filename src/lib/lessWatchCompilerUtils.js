@@ -89,15 +89,12 @@ define(function (require) {
     },
     // Here's where we run the less compiler
     compileCSS: function (file, test) {
-      var dirname = path.dirname(file).replace(lessWatchCompilerUtilsModule.config.watchFolder, "")
-      dirname = dirname === '.'? '' : dirname;
-      var filename = path.basename(file, path.extname(file));
+      var outputFilePath = this.resolveOutputPath(file);
+
       var enableJsFlag = lessWatchCompilerUtilsModule.config.enableJs ? ' --js' : '';
       var minifiedFlag = lessWatchCompilerUtilsModule.config.minified ? ' -x' : '';
       var sourceMap = (lessWatchCompilerUtilsModule.config.sourceMap) ? ' --source-map' : '';
       var plugins = (lessWatchCompilerUtilsModule.config.plugins) ? ' --' + lessWatchCompilerUtilsModule.config.plugins.split(',').join(' --') : '';
-      var outputFilePath = lessWatchCompilerUtilsModule.config.outputFolder  + dirname + '/' + filename.replace(/\s+/g, '\\ ') +
-        (lessWatchCompilerUtilsModule.config.minified ? '.min' : '') + '.css';
       var command = 'lessc' + sourceMap + enableJsFlag + minifiedFlag + plugins + ' ' + file.replace(/\s+/g, '\\ ') + ' ' + outputFilePath;
       // Run the command
       //  console.log(command)
@@ -116,6 +113,35 @@ define(function (require) {
         "outputFilePath": outputFilePath
       };
 
+    },
+    resolveOutputPath: function (filePath) {
+      var fullPath = path.resolve(filePath);
+      var parsedPath = path.parse(fullPath);
+
+      // Only empty when unit testing it seems
+      var relativePath = null;
+      var dirname = null;
+      if (lessWatchCompilerUtilsModule.config.watchFolder) {
+        relativePath = path.relative(lessWatchCompilerUtilsModule.config.watchFolder, fullPath);
+        dirname = path.dirname(relativePath);
+      } else {
+        dirname = path.dirname(filePath);
+      }
+      var filename = parsedPath.name.replace(/\s+/g, '\\ ').trim();
+
+      var formatted = path.format({
+        dir: dirname,
+        name: filename,
+        ext: (lessWatchCompilerUtilsModule.config.minified ? '.min' : '') + '.css',
+      });
+
+      // No matter the path of the main file, the output must always land in the output folder
+      formatted = formatted.replace(/^(\.\.[\/\\])+/, '');
+
+      var finalFullPath = path.resolve(lessWatchCompilerUtilsModule.config.outputFolder, formatted);
+      var shortPath = path.relative(cwd, finalFullPath);
+
+      return shortPath;
     },
     // This is the function we use to filter the files to watch.
     filterFiles: function (f) {

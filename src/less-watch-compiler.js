@@ -89,8 +89,12 @@ function init(){
     console.log('\t\t less-watch-compiler less css');
     process.exit(1);
   }
+  
+  lessWatchCompilerUtils.config.watchFolder = path.resolve(lessWatchCompilerUtils.config.watchFolder);
+  lessWatchCompilerUtils.config.outputFolder = path.resolve(lessWatchCompilerUtils.config.outputFolder);
+
   if (lessWatchCompilerUtils.config.mainFile) {
-    mainFilePath = [lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile].join('/');
+    mainFilePath = path.resolve(lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile);
     fs.exists(mainFilePath, function(exists) {
       if (!exists){
         console.log("Main file " + mainFilePath+" does not exist.");
