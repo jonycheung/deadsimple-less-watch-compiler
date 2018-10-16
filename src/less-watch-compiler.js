@@ -36,7 +36,7 @@ program
   .parse(process.argv);
 
 // Check if configuration file exists
-var configPath = path.isAbsolute(program.config) ? program.config : (cwd + '/' + program.config);
+var configPath = path.isAbsolute(program.config) ? program.config : (cwd + path.sep + program.config);
 fs.exists(configPath, function(exists) {
   if (exists) {
     data = fs.readFileSync(configPath);
@@ -124,22 +124,22 @@ function init(){
         var filename = f.substring(lessWatchCompilerUtils.config.watchFolder.length+1)
         for (var i in fileimportlist){
           for (var k in fileimportlist[i]){
-            var hasExtension = fileimportlist[i][k].substring(fileimportlist[i][k].lastIndexOf('/') + 1).indexOf('.') != -1;
-            var importFile = '' +fileimportlist[i][k] + (hasExtension ? '' : '.less');
-            var normalizedPath = path.normalize(path.dirname(i) + '/' + importFile);
+            var hasExtension = path.extname(fileimportlist[i][k]).length > 1;
+            var importFile = path.join(fileimportlist[i][k], (hasExtension ? '' : '.less'));
+            var normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile);
 
             // console.log('compare ' + f + ' with import #' + k + ' in ' + i + ' value ' + normalized);
             if (f == normalizedPath && !mainFilePath) {
               // Compile changed file only if a main file is there.
               var compileResult = lessWatchCompilerUtils.compileCSS(i);
-              console.log('The file: ' + i + ' was changed because '+f+' is specified as an import.  Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
+              console.log('The file: ' + i + ' was changed because '+JSON.stringify(f)+' is specified as an import.  Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
               importedFile = true;
             }
           }
         }
         if (!importedFile){
           var compileResult = lessWatchCompilerUtils.compileCSS(mainFilePath || f);
-          console.log('The file: ' + f + ' was changed. Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
+          console.log('The file: ' + JSON.stringify(f) + ' was changed. Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
         }
       }
     },
