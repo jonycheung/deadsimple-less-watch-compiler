@@ -95,7 +95,10 @@ define(function (require) {
       var minifiedFlag = lessWatchCompilerUtilsModule.config.minified ? ' -x' : '';
       var sourceMap = (lessWatchCompilerUtilsModule.config.sourceMap) ? ' --source-map' : '';
       var plugins = (lessWatchCompilerUtilsModule.config.plugins) ? ' --' + lessWatchCompilerUtilsModule.config.plugins.split(',').join(' --') : '';
-      var command = 'lessc' + sourceMap + enableJsFlag + minifiedFlag + plugins + ' ' + JSON.stringify(file) + ' ' + outputFilePath;
+      var math = lessWatchCompilerUtilsModule.config.math ? ' --math=' + lessWatchCompilerUtilsModule.config.math  : '';
+      var urlArgs = lessWatchCompilerUtilsModule.config.urlArgs ? ' --url-args=' + lessWatchCompilerUtilsModule.config.urlArgs : '';
+      var strictUnits = lessWatchCompilerUtilsModule.config.strictUnits ? ' --strict-units=on' : '';
+      var command = 'lessc' + sourceMap + enableJsFlag + minifiedFlag + plugins + math + urlArgs + strictUnits + ' ' + JSON.stringify(file) + ' ' + outputFilePath;
       // Run the command
       //  console.log(command)
       if (!test)

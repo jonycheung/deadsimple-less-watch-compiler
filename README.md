@@ -98,7 +98,10 @@ less-watch-compiler
     "sourceMap": false,
     "plugins": "plugin1,plugin2",
     "runOnce": false,
-    "enableJs": true
+    "enableJs": true,
+    "math": "always|parens-division|parens|strict|strict-legacy",
+    "strictUnits": false,
+    "urlArgs": "cache12345"
 }
 ```
 

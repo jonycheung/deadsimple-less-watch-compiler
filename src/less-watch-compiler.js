@@ -33,6 +33,9 @@ program
   .option('--config <file>', 'Custom configuration file path (default less-watch-compiler.config.json)', 'less-watch-compiler.config.json')
   .option('--run-once', 'Run the compiler once without waiting for additional changes')
   .option('--enable-js', 'Enables inline JavaScript in less files')
+  .option('--math', 'Specify how LESS handles math')
+  .option('--strict-units', 'Specify if Less should guess the output unit when it does maths')
+  .option('--url-args', 'Specify an argument to go on to every URL, e.g. cache-busting')
   .parse(process.argv);
 
 // Check if configuration file exists
@@ -56,6 +59,9 @@ function init(){
   if (program.plugins) lessWatchCompilerUtils.config.plugins = program.plugins;
   if (program.runOnce) lessWatchCompilerUtils.config.runOnce = program.runOnce;
   if (program.enableJs) lessWatchCompilerUtils.config.enableJs = program.enableJs;
+  if (program.math) lessWatchCompilerUtils.config.math = program.math;
+  if (program.strictUnits) lessWatchCompilerUtils.config.strictUnits = program.strictUnits;
+  if (program.urlArgs) lessWatchCompilerUtils.config.urlArgs = program.urlArgs;
 
   /*
     3rd parameter is optional, but once you define it, then we will just compile 
