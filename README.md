@@ -97,6 +97,7 @@ less-watch-compiler
     "mainFile": "<main-file>",   
     "sourceMap": false,
     "plugins": "plugin1,plugin2",
+    "less-args": "option1=1,option2=2",
     "runOnce": false,
     "enableJs": true
 }
@@ -104,16 +105,17 @@ less-watch-compiler
 
 ## Options:
 
-    -h, --help                       output usage information
-    -V, --version                    output the version number
-    --source-map                     Generate source map for css files
-    --main-file <file>               Specify <file> as the file to always re-compile e.g. '--main-file style.less'
-    --plugins <plugin-a>,<plugin-b>  List of plugins separated by commas
-    --config <file>                  Custom configuration file path (default less-watch-compiler.config.json)
-    --run-once                       Run the compiler once without waiting for additional changes
-    --enable-js                      Enables inline JavaScript in less files
+    -h, --help                                                               output usage information
+    -V, --version                                                            output the version number
+    --main-file <file>                                                       Specify <file> as the file to always re-compile e.g. '--main-file style.less'.
+    --config <file>                                                          Custom configuration file path. (default: "less-watch-compiler.config.json")
+    --run-once                                                               Run the compiler once without waiting for additional changes.
+    --enable-js                                                              Less.js Option: To enable inline JavaScript in less files.
+    --source-map                                                             Less.js Option: To generate source map for css files.
+    --plugins <plugin-a>,<plugin-b>                                          Less.js Option: To specify plugins separated by commas.
+    --less-args <less-arg1>=<less-arg1-value>,<less-arg1>=<less-arg2-value>  Less.js Option: To specify any other less options e.g. '--less-args math=strict,strict-units=on,include-path=./dir1\;./dir2'.
 
-## Extras:
+## Please note:
 * By default, "minified" is turned on to always compress/minify output. You can set the minification to false by adding `"minified":false` in the config file.
 * By default, "sourceMap" is turned off. You can generating sourcemap to true by adding `"sourceMap":true` in the config file.
 * By default, this script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array in `config.json`.

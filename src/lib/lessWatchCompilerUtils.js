@@ -88,14 +88,20 @@ define(function (require) {
         initCallback);
     },
     // Here's where we run the less compiler
+    getLessArgs: function(args) {
+      var arr = args.split(',');
+      return " --" + arr.join(' --');
+    },
     compileCSS: function (file, test) {
+
       var outputFilePath = this.resolveOutputPath(file);
 
       var enableJsFlag = lessWatchCompilerUtilsModule.config.enableJs ? ' --js' : '';
       var minifiedFlag = lessWatchCompilerUtilsModule.config.minified ? ' -x' : '';
       var sourceMap = (lessWatchCompilerUtilsModule.config.sourceMap) ? ' --source-map' : '';
+      var lessArgs = (lessWatchCompilerUtilsModule.config.lessArgs)? this.getLessArgs(lessWatchCompilerUtilsModule.config.lessArgs): '';
       var plugins = (lessWatchCompilerUtilsModule.config.plugins) ? ' --' + lessWatchCompilerUtilsModule.config.plugins.split(',').join(' --') : '';
-      var command = 'lessc' + sourceMap + enableJsFlag + minifiedFlag + plugins + ' ' + JSON.stringify(file) + ' ' + outputFilePath;
+      var command = 'lessc' + lessArgs + sourceMap + enableJsFlag + minifiedFlag + plugins + ' ' + JSON.stringify(file) + ' ' + outputFilePath;
       // Run the command
       //  console.log(command)
       if (!test)

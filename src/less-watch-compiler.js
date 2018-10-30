@@ -27,12 +27,14 @@ var sys = require('util')
 program
   .version(packagejson.version)
   .usage('[options] <source_dir> <destination_dir> [main_file_name]')
-  .option('--source-map', "Generate source map for css files")
-  .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'")
-  .option('--plugins <plugin-a>,<plugin-b>', 'List of plugins separated by commas')
-  .option('--config <file>', 'Custom configuration file path (default less-watch-compiler.config.json)', 'less-watch-compiler.config.json')
-  .option('--run-once', 'Run the compiler once without waiting for additional changes')
-  .option('--enable-js', 'Enables inline JavaScript in less files')
+  .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'.")
+  .option('--config <file>', 'Custom configuration file path.', 'less-watch-compiler.config.json')
+  .option('--run-once', 'Run the compiler once without waiting for additional changes.')
+  //Less Options
+  .option('--enable-js', 'Less.js Option: To enable inline JavaScript in less files.')
+  .option('--source-map', "Less.js Option: To generate source map for css files.")
+  .option('--plugins <plugin-a>,<plugin-b>', 'Less.js Option: To specify plugins separated by commas.')
+  .option('--less-args <less-arg1>=<less-arg1-value>,<less-arg1>=<less-arg2-value>', 'Less.js Option: To specify any other less options e.g. \'--less-args math=strict,strict-units=on,include-path=.\/dir1\\;.\/dir2\'.')
   .parse(process.argv);
 
 // Check if configuration file exists
@@ -56,6 +58,7 @@ function init(){
   if (program.plugins) lessWatchCompilerUtils.config.plugins = program.plugins;
   if (program.runOnce) lessWatchCompilerUtils.config.runOnce = program.runOnce;
   if (program.enableJs) lessWatchCompilerUtils.config.enableJs = program.enableJs;
+  if (program.lessArgs) lessWatchCompilerUtils.config.lessArgs = program.lessArgs;
 
   /*
     3rd parameter is optional, but once you define it, then we will just compile 
