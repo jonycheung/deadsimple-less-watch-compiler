@@ -14,6 +14,11 @@ A clear and concise description of what the bug is.
 **To Reproduce**
 Steps to reproduce the behavior:
 1. My folder setup is ...
+  ─ tests
+      └── css
+      │    └─  styles.css
+      └───less
+              └─   styles.less
 2. The command I ran is `less-watch-compiler tests/less tests/css`
 3. Something went wrong... What is it?
 
