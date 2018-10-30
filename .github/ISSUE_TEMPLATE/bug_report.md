@@ -23,7 +23,7 @@ Steps to reproduce the behavior:
 3. Something went wrong... What is it?
 
 **Actual behavior**
-A clear and concise description of what you expected to happen.
+A clear and concise description of what actually happened.
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
