@@ -130,3 +130,48 @@ node less-watch-compiler.js [options]
 ```
 
 To run unit tests: `yarn test` or `npm test` (see tests/test.js).
+
+## Contributors
+
+<a href="https://opencollective.com/less-watch-compiler/backers/0/website"><img src="https://opencollective.com/less-watch-compiler/backers/0/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/1/website"><img src="https://opencollective.com/less-watch-compiler/backers/1/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/2/website"><img src="https://opencollective.com/less-watch-compiler/backers/2/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/3/website"><img src="https://opencollective.com/less-watch-compiler/backers/3/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/4/website"><img src="https://opencollective.com/less-watch-compiler/backers/4/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/5/website"><img src="https://opencollective.com/less-watch-compiler/backers/5/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/6/website"><img src="https://opencollective.com/less-watch-compiler/backers/6/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/7/website"><img src="https://opencollective.com/less-watch-compiler/backers/7/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/8/website"><img src="https://opencollective.com/less-watch-compiler/backers/8/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/9/website"><img src="https://opencollective.com/less-watch-compiler/backers/9/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/10/website"><img src="https://opencollective.com/less-watch-compiler/backers/10/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/11/website"><img src="https://opencollective.com/less-watch-compiler/backers/11/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/12/website"><img src="https://opencollective.com/less-watch-compiler/backers/12/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/13/website"><img src="https://opencollective.com/less-watch-compiler/backers/13/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/14/website"><img src="https://opencollective.com/less-watch-compiler/backers/14/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/15/website"><img src="https://opencollective.com/less-watch-compiler/backers/15/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/16/website"><img src="https://opencollective.com/less-watch-compiler/backers/16/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/17/website"><img src="https://opencollective.com/less-watch-compiler/backers/17/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/18/website"><img src="https://opencollective.com/less-watch-compiler/backers/18/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/19/website"><img src="https://opencollective.com/less-watch-compiler/backers/19/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/20/website"><img src="https://opencollective.com/less-watch-compiler/backers/20/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/21/website"><img src="https://opencollective.com/less-watch-compiler/backers/21/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/22/website"><img src="https://opencollective.com/less-watch-compiler/backers/22/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/23/website"><img src="https://opencollective.com/less-watch-compiler/backers/23/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/24/website"><img src="https://opencollective.com/less-watch-compiler/backers/24/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/25/website"><img src="https://opencollective.com/less-watch-compiler/backers/25/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/26/website"><img src="https://opencollective.com/less-watch-compiler/backers/26/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/27/website"><img src="https://opencollective.com/less-watch-compiler/backers/27/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/28/website"><img src="https://opencollective.com/less-watch-compiler/backers/28/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/backers/29/website"><img src="https://opencollective.com/less-watch-compiler/backers/29/avatar"></a>
+
+
+<a href="https://opencollective.com/less-watch-compiler/sponsors/0/website"><img src="https://opencollective.com/less-watch-compiler/sponsors/0/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/sponsors/1/website"><img src="https://opencollective.com/less-watch-compiler/sponsors/1/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/sponsors/2/website"><img src="https://opencollective.com/less-watch-compiler/sponsors/2/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/sponsors/3/website"><img src="https://opencollective.com/less-watch-compiler/sponsors/3/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/sponsors/4/website"><img src="https://opencollective.com/less-watch-compiler/sponsors/4/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/sponsors/5/website"><img src="https://opencollective.com/less-watch-compiler/sponsors/5/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/sponsors/6/website"><img src="https://opencollective.com/less-watch-compiler/sponsors/6/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/sponsors/7/website"><img src="https://opencollective.com/less-watch-compiler/sponsors/7/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/sponsors/8/website"><img src="https://opencollective.com/less-watch-compiler/sponsors/8/avatar"></a>
+<a href="https://opencollective.com/less-watch-compiler/sponsors/9/website"><img src="https://opencollective.com/less-watch-compiler/sponsors/9/avatar"></a>
