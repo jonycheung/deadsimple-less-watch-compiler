@@ -16,7 +16,8 @@
     "prepublishOnly": "yarn run build",
     "commit": "git-cz -n",
     "build": "babel src --out-dir dist",
-    "start": "yarn run build && node ./dist/less-watch-compiler.js"
+    "start": "yarn run build && node ./dist/less-watch-compiler.js",
+    "postinstall": "opencollective-postinstall"
   },
   "repository": {
     "url": "https://github.com/jonycheung/deadsimple-less-watch-compiler.git",
@@ -31,7 +32,9 @@
     "extend": ">= 2.0.0",
     "global": "^4.3.1",
     "less": "^3.8.1",
-    "shelljs": ">= 0.4.0"
+    "opencollective-postinstall": "^2.0.1",
+    "shelljs": ">= 0.4.0",
+    "opencollective": "^1.0.3"
   },
   "engine": "node 0.10.26",
   "devDependencies": {
@@ -65,5 +68,9 @@
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
     }
+  },
+  "collective": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/less-watch-compiler"
   }
 }
