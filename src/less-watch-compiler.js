@@ -22,7 +22,11 @@ var sys = require('util')
   , data
   , mainFilePath = undefined
   , program = require('commander')
-  , packagejson = require('../package.json');
+  , packagejson = require('../package.json')
+  , events = require('events');
+
+//bypass maxlistener errors because more files means more listeners #90
+events.EventEmitter.defaultMaxListeners = 0;
 
 program
   .version(packagejson.version)
