@@ -1,6 +1,6 @@
 {
   "name": "less-watch-compiler",
-  "version": "1.14.4",
+  "version": "1.14.5",
   "description": "A command that watches folders(and subfolders) for file changes and automatically compile the less css files into css. This is a file system watcher and compiler.",
   "main": "dist/less-watch-compiler.js",
   "directories": {
