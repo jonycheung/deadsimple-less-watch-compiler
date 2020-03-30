@@ -150,9 +150,12 @@ function init(){
         }
       }
     },
+    // init function
     function(f){
-      // console.log("mainFilePath :" +mainFilePath)
-      lessWatchCompilerUtils.compileCSS(mainFilePath || f);
+      if (!mainFilePath || mainFilePath === f) {
+        // compile each file when main file is missing or compile main file only once
+        lessWatchCompilerUtils.compileCSS(f);
+      }
     }
   );
 }
