@@ -149,19 +149,19 @@ define(function (require) {
 
       return JSON.stringify(shortPath);
     },
-    // This is the function we use to filter the files to watch.
+    // We build the function to filter the files to watch.
+    // Returning true marks a file to be ignored.
     filterFiles: function (f) {
       var filename = path.basename(f);
       var extension = path.extname(f),
-        allowedExtensions = lessWatchCompilerUtilsModule.config.allowedExtensions || defaultAllowedExtensions;
-      if (filename.substr(0, 1) == '_' ||
-        filename.substr(0, 1) == '.' ||
-        filename == '' ||
-        allowedExtensions.indexOf(extension) == -1
-      )
-        return true;
-      else {
-        return false;
+          allowedExtensions = lessWatchCompilerUtilsModule.config.allowedExtensions || defaultAllowedExtensions;
+      if (filename == '' || allowedExtensions.indexOf(extension) == -1) {
+          return true;
+      } else {
+          // If we're including hidden files then don't ignore this file
+          if (lessWatchCompilerUtilsModule.config.includeHidden) return false;
+          // Otherwise, do ignore this file if it's a hidden file
+          else return filename.substr(0, 1) == '_' || filename.substr(0, 1) == '.'
       }
     },
     getDateTime: function () {
