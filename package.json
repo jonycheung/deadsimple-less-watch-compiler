@@ -40,7 +40,7 @@
     "opencollective": "^1.0.3",
     "babel-cli": "6.26.0",
     "babel-preset-env": "1.7.0",
-    "cz-conventional-changelog": "2.1.0",
+    "cz-conventional-changelog": "3.3.0",
     "mocha": "6.2.0",
     "webpack": "4.39.3"
   },
