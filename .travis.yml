@@ -1,6 +1,6 @@
 language: node_js
 node_js:
-- '6'
+- '12'
 deploy:
   provider: npm
   email: jtc126@gmail.com
@@ -13,3 +13,5 @@ deploy:
 env:
   global:
     secure: s6j10HngFDCwENqfsK6AFv1QeL7H7qTQJhCLlQ0KlIjtCxNeRPRGKeLTGxjcSTMiD5YWhp6QBrrEFeH3upvqCQcWI/IQtOG0dfI04EW2aIB/xrw7MF9aTFUmIYraqqFnsehp+7odBP/z7q92oaHdirDtVKMLPl9X1B1rHgRmiQWCvJF9W47Gb62wD0VSwN07hshe9yO9kouV0fthOqU0y/XqTATkXWzEmqbTJs+H6KS6cXYYtd8KoDgHRJDy7ClIdD8jhiPuF339gaG7Yl3lxStIOVAYO+Kxu2+PEVS25UI/JiFvZXHy83FRjsEwJF7b3IN5U2mRe/1StHt5ug9VpgOR82df8whq9xzKmLL5jff2sJuZrrp8n+EB+Hgq/7fU2eXixo3ZFrIFp8jd4EABZdBTtZYrL4VP2ohD5WOWAikHKHFs1ZHJfzNoCeL6+3h7NfD6C1DW0E4J6vuIAflV6+vIc0bX8JI+dV6Vnx0lj7xZyRHlyueXgN3JkbCeNfGXs06BazdAsQSqWkZ0GVMm93xm36ae5aGpAZYZLN1o2wh78BJtNpT9IMU/yUOOv81kmoW2f+6fOtSj3IN8pbpUFDu8Jep5hDz0HD6OoGlihjhDLSdP6kvNzoHdDBs7qsfJoZzPVtd3qIeAWI3n1zQC+vhZpLTPyDjWbmlXtxU0TFY=
+install:
+  - yarn
