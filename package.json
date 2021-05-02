@@ -37,11 +37,11 @@
   },
   "engine": "node 0.10.26",
   "devDependencies": {
-    "opencollective": "^1.0.3",
+    "opencollective": "1.0.3",
     "babel-cli": "6.26.0",
     "babel-preset-env": "1.7.0",
     "cz-conventional-changelog": "3.3.0",
-    "mocha": "6.2.3",
+    "mocha": "8.3.2",
     "webpack": "4.39.3"
   },
   "preferGlobal": "true",
