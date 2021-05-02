@@ -44,7 +44,7 @@
     "mocha": "8.3.2",
     "webpack": "4.39.3"
   },
-  "preferGlobal": "true",
+  "preferGlobal": true,
   "keywords": [
     "less",
     "lessc",
