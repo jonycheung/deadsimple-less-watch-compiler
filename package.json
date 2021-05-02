@@ -42,7 +42,7 @@
     "babel-preset-env": "1.7.0",
     "cz-conventional-changelog": "3.3.0",
     "mocha": "8.3.2",
-    "webpack": "4.39.3"
+    "webpack": "5.36.2"
   },
   "preferGlobal": "true",
   "keywords": [
