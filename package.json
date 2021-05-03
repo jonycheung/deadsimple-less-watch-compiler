@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "amdefine": ">= 0.1.0",
-    "commander": "^3.0.0",
+    "commander": "^7.0.0",
     "extend": ">= 2.0.0",
     "global": "^4.3.1",
     "less": "^4.0.0",
@@ -44,7 +44,7 @@
     "mocha": "8.3.2",
     "webpack": "4.39.3"
   },
-  "preferGlobal": "true",
+  "preferGlobal": true,
   "keywords": [
     "less",
     "lessc",
