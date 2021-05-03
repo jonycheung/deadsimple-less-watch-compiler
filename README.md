@@ -97,7 +97,7 @@ less-watch-compiler
     "mainFile": "<main-file>",   
     "sourceMap": false,
     "plugins": "plugin1,plugin2",
-    "less-args": "option1=1,option2=2",
+    "lessArgs": "option1=1,option2=2",
     "runOnce": false,
     "enableJs": true
 }
