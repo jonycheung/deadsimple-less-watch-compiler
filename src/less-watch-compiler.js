@@ -34,6 +34,7 @@ program
   .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'.")
   .option('--config <file>', 'Custom configuration file path.', 'less-watch-compiler.config.json')
   .option('--run-once', 'Run the compiler once without waiting for additional changes.')
+  .option('--include-hidden', "Don't ignore files beginning with a '.' or a '_'")
   //Less Options
   .option('--enable-js', 'Less.js Option: To enable inline JavaScript in less files.')
   .option('--source-map', "Less.js Option: To generate source map for css files.")
@@ -65,6 +66,7 @@ function init(){
   if (program.sourceMap) lessWatchCompilerUtils.config.sourceMap = program.sourceMap;
   if (program.plugins) lessWatchCompilerUtils.config.plugins = program.plugins;
   if (program.runOnce) lessWatchCompilerUtils.config.runOnce = program.runOnce;
+  if (program.inludeHidden) lessWatchCompilerUtils.config.includeHidden = program.includeHidden;
   if (program.enableJs) lessWatchCompilerUtils.config.enableJs = program.enableJs;
   if (program.lessArgs) lessWatchCompilerUtils.config.lessArgs = program.lessArgs;
 
