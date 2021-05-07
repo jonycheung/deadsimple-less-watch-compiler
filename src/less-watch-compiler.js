@@ -42,10 +42,10 @@ program
   .parse(process.argv);
 
 // Check if configuration file exists
-if (program.config){
-  var configPath = path.isAbsolute(program.config) ? program.config : (cwd + path.sep + program.config);
-  fs.exists(configPath, function(exists) {
-    if (exists) {
+  var configPath = program.config ? (path.isAbsolute(program.config))? program.config : (cwd + path.sep + program.config): "less-watch-compiler.config.json";
+
+  fs.access(configPath, fs.constants.F_OK, (err) => {
+    if (!err) {
       data = fs.readFileSync(configPath);
       var customConfig = JSON.parse(data);
       console.log('Config file ' + configPath + ' is loaded.');
@@ -53,9 +53,7 @@ if (program.config){
     }
     init();
   });
-}else{
-  init();
-}
+
 
 function init(){
   if (program.args[0])   lessWatchCompilerUtils.config.watchFolder =  program.args[0];
