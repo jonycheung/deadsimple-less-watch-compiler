@@ -77,7 +77,7 @@ function init(){
   if (program.enableJs) lessWatchCompilerUtils.config.enableJs = program.enableJs;
   if (program.lessArgs) lessWatchCompilerUtils.config.lessArgs = program.lessArgs;
 
-  lessWatchCompilerUtils.config = { ...lessWatchCompilerUtils.config, ...program.opts() }
+  lessWatchCompilerUtils.config = Object.assign({}, lessWatchCompilerUtils.config, program.opts())
 
   /*
     3rd parameter is optional, but once you define it, then we will just compile 
