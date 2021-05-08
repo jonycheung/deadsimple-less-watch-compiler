@@ -160,10 +160,12 @@ describe('lessWatchCompilerUtils Module API', function () {
             });
             it('filterFiles() function should return "true" for hidden files' + JSON.stringify(lessWatchCompilerUtils.config), function () {
                 assert.equal(true, lessWatchCompilerUtils.filterFiles("_file.less"));
+                assert.equal(true, lessWatchCompilerUtils.filterFiles(".file.less"));
             });
             it('filterFiles() function should return "false" for hidden files with includeHidden flag' + JSON.stringify(lessWatchCompilerUtils.config), function () {
                 lessWatchCompilerUtils.config.includeHidden = true
                 assert.equal(false, lessWatchCompilerUtils.filterFiles("_file.less"));
+                assert.equal(false, lessWatchCompilerUtils.filterFiles(".file.less"));
                 lessWatchCompilerUtils.config = {}
             });
 
