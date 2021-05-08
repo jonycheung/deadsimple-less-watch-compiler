@@ -57,6 +57,15 @@ program
 
 
 function init(){
+  // TODO: Clean up the way we setup `lessWatchCompilerUtils.config` by using the
+  // commander dependency more closely with how it was intended (see
+  // https://github.com/tj/commander.js#readme and especially
+  // https://github.com/tj/commander.js#specify-the-argument-syntax).
+  //
+  // For example, first set
+  //   program.arguments("<source_dir> <destination_dir> [main_file_name]")
+  // above, and then get the source_dir and other arguments with program.source_dir()
+  // and so on here.
   if (program.args[0])   lessWatchCompilerUtils.config.watchFolder =  program.args[0];
   if (program.args[1])   lessWatchCompilerUtils.config.outputFolder =  program.args[1];
   if (program.args[2])   lessWatchCompilerUtils.config.mainFile =  program.args[2];
@@ -67,6 +76,8 @@ function init(){
   if (program.inludeHidden) lessWatchCompilerUtils.config.includeHidden = program.includeHidden;
   if (program.enableJs) lessWatchCompilerUtils.config.enableJs = program.enableJs;
   if (program.lessArgs) lessWatchCompilerUtils.config.lessArgs = program.lessArgs;
+
+  lessWatchCompilerUtils.config = { ...lessWatchCompilerUtils.config, ...program.opts() }
 
   /*
     3rd parameter is optional, but once you define it, then we will just compile 
