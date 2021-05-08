@@ -131,7 +131,12 @@ function init(){
     console.log('Watching directory for file changes.');
   lessWatchCompilerUtils.watchTree(
     lessWatchCompilerUtils.config.watchFolder,
-    {interval: 200, ignoreDotFiles: true, filter:lessWatchCompilerUtils.filterFiles},
+    {
+      interval: 200,
+      // If we've set --include-hidden, don't ignore dotfiles
+      ignoreDotFiles: !lessWatchCompilerUtils.config.includeHidden,
+      filter: lessWatchCompilerUtils.filterFiles
+    },
     function (f, curr, prev, fileimportlist) {
       if (typeof f == 'object' && prev === null && curr === null) {
         // Finished walking the tree
