@@ -37,7 +37,7 @@
   },
   "engine": "node 0.10.26",
   "devDependencies": {
-    "babel-cli": "6.26.0",
+    "babel-cli": "^6.18.0",
     "babel-preset-env": "1.7.0",
     "cz-conventional-changelog": "3.3.0",
     "mocha": "8.4.0",
