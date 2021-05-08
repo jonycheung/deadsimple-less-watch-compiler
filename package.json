@@ -1,6 +1,6 @@
 {
   "name": "less-watch-compiler",
-  "version": "1.15.0",
+  "version": "1.15.1",
   "description": "A command that watches folders(and subfolders) for file changes and automatically compile the less css files into css. This is a file system watcher and compiler.",
   "main": "dist/less-watch-compiler.js",
   "directories": {
@@ -37,10 +37,10 @@
   },
   "engine": "node 0.10.26",
   "devDependencies": {
-    "babel-cli": "6.26.0",
+    "babel-cli": "^6.18.0",
     "babel-preset-env": "1.7.0",
     "cz-conventional-changelog": "3.3.0",
-    "mocha": "8.3.2",
+    "mocha": "8.4.0",
     "opencollective": "1.0.3"
   },
   "preferGlobal": true,
