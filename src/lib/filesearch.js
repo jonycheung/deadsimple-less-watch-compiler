@@ -20,6 +20,9 @@ define(function (require){
                 }
                 return files;
             }
+        },
+        isHiddenFile: function (filename) {
+            return filename.substr(0, 1) === '_' || filename.substr(0, 1) === '.';
         }
     }
     return filesearch;

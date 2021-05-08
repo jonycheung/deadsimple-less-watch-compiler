@@ -161,7 +161,7 @@ define(function (require) {
           // If we're including hidden files then don't ignore this file
           if (lessWatchCompilerUtilsModule.config.includeHidden) return false;
           // Otherwise, do ignore this file if it's a hidden file
-          else return filename.substr(0, 1) == '_' || filename.substr(0, 1) == '.'
+          else return fileSearch.isHiddenFile(filename)
       }
     },
     getDateTime: function () {

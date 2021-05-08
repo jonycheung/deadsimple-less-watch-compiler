@@ -29,6 +29,14 @@ describe('filesearch Module', function () {
                 done();
             });
         })
-
+        describe('isHiddenFile()', function () {
+            it('should return `true` on hidden files', function () {
+                assert.equal(filesearch.isHiddenFile(".hidden.less"), true);
+                assert.equal(filesearch.isHiddenFile("_hidden.less"), true);
+            })
+            it('should return `false` on non-hidden files', function () {
+                assert.equal(filesearch.isHiddenFile("non-hidden.less"), false);
+            })
+        });
     })
 })
