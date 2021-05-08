@@ -96,6 +96,10 @@ define(function (require) {
 
       var outputFilePath = this.resolveOutputPath(file);
 
+      // As a rule, we don't compile hidden files for now. If we encounter one,
+      // just return.
+      if (fileSearch.isHiddenFile(outputFilePath)) return
+
       var enableJsFlag = lessWatchCompilerUtilsModule.config.enableJs ? ' --js' : '';
       var minifiedFlag = lessWatchCompilerUtilsModule.config.minified ? ' -x' : '';
       var sourceMap = (lessWatchCompilerUtilsModule.config.sourceMap) ? ' --source-map' : '';
