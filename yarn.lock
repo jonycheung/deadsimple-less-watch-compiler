@@ -195,7 +195,7 @@
   "resolved" "https://registry.npmjs.org/atob/-/atob-2.1.2.tgz"
   "version" "2.1.2"
 
-"babel-cli@^6.18.0":
+"babel-cli@6.18.0":
   "integrity" "sha1-khF/NBrdnerZD2+n0Kl8DMCOwYY="
   "resolved" "https://registry.npmjs.org/babel-cli/-/babel-cli-6.18.0.tgz"
   "version" "6.18.0"
