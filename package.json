@@ -40,8 +40,7 @@
     "babel-cli": "6.26.0",
     "babel-preset-env": "1.7.0",
     "cz-conventional-changelog": "3.3.0",
-    "mocha": "8.4.0",
-    "opencollective": "1.0.3"
+    "mocha": "8.4.0"
   },
   "preferGlobal": true,
   "keywords": [
