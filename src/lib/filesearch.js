@@ -5,6 +5,8 @@ if (typeof define !== 'function') {
 
 define(function (require){
     const fs = require('fs');
+    const path = require('path')
+
     const filesearch = {
         findLessImportsInFile: function(f){
             if (fs.statSync(f) && fs.statSync(f).isFile() === false) 
@@ -22,6 +24,7 @@ define(function (require){
             }
         },
         isHiddenFile: function (filename) {
+            filename = path.basename(filename)
             return filename.substr(0, 1) === '_' || filename.substr(0, 1) === '.';
         }
     }
