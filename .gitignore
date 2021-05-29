@@ -4,6 +4,6 @@ tests/css
 .idea/
 node_modules
 .vscode/
-less-watch-compiler.config.json
+./less-watch-compiler.config.json
 build/
 dist/
