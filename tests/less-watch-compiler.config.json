@@ -1,0 +1,10 @@
+{
+    "allowedExtensions":[".less"],
+    "enableJs": false,
+    "runOnce": true,
+    "minified": false,
+    "sourceMap": false,
+    "plugins": "",
+    "watchFolder": "tests/less",
+    "outputFolder": "tests/css"
+}

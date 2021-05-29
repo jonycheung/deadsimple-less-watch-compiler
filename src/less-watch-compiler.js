@@ -21,14 +21,14 @@ var sys = require('util')
   , cwd = sh.pwd()
   , data
   , mainFilePath = undefined
-  , program = require('commander')
+  , cmdr = require('commander')
   , packagejson = require('../package.json')
   , events = require('events');
 
 //bypass maxlistener errors because more files means more listeners #90
 events.EventEmitter.defaultMaxListeners = 0;
 
-program
+cmdr
   .version(packagejson.version)
   .usage('[options] <source_dir> <destination_dir> [main_file_name]')
   .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'.")
@@ -41,7 +41,9 @@ program
   .option('--less-args <less-arg1>=<less-arg1-value>,<less-arg1>=<less-arg2-value>', 'Less.js Option: To specify any other less options e.g. \'--less-args math=strict,strict-units=on,include-path=.\/dir1\\;.\/dir2\'.')
   .parse(process.argv);
 
-// Check if configuration file exists
+const program = cmdr.opts();
+
+  // Check if configuration file exists
   var configPath = program.config ? (path.isAbsolute(program.config))? program.config : (cwd + path.sep + program.config): "less-watch-compiler.config.json";
 
   fs.access(configPath, fs.constants.F_OK, (err) => {
@@ -56,9 +58,9 @@ program
 
 
 function init(){
-  if (program.args[0])   lessWatchCompilerUtils.config.watchFolder =  program.args[0];
-  if (program.args[1])   lessWatchCompilerUtils.config.outputFolder =  program.args[1];
-  if (program.args[2])   lessWatchCompilerUtils.config.mainFile =  program.args[2];
+  if (cmdr.args[0])   lessWatchCompilerUtils.config.watchFolder =  cmdr.args[0];
+  if (cmdr.args[1])   lessWatchCompilerUtils.config.outputFolder =  cmdr.args[1];
+  if (cmdr.args[2])   lessWatchCompilerUtils.config.mainFile =  cmdr.args[2];
   if (program.mainFile)   lessWatchCompilerUtils.config.mainFile =  program.mainFile;
   if (program.sourceMap) lessWatchCompilerUtils.config.sourceMap = program.sourceMap;
   if (program.plugins) lessWatchCompilerUtils.config.plugins = program.plugins;
