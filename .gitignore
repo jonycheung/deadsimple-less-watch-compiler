@@ -4,7 +4,7 @@ tests/css
 .idea/
 node_modules
 .vscode/
-less-watch-compiler.config.json
+./less-watch-compiler.config.json
 build/
 dist/
 tests/examples/with-hidden-variables-file/css/main.css
