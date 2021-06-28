@@ -95,6 +95,7 @@ less-watch-compiler
     "watchFolder": "<input_folder>",   
     "outputFolder": "<output_folder>",
     "mainFile": "<main-file>",   
+    "includeHidden": false,
     "sourceMap": false,
     "plugins": "plugin1,plugin2",
     "lessArgs": "option1=1,option2=2",
@@ -110,6 +111,7 @@ less-watch-compiler
     --main-file <file>                                                       Specify <file> as the file to always re-compile e.g. '--main-file style.less'.
     --config <file>                                                          Custom configuration file path. (default: "less-watch-compiler.config.json")
     --run-once                                                               Run the compiler once without waiting for additional changes.
+    --include-hidden                                                         Don't ignore files beginning with a '.' or a '_'
     --enable-js                                                              Less.js Option: To enable inline JavaScript in less files.
     --source-map                                                             Less.js Option: To generate source map for css files.
     --plugins <plugin-a>,<plugin-b>                                          Less.js Option: To specify plugins separated by commas.
@@ -119,7 +121,7 @@ less-watch-compiler
 * By default, "minified" is turned on to always compress/minify output. You can set the minification to false by adding `"minified":false` in the config file.
 * By default, "sourceMap" is turned off. You can generating sourcemap to true by adding `"sourceMap":true` in the config file.
 * By default, this script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array in `config.json`.
-* Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed in the `filterFiles()` function.
+* Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed by adding `"includeHidden:true` in the config file.
 * When `--run-once` used, compilation will fail on first error
 
 ### Using the source files

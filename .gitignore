@@ -7,3 +7,4 @@ node_modules
 ./less-watch-compiler.config.json
 build/
 dist/
+tests/examples/with-hidden-variables-file/css/main.css
