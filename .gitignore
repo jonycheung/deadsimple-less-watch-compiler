@@ -1,10 +1,10 @@
 .DS_Store
 *.log
 tests/css
+tests/examples/*/css/*
 .idea/
 node_modules
 .vscode/
 ./less-watch-compiler.config.json
 build/
 dist/
-tests/examples/with-hidden-variables-file/css/main.css
