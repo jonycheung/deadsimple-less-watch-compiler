@@ -34,6 +34,7 @@ cmdr
   .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'.")
   .option('--config <file>', 'Custom configuration file path.', 'less-watch-compiler.config.json')
   .option('--run-once', 'Run the compiler once without waiting for additional changes.')
+  .option('--include-hidden', "Don't ignore files beginning with a '.' or a '_'")
   //Less Options
   .option('--enable-js', 'Less.js Option: To enable inline JavaScript in less files.')
   .option('--source-map', "Less.js Option: To generate source map for css files.")
@@ -65,8 +66,11 @@ function init(){
   if (program.sourceMap) lessWatchCompilerUtils.config.sourceMap = program.sourceMap;
   if (program.plugins) lessWatchCompilerUtils.config.plugins = program.plugins;
   if (program.runOnce) lessWatchCompilerUtils.config.runOnce = program.runOnce;
+  if (program.inludeHidden) lessWatchCompilerUtils.config.includeHidden = program.includeHidden;
   if (program.enableJs) lessWatchCompilerUtils.config.enableJs = program.enableJs;
   if (program.lessArgs) lessWatchCompilerUtils.config.lessArgs = program.lessArgs;
+
+  lessWatchCompilerUtils.config = Object.assign({}, lessWatchCompilerUtils.config, cmdr.opts())
 
   /*
     3rd parameter is optional, but once you define it, then we will just compile 
@@ -120,7 +124,12 @@ function init(){
     console.log('Watching directory for file changes.');
   lessWatchCompilerUtils.watchTree(
     lessWatchCompilerUtils.config.watchFolder,
-    {interval: 200, ignoreDotFiles: true, filter:lessWatchCompilerUtils.filterFiles},
+    {
+      interval: 200,
+      // If we've set --include-hidden, don't ignore dotfiles
+      ignoreDotFiles: !lessWatchCompilerUtils.config.includeHidden,
+      filter: lessWatchCompilerUtils.filterFiles
+    },
     function (f, curr, prev, fileimportlist) {
       if (typeof f == 'object' && prev === null && curr === null) {
         // Finished walking the tree

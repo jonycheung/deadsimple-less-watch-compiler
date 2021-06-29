@@ -16,7 +16,7 @@ describe('filesearch Module', function () {
 
             it('should search through a file and find LESS @import statements ', function (done) {
                 var file = "./tests/less/test.less";
-                var result = ['lvl1.less', 'lvl2/lvl2.less', 'lvl2/lvl3/lvl3.less'],
+                var result = ['lvl1.less', 'lvl2/lvl2.less', 'lvl2/lvl3/lvl3.less', 'hidden/_hidden.less', 'hidden/.hidden2.less'],
                     filesearchresult = filesearch.findLessImportsInFile(file);
                 assert.equal(result.toString(), filesearchresult.toString());
                 done();
@@ -29,6 +29,14 @@ describe('filesearch Module', function () {
                 done();
             });
         })
-
+        describe('isHiddenFile()', function () {
+            it('should return `true` on hidden files', function () {
+                assert.equal(filesearch.isHiddenFile(".hidden.less"), true);
+                assert.equal(filesearch.isHiddenFile("_hidden.less"), true);
+            })
+            it('should return `false` on non-hidden files', function () {
+                assert.equal(filesearch.isHiddenFile("non-hidden.less"), false);
+            })
+        });
     })
 })
