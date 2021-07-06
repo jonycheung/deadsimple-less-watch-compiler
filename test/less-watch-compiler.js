@@ -13,7 +13,7 @@ describe("The CLI should", function () {
       it("exit after once", () => {
         let runCommand = async () => {
           let result = await cli(
-            ["--run-once", "tests/less", "tests/css"],
+            ["--run-once", "test/less", "test/css"],
             "."
           );
           return result;
@@ -25,11 +25,11 @@ describe("The CLI should", function () {
     });
 
     describe("--config parameter", function () {
-      const cssDir = cwd + "/tests/examples/with-config/css";
+      const cssDir = cwd + "/test/examples/with-config/css";
       it("should load a config json", () => {
         let runCommand = async () => {
           let result = await cli(
-            ["--config", "tests/less-watch-compiler.config.json"],
+            ["--config", "test/less-watch-compiler.config.json"],
             "."
           );
           return result;
@@ -51,8 +51,8 @@ describe("The CLI should", function () {
     });
 
     describe("--include-hidden parameter", function () {
-      const lessDir = cwd + "/tests/examples/with-hidden-variables-file/less";
-      const cssDir = cwd + "/tests/examples/with-hidden-variables-file/css";
+      const lessDir = cwd + "/test/examples/with-hidden-variables-file/less";
+      const cssDir = cwd + "/test/examples/with-hidden-variables-file/css";
       it("should compile hidden files when parameter is specified", () => {
         let runCommand = async () => {
           let result = await cli(["--include-hidden"], lessDir, cssDir);

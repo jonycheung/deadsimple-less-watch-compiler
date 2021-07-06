@@ -10,9 +10,9 @@
     "dist"
   ],
   "scripts": {
-    "test": "yarn run build && yarn run clean && tests/test.sh",
+    "test": "yarn run build && yarn run clean && npx mocha --exit",
     "postversion": "git push && git push --tags",
-    "clean": "rm -R ./tests/css || true && mkdir ./tests/css",
+    "clean": "rm -R ./test/css || true && mkdir ./test/css",
     "prepublishOnly": "yarn run build",
     "commit": "git-cz -n",
     "build": "babel src --out-dir dist",

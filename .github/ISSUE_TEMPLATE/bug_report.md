@@ -19,7 +19,7 @@ Steps to reproduce the behavior:
       │    └─  styles.css
       └───less
               └─   styles.less
-2. The command I ran is `less-watch-compiler tests/less tests/css`
+2. The command I ran is `less-watch-compiler test/less test/css`
 3. Something went wrong... What is it?
 
 **Actual behavior**

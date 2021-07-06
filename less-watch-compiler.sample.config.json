@@ -5,6 +5,6 @@
     "includeHidden": true,
     "sourceMap": true,
     "plugins": "plugin1,plugin2",
-    "watchFolder": "tests/less",
-    "outputFolder": "tests/css"
+    "watchFolder": "test/less",
+    "outputFolder": "test/css"
 }

@@ -5,6 +5,6 @@
     "minified": false,
     "sourceMap": false,
     "plugins": "",
-    "watchFolder": "tests/examples/with-config/css",
-    "outputFolder": "tests/examples/with-config/css"
+    "watchFolder": "test/examples/with-config/css",
+    "outputFolder": "test/examples/with-config/css"
 }

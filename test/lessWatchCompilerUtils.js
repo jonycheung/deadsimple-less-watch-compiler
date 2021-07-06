@@ -2,8 +2,8 @@ var assert = require("assert"),
     lessWatchCompilerUtils = require('../dist/lib/lessWatchCompilerUtils.js'),
     sh = require('shelljs'),
     cwd = sh.pwd().toString(),
-    testroot = cwd+'/tests/less/',
-    testRelative = './tests/less';
+    testroot = cwd+'/test/less/',
+    testRelative = './test/less';
 
 describe('lessWatchCompilerUtils Module API', function () {
     describe('Should have the following API\'s', function () {
