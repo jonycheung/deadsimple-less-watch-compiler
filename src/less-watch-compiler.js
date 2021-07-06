@@ -21,15 +21,15 @@ var sys = require('util')
   , cwd = sh.pwd()
   , data
   , mainFilePath = undefined
-  , cmdr = require('commander')
+  , program = require('commander')
   , packagejson = require('../package.json')
   , events = require('events');
 
 //bypass maxlistener errors because more files means more listeners #90
 events.EventEmitter.defaultMaxListeners = 0;
 
-cmdr
-  .version(packagejson.version)
+program
+  .version(packagejson.version, '-v, -V, --version', 'Output the current version')
   .usage('[options] <source_dir> <destination_dir> [main_file_name]')
   .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'.")
   .option('--config <file>', 'Custom configuration file path.', 'less-watch-compiler.config.json')
@@ -40,12 +40,12 @@ cmdr
   .option('--source-map', "Less.js Option: To generate source map for css files.")
   .option('--plugins <plugin-a>,<plugin-b>', 'Less.js Option: To specify plugins separated by commas.')
   .option('--less-args <less-arg1>=<less-arg1-value>,<less-arg1>=<less-arg2-value>', 'Less.js Option: To specify any other less options e.g. \'--less-args math=strict,strict-units=on,include-path=.\/dir1\\;.\/dir2\'.')
-  .parse(process.argv);
+  .parse();
 
-const program = cmdr.opts();
+const programOption = program.opts();
 
   // Check if configuration file exists
-  var configPath = program.config ? (path.isAbsolute(program.config))? program.config : (cwd + path.sep + program.config): "less-watch-compiler.config.json";
+  var configPath = programOption.config ? (path.isAbsolute(programOption.config))? programOption.config : (cwd + path.sep + programOption.config): "less-watch-compiler.config.json";
 
   fs.access(configPath, fs.constants.F_OK, (err) => {
     if (!err) {
@@ -59,18 +59,18 @@ const program = cmdr.opts();
 
 
 function init(){
-  if (cmdr.args[0])   lessWatchCompilerUtils.config.watchFolder =  cmdr.args[0];
-  if (cmdr.args[1])   lessWatchCompilerUtils.config.outputFolder =  cmdr.args[1];
-  if (cmdr.args[2])   lessWatchCompilerUtils.config.mainFile =  cmdr.args[2];
-  if (program.mainFile)   lessWatchCompilerUtils.config.mainFile =  program.mainFile;
-  if (program.sourceMap) lessWatchCompilerUtils.config.sourceMap = program.sourceMap;
-  if (program.plugins) lessWatchCompilerUtils.config.plugins = program.plugins;
-  if (program.runOnce) lessWatchCompilerUtils.config.runOnce = program.runOnce;
-  if (program.inludeHidden) lessWatchCompilerUtils.config.includeHidden = program.includeHidden;
-  if (program.enableJs) lessWatchCompilerUtils.config.enableJs = program.enableJs;
-  if (program.lessArgs) lessWatchCompilerUtils.config.lessArgs = program.lessArgs;
+  if (program.args[0])   lessWatchCompilerUtils.config.watchFolder =  program.args[0];
+  if (program.args[1])   lessWatchCompilerUtils.config.outputFolder =  program.args[1];
+  if (program.args[2])   lessWatchCompilerUtils.config.mainFile =  program.args[2];
+  if (programOption.mainFile)   lessWatchCompilerUtils.config.mainFile =  programOption.mainFile;
+  if (programOption.sourceMap) lessWatchCompilerUtils.config.sourceMap = programOption.sourceMap;
+  if (programOption.plugins) lessWatchCompilerUtils.config.plugins = programOption.plugins;
+  if (programOption.runOnce) lessWatchCompilerUtils.config.runOnce = programOption.runOnce;
+  if (programOption.inludeHidden) lessWatchCompilerUtils.config.includeHidden = programOption.includeHidden;
+  if (programOption.enableJs) lessWatchCompilerUtils.config.enableJs = programOption.enableJs;
+  if (programOption.lessArgs) lessWatchCompilerUtils.config.lessArgs = programOption.lessArgs;
 
-  lessWatchCompilerUtils.config = Object.assign({}, lessWatchCompilerUtils.config, cmdr.opts())
+  lessWatchCompilerUtils.config = Object.assign({}, lessWatchCompilerUtils.config, program.opts())
 
   /*
     3rd parameter is optional, but once you define it, then we will just compile 
