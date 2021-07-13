@@ -11,32 +11,30 @@ describe('lessWatchCompilerUtils Module API', function () {
             it('walk() function should be there', function () {
                 assert.equal("function", typeof (lessWatchCompilerUtils.walk));
             });
-            it('walk() function should return an object of files ', function (done) {
-                var timeout;
-                lessWatchCompilerUtils.walk(testroot, {}, function (err, files) {
-                    for (var i in files) {
-                        assert.equal("object", typeof (files[i]));
-                    }
+            it('walk() function should return an object of files ', async (done) => {
+                await runCommand(done);
+                function runCommand (done) {
+                    lessWatchCompilerUtils.walk(testroot, {}, (err, files) => {
+                        for (var i in files) {
+                            assert.equal("object", typeof (files[i]));
+                        }
                 }, function () {});
-                if (timeout) clearTimeout(timeout);
-                timeout = setTimeout(function () {
-                    //`fs` is notorious for multiple callbacks so we have to do this.
-                    done();
-                }, 30);
+                done();
+             }
+                
             });
         })
         describe('watchTree()', function () {
             it('watchTree() function should be there', function () {
-                assert.equal("function", typeof (lessWatchCompilerUtils.watchTree));
+                assert.strictEqual("function", typeof (lessWatchCompilerUtils.watchTree));
             });
-            it('watchTree() function should complete and call a callback ', function (done) {
-                var timeout;
-                lessWatchCompilerUtils.watchTree(testroot, {}, function () {}, function () {
-                    if (timeout) clearTimeout(timeout);
-                    timeout = setTimeout(function () {
-                        done();
-                    }, 20);
-                });
+            it('watchTree() function should complete and call a callback ', async (done) => {
+                await runCommand(done);
+                function runCommand (done) {
+                    lessWatchCompilerUtils.watchTree(testroot, {}, function () {}, function() { });
+                    assert.ok("completed")
+                    done()
+                }
             });
         })
         describe('compileCSS()', function () {

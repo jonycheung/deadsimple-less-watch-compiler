@@ -4,8 +4,8 @@ const assert = require("assert"),
   sh = require("shelljs"),
   cwd = sh.pwd().toString(),
   path = require("path"),
-  fs = require("fs");
-exec = require("child_process").exec;
+  fs = require("fs"),
+  exec = require("child_process").exec;
 
 describe("The CLI should", function () {
   describe("run correctly with these options:", function () {
@@ -98,7 +98,7 @@ describe("The CLI should", function () {
   });
 });
 
-function cli(args) {
+function cli(...args) {
   return new Promise((resolve) => {
     const command = `node ${path.resolve(
       "src/less-watch-compiler.js"

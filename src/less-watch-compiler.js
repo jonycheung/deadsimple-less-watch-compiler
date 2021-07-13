@@ -49,8 +49,8 @@ const programOption = program.opts();
 
   fs.access(configPath, fs.constants.F_OK, (err) => {
     if (!err) {
-      data = fs.readFileSync(configPath);
-      var customConfig = JSON.parse(data);
+      let data = fs.readFileSync(configPath);
+      var customConfig = JSON.parse(data.toString());
       console.log('Config file ' + configPath + ' is loaded.');
       extend(true, lessWatchCompilerUtils.config, customConfig);
     }
