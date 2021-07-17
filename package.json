@@ -38,6 +38,7 @@
   "engine": "node 0.10.26",
   "devDependencies": {
     "@types/commander": "2.12.2",
+    "@types/node": "^16.3.2",
     "babel-cli": "6.26.0",
     "babel-preset-env": "1.7.0",
     "cz-conventional-changelog": "3.3.0",
