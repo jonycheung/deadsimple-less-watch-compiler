@@ -2,7 +2,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-class FileSearch {
+export default class FileSearch {
 
         constructor(){
 
@@ -27,5 +27,3 @@ class FileSearch {
             return filename.substr(0, 1) === "_" || filename.substr(0, 1) === ".";
         }
 };
-
-export default FileSearch;

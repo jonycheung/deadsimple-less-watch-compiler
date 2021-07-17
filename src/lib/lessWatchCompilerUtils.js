@@ -15,9 +15,11 @@ define(function (require) {
     exec = require('child_process').exec,
     cwd = sh.pwd().toString(),
     defaultAllowedExtensions = [".less"],
-    fileSearch = require('./filesearch'),
+    FileSearch = require('./fileSearch.js'),
     filelist = [],
     fileimportlist = {};
+
+  var fileSearch = new FileSearch.default();
 
   var lessWatchCompilerUtilsModule = {
     config: {},

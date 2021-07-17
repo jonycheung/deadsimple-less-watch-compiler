@@ -1,8 +1,8 @@
 var assert = require("assert"),
-    filesearch = require('../dist/lib/filesearch.js'),
+    FileSearch = require('../dist/lib/fileSearch.js'),
     sh = require('shelljs'),
-    cwd = sh.pwd().toString();
-
+    cwd = sh.pwd().toString(),
+    filesearch = new FileSearch.default();
 
 // TODO - Add meaningful tests duh!
 

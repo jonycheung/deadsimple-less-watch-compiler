@@ -15,7 +15,7 @@
     "clean": "rm -R ./test/css || true && mkdir ./test/css",
     "prepublishOnly": "yarn run build",
     "commit": "git-cz -n",
-    "build": "babel src --out-dir dist",
+    "build": "./node_modules/typescript/bin/tsc",
     "start": "yarn run build && node ./dist/less-watch-compiler.js",
     "postinstall": "opencollective-postinstall"
   },
@@ -42,7 +42,8 @@
     "babel-cli": "6.26.0",
     "babel-preset-env": "1.7.0",
     "cz-conventional-changelog": "3.3.0",
-    "mocha": "9.0.2"
+    "mocha": "9.0.2",
+    "typescript": "^4.3.5"
   },
   "preferGlobal": true,
   "keywords": [
