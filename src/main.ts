@@ -12,16 +12,13 @@
                     and compile the less css files into ./css when they are added/updated
 */
 import * as fs from "fs";
-import * as sys from "util";
 import * as path from "path";
 import * as sh from "shelljs";
-// import * as extend from "extend";
-import * as child_process from "child_process";
 import { Command } from 'commander';
 import * as events from "events";
+import {compileCSS} from "./lib/Utils";
 
-const exec = child_process.exec
-      , cwd = sh.pwd()
+const   cwd = sh.pwd()
       , lessWatchCompilerUtils = require('./lib/lessWatchCompilerUtils.cjs.js')
       , packagejson =require("../package.json")
       , extend = require("extend")
@@ -64,12 +61,12 @@ program
         lessWatchCompilerUtils.config, 
         customConfig);
     }
-    
+
     init();
   });
 
 
-function init():void{
+function init():void {
   if (program.args[0])   lessWatchCompilerUtils.config.watchFolder =  program.args[0];
   if (program.args[1])   lessWatchCompilerUtils.config.outputFolder =  program.args[1];
   if (program.args[2])   lessWatchCompilerUtils.config.mainFile =  program.args[2];
@@ -121,11 +118,9 @@ function init():void{
 
   if (lessWatchCompilerUtils.config.mainFile) {
     mainFilePath = path.resolve(lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile);
-    fs.exists(mainFilePath, function(exists) {
-      if (!exists){
-        console.log("Main file " + mainFilePath+" does not exist.");
-        process.exit();
-      }
+    fs.access(mainFilePath, fs.constants.F_OK, (err)=> {
+        console.log("Main file " + mainFilePath+` ${err ? 'does not exist' : 'exists'}`);
+        if (err) process.exit();
     });
   }
 
@@ -162,15 +157,17 @@ function init():void{
             // console.log('compare ' + f + ' with import #' + k + ' in ' + i + ' value ' + normalized);
             if (f == normalizedPath && !mainFilePath) {
               // Compile changed file only if a main file is there.
-              const compileResult = lessWatchCompilerUtils.compileCSS(i);
-              console.log('The file: ' + i + ' was changed because '+JSON.stringify(f)+' is specified as an import.  Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
+              const compileResult = compileCSS(i);
+              const path = (compileResult)? compileResult.outputFilePath : "";
+              console.log('The file: ' + i + ' was changed because '+JSON.stringify(f)+' is specified as an import.  Recompiling '+path+' at ' + lessWatchCompilerUtils.getDateTime());
               importedFile = true;
             }
           }
         }
         if (!importedFile){
-          const compileResult = lessWatchCompilerUtils.compileCSS(mainFilePath || f);
-          console.log('The file: ' + JSON.stringify(f) + ' was changed. Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
+          const compileResult = compileCSS(mainFilePath || f);
+          const path = (compileResult)? compileResult.outputFilePath : "";
+          console.log('The file: ' + JSON.stringify(f) + ' was changed. Recompiling '+path +' at ' + lessWatchCompilerUtils.getDateTime());
         }
       }
     },
