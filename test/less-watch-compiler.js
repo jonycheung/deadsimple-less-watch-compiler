@@ -12,10 +12,7 @@ describe("The CLI should", function () {
     describe("--run-once parameter", function () {
       it("exit after once", () => {
         let runCommand = async () => {
-          let result = await cli(
-            ["--run-once", "test/less", "test/css"],
-            "."
-          );
+          let result = await cli(["--run-once", "test/less", "test/css"], ".");
           return result;
         };
         runCommand().then((result) => {
