@@ -6,7 +6,8 @@ var assert = require("assert"),
 
 const compileCSS = Utils.compileCSS,
   resolveOutputPath = Utils.resolveOutputPath,
-  getDateTime = Utils.getDateTime;
+  getDateTime = Utils.getDateTime,
+  filterFiles = Utils.filterFiles;
 
 describe("getDateTime()", function () {
   console.log(getDateTime());
@@ -154,4 +155,52 @@ describe("resolveOutputPath()", function () {
       '"testFolder/nested/afile.min.css"'
     );
   });
+});
+describe("filterFiles()", function () {
+  // reset config
+  lessWatchCompilerUtils.config = {};
+
+  it(
+    "filterFiles() function should be there" +
+      JSON.stringify(lessWatchCompilerUtils.config),
+    function () {
+      assert.strictEqual("function", typeof filterFiles);
+    }
+  );
+  it(
+    'filterFiles() function should return "false" for allowed files:' +
+      JSON.stringify(lessWatchCompilerUtils.config),
+    function () {
+      assert.strictEqual(false, filterFiles("file.less"));
+
+      lessWatchCompilerUtils.config.allowedExtensions = [".css"];
+      assert.strictEqual(false, filterFiles("file.css"));
+      lessWatchCompilerUtils.config = {};
+    }
+  );
+  it(
+    'filterFiles() function should return "true" for non-allowed files' +
+      JSON.stringify(lessWatchCompilerUtils.config),
+    function () {
+      assert.strictEqual(true, filterFiles("file.js"));
+    }
+  );
+  it(
+    'filterFiles() function should return "true" for hidden files' +
+      JSON.stringify(lessWatchCompilerUtils.config),
+    function () {
+      assert.strictEqual(true, filterFiles("_file.less"));
+      assert.strictEqual(true, filterFiles(".file.less"));
+    }
+  );
+  it(
+    'filterFiles() function should return "false" for hidden files with includeHidden flag' +
+      JSON.stringify(lessWatchCompilerUtils.config),
+    function () {
+      lessWatchCompilerUtils.config.includeHidden = true;
+      assert.strictEqual(false, filterFiles("_file.less"));
+      assert.strictEqual(false, filterFiles(".file.less"));
+      lessWatchCompilerUtils.config = {};
+    }
+  );
 });

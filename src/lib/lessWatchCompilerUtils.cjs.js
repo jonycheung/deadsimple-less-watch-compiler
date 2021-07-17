@@ -14,7 +14,6 @@ define(function (require) {
     extend = require("extend"),
     exec = require("child_process").exec,
     cwd = sh.pwd().toString(),
-    defaultAllowedExtensions = [".less"],
     FileSearch = require("./fileSearch.js"),
     filelist = [],
     fileimportlist = {};
@@ -116,21 +115,6 @@ define(function (require) {
     },
     // We build the function to filter the files to watch.
     // Returning true marks a file to be ignored.
-    filterFiles: function (f) {
-      var filename = path.basename(f);
-      var extension = path.extname(f),
-        allowedExtensions =
-          lessWatchCompilerUtilsModule.config.allowedExtensions ||
-          defaultAllowedExtensions;
-      if (filename == "" || allowedExtensions.indexOf(extension) == -1) {
-        return true;
-      } else {
-        // If we're including hidden files then don't ignore this file
-        if (lessWatchCompilerUtilsModule.config.includeHidden) return false;
-        // Otherwise, do ignore this file if it's a hidden file
-        else return fileSearch.isHiddenFile(filename);
-      }
-    },
     setupWatcher: function (f, files, options, watchCallback) {
       if (lessWatchCompilerUtilsModule.config.runOnce === true) return;
       fs.watchFile(f, options, function (c, p) {

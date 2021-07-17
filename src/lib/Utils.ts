@@ -3,7 +3,8 @@ import * as path from "path";
 import FileSearch from "./fileSearch";
 import sh from "shelljs";
 const lessWatchCompilerUtilsModule = require("./lessWatchCompilerUtils.cjs.js");
-// import * as lessWatchCompilerUtilsModule from './lessWatchCompilerUtils.cjs.js';
+const defaultAllowedExtensions = [".less"],
+  fileSearch = new FileSearch();
 
 export function compileCSS(
   file: string,
@@ -12,8 +13,7 @@ export function compileCSS(
   const outputFilePath = resolveOutputPath(file);
   // As a rule, we don't compile hidden files for now. If we encounter one,
   // just return.
-  const fileSearch = new FileSearch(),
-    exec = require("child_process").exec;
+  const exec = require("child_process").exec;
   if (fileSearch.isHiddenFile(outputFilePath)) return undefined;
 
   const enableJsFlag = lessWatchCompilerUtilsModule.config.enableJs
@@ -113,4 +113,20 @@ export function resolveOutputPath(filePath: string) {
 export function getLessArgs(args: string) {
   const arr = args.split(",");
   return " --" + arr.join(" --");
+}
+
+export function filterFiles(f: string) {
+  var filename = path.basename(f);
+  var extension = path.extname(f),
+    allowedExtensions =
+      lessWatchCompilerUtilsModule.config.allowedExtensions ||
+      defaultAllowedExtensions;
+  if (filename == "" || allowedExtensions.indexOf(extension) == -1) {
+    return true;
+  } else {
+    // If we're including hidden files then don't ignore this file
+    if (lessWatchCompilerUtilsModule.config.includeHidden) return false;
+    // Otherwise, do ignore this file if it's a hidden file
+    else return fileSearch.isHiddenFile(filename);
+  }
 }

@@ -174,7 +174,7 @@ function init():void {
     (f:string) => {
       if (!mainFilePath || mainFilePath === f) {
         // compile each file when main file is missing or compile main file only once
-        lessWatchCompilerUtils.compileCSS(f);
+        compileCSS(f);
       }
     }
   );
