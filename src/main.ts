@@ -11,19 +11,24 @@
    Example:         'less-watch-compiler less css' will watch ./less folder
                     and compile the less css files into ./css when they are added/updated
 */
-var sys = require('util')
-  , fs = require('fs')
-  , path= require('path')
-  , sh = require('shelljs')
-  , extend = require('extend')
-  , exec = require('child_process').exec
-  , lessWatchCompilerUtils = require('./lib/lessWatchCompilerUtils.cjs.js')
-  , cwd = sh.pwd()
-  , data
-  , mainFilePath = undefined
-  , program = require('commander')
-  , packagejson = require('../package.json')
-  , events = require('events');
+import * as fs from "fs";
+import * as sys from "util";
+import * as path from "path";
+import * as sh from "shelljs";
+// import * as extend from "extend";
+import * as child_process from "child_process";
+import { Command } from 'commander';
+import * as events from "events";
+
+const exec = child_process.exec
+      , cwd = sh.pwd()
+      , lessWatchCompilerUtils = require('./lib/lessWatchCompilerUtils.cjs.js')
+      , packagejson =require("../package.json")
+      , extend = require("extend")
+      , program = new Command()
+
+let   mainFilePath:string;
+
 
 //bypass maxlistener errors because more files means more listeners #90
 events.EventEmitter.defaultMaxListeners = 0;
@@ -42,23 +47,29 @@ program
   .option('--less-args <less-arg1>=<less-arg1-value>,<less-arg1>=<less-arg2-value>', 'Less.js Option: To specify any other less options e.g. \'--less-args math=strict,strict-units=on,include-path=.\/dir1\\;.\/dir2\'.')
   .parse();
 
-const programOption = program.opts();
+  
+  // export const lessWatchCompilerUtils: any;
+
+  const programOption = program.opts();
 
   // Check if configuration file exists
-  var configPath = programOption.config ? (path.isAbsolute(programOption.config))? programOption.config : (cwd + path.sep + programOption.config): "less-watch-compiler.config.json";
+  const configPath = programOption.config ? (path.isAbsolute(programOption.config))? programOption.config : (cwd + path.sep + programOption.config): "less-watch-compiler.config.json";
 
   fs.access(configPath, fs.constants.F_OK, (err) => {
     if (!err) {
       let data = fs.readFileSync(configPath);
-      var customConfig = JSON.parse(data.toString());
+      const customConfig = JSON.parse(data.toString());
       console.log('Config file ' + configPath + ' is loaded.');
-      extend(true, lessWatchCompilerUtils.config, customConfig);
+      extend(true, 
+        lessWatchCompilerUtils.config, 
+        customConfig);
     }
+    
     init();
   });
 
 
-function init(){
+function init():void{
   if (program.args[0])   lessWatchCompilerUtils.config.watchFolder =  program.args[0];
   if (program.args[1])   lessWatchCompilerUtils.config.outputFolder =  program.args[1];
   if (program.args[2])   lessWatchCompilerUtils.config.mainFile =  program.args[2];
@@ -130,7 +141,7 @@ function init(){
       ignoreDotFiles: !lessWatchCompilerUtils.config.includeHidden,
       filter: lessWatchCompilerUtils.filterFiles
     },
-    function (f, curr, prev, fileimportlist) {
+     (f:string, curr:{nlink:number}, prev:object, fileimportlist:string[][]) => {
       if (typeof f == 'object' && prev === null && curr === null) {
         // Finished walking the tree
         return;
@@ -140,31 +151,31 @@ function init(){
       } else {
         // f is a new file or changed
         // console.log(f)
-        var importedFile = false;
-        var filename = f.substring(lessWatchCompilerUtils.config.watchFolder.length+1)
+        let importedFile = false;
+        // var filename = f.substring(lessWatchCompilerUtils.config.watchFolder.length+1)
         for (var i in fileimportlist){
           for (var k in fileimportlist[i]){
-            var hasExtension = path.extname(fileimportlist[i][k]).length > 1;
-            var importFile = path.join(fileimportlist[i][k], (hasExtension ? '' : '.less'));
-            var normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile);
+            const   hasExtension = path.extname(fileimportlist[i][k]).length > 1
+                  , importFile = path.join(fileimportlist[i][k], (hasExtension ? '' : '.less'))
+                  , normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile)
 
             // console.log('compare ' + f + ' with import #' + k + ' in ' + i + ' value ' + normalized);
             if (f == normalizedPath && !mainFilePath) {
               // Compile changed file only if a main file is there.
-              var compileResult = lessWatchCompilerUtils.compileCSS(i);
+              const compileResult = lessWatchCompilerUtils.compileCSS(i);
               console.log('The file: ' + i + ' was changed because '+JSON.stringify(f)+' is specified as an import.  Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
               importedFile = true;
             }
           }
         }
         if (!importedFile){
-          var compileResult = lessWatchCompilerUtils.compileCSS(mainFilePath || f);
+          const compileResult = lessWatchCompilerUtils.compileCSS(mainFilePath || f);
           console.log('The file: ' + JSON.stringify(f) + ' was changed. Recompiling '+compileResult.outputFilePath+' at ' + lessWatchCompilerUtils.getDateTime());
         }
       }
     },
-    // init function
-    function(f){
+    // init 
+    (f:string) => {
       if (!mainFilePath || mainFilePath === f) {
         // compile each file when main file is missing or compile main file only once
         lessWatchCompilerUtils.compileCSS(f);
