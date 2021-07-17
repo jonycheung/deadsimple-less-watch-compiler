@@ -66,11 +66,6 @@ describe('lessWatchCompilerUtils Module API', function () {
             });
 
         })
-        describe('getDateTime()', function () {
-            it('getDateTime() function should be there and has value', function () {
-                assert.equal(true, lessWatchCompilerUtils.getDateTime().length > 0);
-            });
-        })
         describe('setupWatcher()', function () {
             it('setupWatcher() function should be there', function () {
                 assert.equal("function", typeof (lessWatchCompilerUtils.setupWatcher));

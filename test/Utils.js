@@ -5,9 +5,22 @@ var assert = require("assert"),
     cwd = sh.pwd().toString();
     
     const   compileCSS = Utils.compileCSS,
-            resolveOutputPath = Utils.resolveOutputPath;
+            resolveOutputPath = Utils.resolveOutputPath,
+            getDateTime = Utils.getDateTime;
 
-            console.log(lessWatchCompilerUtils)
+    describe('getDateTime()', function () {
+
+        console.log(getDateTime());
+        it('getDateTime() function should be there and has value', function () {
+            assert.strictEqual(true, getDateTime().length > 0);
+        });
+        it('getDateTime() format should be correct [HH:MM:SS on DD/MM/YYYY]', function () {
+            let pattern = new RegExp(/\d+\:\d+\:\d+ on \d+\/\d+\/\d{4}/g)
+            assert.ok(pattern.test(getDateTime()))
+        });
+
+        
+    })
             
     describe('compileCSS()', function () {
         // reset config

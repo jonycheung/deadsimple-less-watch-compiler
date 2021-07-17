@@ -16,7 +16,7 @@ import * as path from "path";
 import * as sh from "shelljs";
 import { Command } from 'commander';
 import * as events from "events";
-import {compileCSS} from "./lib/Utils";
+import {compileCSS, getDateTime} from "./lib/Utils";
 
 const   cwd = sh.pwd()
       , lessWatchCompilerUtils = require('./lib/lessWatchCompilerUtils.cjs.js')
@@ -43,7 +43,6 @@ program
   .option('--plugins <plugin-a>,<plugin-b>', 'Less.js Option: To specify plugins separated by commas.')
   .option('--less-args <less-arg1>=<less-arg1-value>,<less-arg1>=<less-arg2-value>', 'Less.js Option: To specify any other less options e.g. \'--less-args math=strict,strict-units=on,include-path=.\/dir1\\;.\/dir2\'.')
   .parse();
-
   
   // export const lessWatchCompilerUtils: any;
 
@@ -159,7 +158,7 @@ function init():void {
               // Compile changed file only if a main file is there.
               const compileResult = compileCSS(i);
               const path = (compileResult)? compileResult.outputFilePath : "";
-              console.log('The file: ' + i + ' was changed because '+JSON.stringify(f)+' is specified as an import.  Recompiling '+path+' at ' + lessWatchCompilerUtils.getDateTime());
+              console.log('The file: ' + i + ' was changed because '+JSON.stringify(f)+' is specified as an import.  Recompiling '+path+' at ' + getDateTime());
               importedFile = true;
             }
           }
@@ -167,7 +166,7 @@ function init():void {
         if (!importedFile){
           const compileResult = compileCSS(mainFilePath || f);
           const path = (compileResult)? compileResult.outputFilePath : "";
-          console.log('The file: ' + JSON.stringify(f) + ' was changed. Recompiling '+path +' at ' + lessWatchCompilerUtils.getDateTime());
+          console.log('The file: ' + JSON.stringify(f) + ' was changed. Recompiling '+path +' at ' + getDateTime());
         }
       }
     },
