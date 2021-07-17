@@ -17,7 +17,7 @@ var sys = require('util')
   , sh = require('shelljs')
   , extend = require('extend')
   , exec = require('child_process').exec
-  , lessWatchCompilerUtils = require('./lib/lessWatchCompilerUtils.js')
+  , lessWatchCompilerUtils = require('./lib/lessWatchCompilerUtils.cjs.js')
   , cwd = sh.pwd()
   , data
   , mainFilePath = undefined

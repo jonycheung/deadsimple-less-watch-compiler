@@ -4,9 +4,6 @@ import * as path from "path";
 
 export default class FileSearch {
 
-        constructor(){
-
-        }
         
         findLessImportsInFile (f: string): string[] {
             if (fs.statSync(f) && fs.statSync(f).isFile() === false) return [];
