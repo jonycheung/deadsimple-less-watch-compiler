@@ -1,7 +1,6 @@
 .DS_Store
 *.log
 test/css
-test/examples/*/css/*
 .idea/
 node_modules
 .vscode/

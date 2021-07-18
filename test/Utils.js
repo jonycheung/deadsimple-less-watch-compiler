@@ -18,7 +18,6 @@ describe("getDateTime()", function () {
     assert.ok(pattern.test(getDateTime()));
   });
 });
-
 describe("compileCSS()", function () {
   this.beforeEach(() => {
     Config.reset();
