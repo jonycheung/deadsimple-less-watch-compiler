@@ -2,33 +2,26 @@
 import * as path from "path";
 import FileSearch from "./fileSearch";
 import sh from "shelljs";
-const lessWatchCompilerUtilsModule = require("./lessWatchCompilerUtils.cjs.js");
-const defaultAllowedExtensions = [".less"],
-  fileSearch = new FileSearch();
+import { Options } from "./Options";
+const fileSearch = new FileSearch();
 
 export function compileCSS(
   file: string,
   test?: boolean
 ): { command: string; outputFilePath: string } | undefined {
   const outputFilePath = resolveOutputPath(file);
+  const Config = Options.getInstance();
   // As a rule, we don't compile hidden files for now. If we encounter one,
   // just return.
   const exec = require("child_process").exec;
   if (fileSearch.isHiddenFile(outputFilePath)) return undefined;
 
-  const enableJsFlag = lessWatchCompilerUtilsModule.config.enableJs
-      ? " --js"
-      : "",
-    minifiedFlag = lessWatchCompilerUtilsModule.config.minified ? " -x" : "",
-    sourceMap = lessWatchCompilerUtilsModule.config.sourceMap
-      ? " --source-map"
-      : "",
-    lessArgs = lessWatchCompilerUtilsModule.config.lessArgs
-      ? getLessArgs(lessWatchCompilerUtilsModule.config.lessArgs)
-      : "",
-    plugins = lessWatchCompilerUtilsModule.config.plugins
-      ? " --" +
-        lessWatchCompilerUtilsModule.config.plugins.split(",").join(" --")
+  const enableJsFlag = Config.enableJs ? " --js" : "",
+    minifiedFlag = Config.minified ? " -x" : "",
+    sourceMap = Config.sourceMap ? " --source-map" : "",
+    lessArgs = Config.lessArgs ? getLessArgs(Config.lessArgs) : "",
+    plugins = Config.plugins
+      ? " --" + Config.plugins.split(",").join(" --")
       : "",
     command =
       "lessc" +
@@ -46,7 +39,7 @@ export function compileCSS(
     exec(command, function (error: string, stdout: string) {
       if (error !== null) {
         console.log(error);
-        if (lessWatchCompilerUtilsModule.config.runOnce) process.exit(1);
+        if (Config.runOnce) process.exit(1);
       }
       if (stdout) console.error(stdout);
     });
@@ -77,15 +70,13 @@ export function getDateTime(): string {
 export function resolveOutputPath(filePath: string) {
   const cwd = sh.pwd().toString(),
     fullPath = path.resolve(filePath),
-    parsedPath = path.parse(fullPath);
+    parsedPath = path.parse(fullPath),
+    Config = Options.getInstance();
 
   // Only empty when unit testing it seems
   let relativePath: string, dirname: string;
-  if (lessWatchCompilerUtilsModule.config.watchFolder) {
-    relativePath = path.relative(
-      lessWatchCompilerUtilsModule.config.watchFolder,
-      fullPath
-    );
+  if (Config.watchFolder) {
+    relativePath = path.relative(Config.watchFolder, fullPath);
     dirname = path.dirname(relativePath);
   } else {
     dirname = path.dirname(filePath);
@@ -95,16 +86,13 @@ export function resolveOutputPath(filePath: string) {
   let formatted: string = path.format({
     dir: dirname,
     name: filename,
-    ext: (lessWatchCompilerUtilsModule.config.minified ? ".min" : "") + ".css",
+    ext: (Config.minified ? ".min" : "") + ".css",
   });
 
   // No matter the path of the main file, the output must always land in the output folder
   formatted = formatted.replace(/^(\.\.[\/\\])+/, "");
 
-  const finalFullPath = path.resolve(
-    lessWatchCompilerUtilsModule.config.outputFolder,
-    formatted
-  );
+  const finalFullPath = path.resolve(Config.outputFolder, formatted);
   const shortPath = path.relative(cwd, finalFullPath);
 
   return JSON.stringify(shortPath);
@@ -116,17 +104,19 @@ export function getLessArgs(args: string) {
 }
 
 export function filterFiles(f: string) {
-  var filename = path.basename(f);
-  var extension = path.extname(f),
-    allowedExtensions =
-      lessWatchCompilerUtilsModule.config.allowedExtensions ||
-      defaultAllowedExtensions;
+  var filename = path.basename(f),
+    extension = path.extname(f),
+    Config = Options.getInstance(),
+    allowedExtensions = Config.allowedExtensions;
+
   if (filename == "" || allowedExtensions.indexOf(extension) == -1) {
     return true;
   } else {
     // If we're including hidden files then don't ignore this file
-    if (lessWatchCompilerUtilsModule.config.includeHidden) return false;
+    if (Config.includeHidden) return false;
     // Otherwise, do ignore this file if it's a hidden file
-    else return fileSearch.isHiddenFile(filename);
+    else {
+      return fileSearch.isHiddenFile(filename);
+    }
   }
 }

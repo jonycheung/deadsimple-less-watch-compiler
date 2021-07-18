@@ -17,6 +17,7 @@ import * as sh from "shelljs";
 import { Command } from "commander";
 import * as events from "events";
 import { compileCSS, getDateTime } from "./lib/Utils";
+import { Options } from './lib/Options'
 
 const cwd = sh.pwd(),
   lessWatchCompilerUtils = require("./lib/lessWatchCompilerUtils.cjs.js"),
@@ -25,7 +26,6 @@ const cwd = sh.pwd(),
   program = new Command();
 
 let mainFilePath: string;
-
 //bypass maxlistener errors because more files means more listeners #90
 events.EventEmitter.defaultMaxListeners = 0;
 
@@ -73,11 +73,12 @@ program
   .parse();
 
 // export const lessWatchCompilerUtils: any;
+const programOption = Options.getInstance(program.opts());
 
-const programOption = program.opts();
+console.log(programOption);
 
 // Check if configuration file exists
-const configPath = programOption.config
+const configPath:string = programOption.config
   ? path.isAbsolute(programOption.config)
     ? programOption.config
     : cwd + path.sep + programOption.config
@@ -95,25 +96,24 @@ fs.access(configPath, fs.constants.F_OK, (err) => {
 });
 
 function init(): void {
-  if (program.args[0])
-    lessWatchCompilerUtils.config.watchFolder = program.args[0];
-  if (program.args[1])
-    lessWatchCompilerUtils.config.outputFolder = program.args[1];
-  if (program.args[2]) lessWatchCompilerUtils.config.mainFile = program.args[2];
-  if (programOption.mainFile)
-    lessWatchCompilerUtils.config.mainFile = programOption.mainFile;
-  if (programOption.sourceMap)
-    lessWatchCompilerUtils.config.sourceMap = programOption.sourceMap;
-  if (programOption.plugins)
-    lessWatchCompilerUtils.config.plugins = programOption.plugins;
-  if (programOption.runOnce)
-    lessWatchCompilerUtils.config.runOnce = programOption.runOnce;
-  if (programOption.inludeHidden)
-    lessWatchCompilerUtils.config.includeHidden = programOption.includeHidden;
-  if (programOption.enableJs)
-    lessWatchCompilerUtils.config.enableJs = programOption.enableJs;
-  if (programOption.lessArgs)
-    lessWatchCompilerUtils.config.lessArgs = programOption.lessArgs;
+  // if (programOption.watchFolder.length >0)
+  //   lessWatchCompilerUtils.config.watchFolder = programOption.watchFolder;
+  // if (programOption.outputFolder.length >0)
+  //   lessWatchCompilerUtils.config.outputFolder = programOption.outputFolder;
+  // if (programOption.mainFile.length >0)
+  //   lessWatchCompilerUtils.config.mainFile = programOption.mainFile;
+  // if (programOption.sourceMap !== false)
+  //   lessWatchCompilerUtils.config.sourceMap = programOption.sourceMap;
+  // if (programOption.plugins.length >0)
+  //   lessWatchCompilerUtils.config.plugins = programOption.plugins;
+  // if (programOption.runOnce !== false)
+  //   lessWatchCompilerUtils.config.runOnce = programOption.runOnce;
+  // if (programOption.includeHidden !== false)
+  //   lessWatchCompilerUtils.config.includeHidden = programOption.includeHidden;
+  // if (programOption.enableJs !== false)
+  //   lessWatchCompilerUtils.config.enableJs = programOption.enableJs;
+  // if (programOption.lessArgs.length >0)
+  //   lessWatchCompilerUtils.config.lessArgs = programOption.lessArgs;
 
   lessWatchCompilerUtils.config = Object.assign(
     {},
@@ -175,7 +175,7 @@ function init(): void {
     );
     fs.access(mainFilePath, fs.constants.F_OK, (err) => {
       console.log(
-        "Main file " + mainFilePath + ` ${err ? "does not exist" : "exists"}`
+        `Main file ${mainFilePath} ${err ? "does not exist" : "exists"}`
       );
       if (err) process.exit();
     });

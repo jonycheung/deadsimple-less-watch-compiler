@@ -15,13 +15,13 @@ define(function (require) {
     exec = require("child_process").exec,
     cwd = sh.pwd().toString(),
     FileSearch = require("./fileSearch.js"),
+    Options = require("./Options.js"),
     filelist = [],
     fileimportlist = {};
 
   var fileSearch = new FileSearch.default();
 
   var lessWatchCompilerUtilsModule = {
-    config: {},
     walk: function (dir, options, callback, initCallback) {
       if (!callback) {
         callback = options;
@@ -116,7 +116,7 @@ define(function (require) {
     // We build the function to filter the files to watch.
     // Returning true marks a file to be ignored.
     setupWatcher: function (f, files, options, watchCallback) {
-      if (lessWatchCompilerUtilsModule.config.runOnce === true) return;
+      if (Options.runOnce === true) return;
       fs.watchFile(f, options, function (c, p) {
         // Check if anything actually changed in stat
         if (
