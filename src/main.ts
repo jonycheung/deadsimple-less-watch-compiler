@@ -17,7 +17,7 @@ import * as sh from "shelljs";
 import { Command } from "commander";
 import * as events from "events";
 import { compileCSS, getDateTime } from "./lib/Utils";
-import { Options } from './lib/Options'
+import { Options } from "./lib/Options";
 
 const cwd = sh.pwd(),
   lessWatchCompilerUtils = require("./lib/lessWatchCompilerUtils.cjs.js"),
@@ -70,18 +70,15 @@ program
     "--less-args <less-arg1>=<less-arg1-value>,<less-arg1>=<less-arg2-value>",
     "Less.js Option: To specify any other less options e.g. '--less-args math=strict,strict-units=on,include-path=./dir1\\;./dir2'."
   )
-  .parse();
+  .parse(process.argv);
 
-// export const lessWatchCompilerUtils: any;
-const programOption = Options.getInstance(program.opts());
-
-console.log(programOption);
+const Config = Options.getInstance({ ...program.opts(), args: program.args });
 
 // Check if configuration file exists
-const configPath:string = programOption.config
-  ? path.isAbsolute(programOption.config)
-    ? programOption.config
-    : cwd + path.sep + programOption.config
+const configPath: string = Config.config
+  ? path.isAbsolute(Config.config)
+    ? Config.config
+    : cwd + path.sep + Config.config
   : "less-watch-compiler.config.json";
 
 fs.access(configPath, fs.constants.F_OK, (err) => {
@@ -89,38 +86,13 @@ fs.access(configPath, fs.constants.F_OK, (err) => {
     let data = fs.readFileSync(configPath);
     const customConfig = JSON.parse(data.toString());
     console.log("Config file " + configPath + " is loaded.");
-    extend(true, lessWatchCompilerUtils.config, customConfig);
+    extend(true, Config, customConfig);
   }
 
   init();
 });
 
 function init(): void {
-  // if (programOption.watchFolder.length >0)
-  //   lessWatchCompilerUtils.config.watchFolder = programOption.watchFolder;
-  // if (programOption.outputFolder.length >0)
-  //   lessWatchCompilerUtils.config.outputFolder = programOption.outputFolder;
-  // if (programOption.mainFile.length >0)
-  //   lessWatchCompilerUtils.config.mainFile = programOption.mainFile;
-  // if (programOption.sourceMap !== false)
-  //   lessWatchCompilerUtils.config.sourceMap = programOption.sourceMap;
-  // if (programOption.plugins.length >0)
-  //   lessWatchCompilerUtils.config.plugins = programOption.plugins;
-  // if (programOption.runOnce !== false)
-  //   lessWatchCompilerUtils.config.runOnce = programOption.runOnce;
-  // if (programOption.includeHidden !== false)
-  //   lessWatchCompilerUtils.config.includeHidden = programOption.includeHidden;
-  // if (programOption.enableJs !== false)
-  //   lessWatchCompilerUtils.config.enableJs = programOption.enableJs;
-  // if (programOption.lessArgs.length >0)
-  //   lessWatchCompilerUtils.config.lessArgs = programOption.lessArgs;
-
-  lessWatchCompilerUtils.config = Object.assign(
-    {},
-    lessWatchCompilerUtils.config,
-    program.opts()
-  );
-
   /*
     3rd parameter is optional, but once you define it, then we will just compile 
     the main and generate as "{main_file_name}.css". All the files that has been 
@@ -146,10 +118,7 @@ function init(): void {
         aux.css
   */
 
-  if (
-    !lessWatchCompilerUtils.config.watchFolder ||
-    !lessWatchCompilerUtils.config.outputFolder
-  ) {
+  if (!Config.watchFolder || !Config.outputFolder) {
     console.log("Missing arguments. Example:");
     console.log(
       "\tnode less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT"
@@ -161,18 +130,11 @@ function init(): void {
     process.exit(1);
   }
 
-  lessWatchCompilerUtils.config.watchFolder = path.resolve(
-    lessWatchCompilerUtils.config.watchFolder
-  );
-  lessWatchCompilerUtils.config.outputFolder = path.resolve(
-    lessWatchCompilerUtils.config.outputFolder
-  );
+  Config.watchFolder = path.resolve(Config.watchFolder);
+  Config.outputFolder = path.resolve(Config.outputFolder);
 
-  if (lessWatchCompilerUtils.config.mainFile) {
-    mainFilePath = path.resolve(
-      lessWatchCompilerUtils.config.watchFolder,
-      lessWatchCompilerUtils.config.mainFile
-    );
+  if (Config.mainFile) {
+    mainFilePath = path.resolve(Config.watchFolder, Config.mainFile);
     fs.access(mainFilePath, fs.constants.F_OK, (err) => {
       console.log(
         `Main file ${mainFilePath} ${err ? "does not exist" : "exists"}`
@@ -181,15 +143,14 @@ function init(): void {
     });
   }
 
-  if (lessWatchCompilerUtils.config.runOnce === true)
-    console.log("Running less-watch-compiler once.");
+  if (Config.runOnce === true) console.log("Running less-watch-compiler only once.");
   else console.log("Watching directory for file changes.");
   lessWatchCompilerUtils.watchTree(
-    lessWatchCompilerUtils.config.watchFolder,
+    Config.watchFolder,
     {
       interval: 200,
       // If we've set --include-hidden, don't ignore dotfiles
-      ignoreDotFiles: !lessWatchCompilerUtils.config.includeHidden,
+      ignoreDotFiles: !Config.includeHidden,
       filter: lessWatchCompilerUtils.filterFiles,
     },
     (
@@ -208,7 +169,7 @@ function init(): void {
         // f is a new file or changed
         // console.log(f)
         let importedFile = false;
-        // var filename = f.substring(lessWatchCompilerUtils.config.watchFolder.length+1)
+        // var filename = f.substring(Config.watchFolder.length+1)
         for (var i in fileimportlist) {
           for (var k in fileimportlist[i]) {
             const hasExtension = path.extname(fileimportlist[i][k]).length > 1,

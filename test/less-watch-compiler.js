@@ -1,5 +1,3 @@
-const { doesNotMatch } = require("assert");
-
 const assert = require("assert"),
   sh = require("shelljs"),
   cwd = sh.pwd().toString(),
@@ -46,6 +44,7 @@ describe("The CLI should", function () {
         });
       });
     });
+    
 
     describe("--include-hidden parameter", function () {
       const lessDir = cwd + "/test/examples/with-hidden-variables-file/less";
@@ -94,6 +93,32 @@ describe("The CLI should", function () {
     });
   });
 });
+
+// describe("--sssss parameter", function () {
+//   const cssDir = cwd + "/test/examples/with-config/css";
+//   it("should load a config json", () => {
+//     let runCommand = async () => {
+//       let result = await cli(
+//         ["--config", "test/less-watch-compiler.config.json"],
+//         "."
+//       );
+//       return result;
+//     };
+
+//     runCommand().then((result) => {
+//       assert.strictEqual(result.code, 0);
+
+//       const contents = fs.readFileSync(cssDir + "/test.css");
+//       const contentsExpected = fs.readFileSync(
+//         cssDir + "/test.expected.css"
+//       );
+
+//       assert.ok(contents.equals(contentsExpected));
+
+//       fs.rmSync(cssDir + "/test.css", { force: true });
+//     });
+//   });
+// });
 
 function cli(...args) {
   return new Promise((resolve) => {

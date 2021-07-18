@@ -1,6 +1,6 @@
 {
     "allowedExtensions":[".less"],
-    "enableJs": true,
+    "enableJs": false,
     "minified": true,
     "includeHidden": true,
     "sourceMap": true,
