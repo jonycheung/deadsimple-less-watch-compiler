@@ -16,8 +16,9 @@ import * as path from "path";
 import * as sh from "shelljs";
 import { Command } from "commander";
 import * as events from "events";
-import { compileCSS, getDateTime } from "./lib/Utils";
+import { compileCSS, getDateTime, resolveOutputPath } from "./lib/Utils";
 import { Options } from "./lib/Options";
+import * as child from "child_process";
 
 const cwd = sh.pwd(),
   lessWatchCompilerUtils = require("./lib/lessWatchCompilerUtils.cjs.js"),
@@ -184,33 +185,44 @@ function init(): void {
             // console.log('compare ' + f + ' with import #' + k + ' in ' + i + ' value ' + normalized);
             if (f == normalizedPath && !mainFilePath) {
               // Compile changed file only if a main file is there.
-              const compileResult = compileCSS(i);
-              const path = compileResult ? compileResult.outputFilePath : "";
-              console.log(
-                "The file: " +
-                  i +
-                  " was changed because " +
-                  JSON.stringify(f) +
-                  " is specified as an import.  Recompiling " +
-                  path +
-                  " at " +
-                  getDateTime()
-              );
+              const outputFilePath = resolveOutputPath(i);
+               
+              const child_process: child.ChildProcess | undefined = compileCSS(outputFilePath);
+
+              if (child_process !== undefined)
+                child_process.on('exit', () => {
+                console.log(
+                  "The file: " +
+                    i +
+                    " was changed because " +
+                    JSON.stringify(f) +
+                    " is specified as an import.  Recompiling " +
+                    outputFilePath +
+                    " at " +
+                    getDateTime()
+                );
               importedFile = true;
+
+              });
             }
           }
         }
         if (!importedFile) {
-          const compileResult = compileCSS(mainFilePath || f);
-          const path = compileResult ? compileResult.outputFilePath : "";
-          console.log(
-            "The file: " +
-              JSON.stringify(f) +
-              " was changed. Recompiling " +
-              path +
-              " at " +
-              getDateTime()
-          );
+          const path = mainFilePath || f;
+          const outputFilePath = resolveOutputPath(path);
+          const child_process: child.ChildProcess | undefined = compileCSS(outputFilePath);
+          if (child_process)
+            child_process.on('exit', ()=>{
+              console.log(
+                "The file: " +
+                  JSON.stringify(f) +
+                  " was changed. Recompiling " +
+                  outputFilePath +
+                  " at " +
+                  getDateTime()
+              );
+
+          })
         }
       }
     },

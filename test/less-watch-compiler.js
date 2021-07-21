@@ -1,18 +1,16 @@
-const { waitForDebugger } = require("inspector");
-
 const assert = require("assert"),
   sh = require("shelljs"),
   cwd = sh.pwd().toString(),
   path = require("path"),
   fs = require("fs"),
-  exec = require("child_process").exec,
+  execSync = require("child_process").execSync,
   outDir = cwd + "/test/css";
 
 describe("The CLI should", function () {
   describe("run correctly with these options:", function () {
     describe("--run-once parameter", function () {
       it("exit after once", () => {
-        return cli("--run-once", "test/less", "test/css");
+        cli("--run-once", "test/less", "test/css");
       });
     });
 
@@ -22,12 +20,11 @@ describe("The CLI should", function () {
         filename = "/with-js.css";
 
       it("should load a config json", () => {
-        return cli("--enable-js", lessDir, outDir).then(() => {
-          const contents = fs.readFileSync(outDir + filename),
-            contentsExpected = fs.readFileSync(expectedCssDir + filename);
-          assert.ok(contents.equals(contentsExpected));
-          fs.rmSync(outDir + filename, { force: true });
-        });
+        cli("--enable-js", "--run-once", lessDir, outDir);
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(expectedCssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + filename, { force: true });
       });
     });
 
@@ -37,14 +34,11 @@ describe("The CLI should", function () {
         filename = "/with-hidden.css";
 
       it("should compile hidden files when parameter is specified", () => {
-        return cli("--include-hidden", "--run-once", lessDir, outDir).then(
-          () => {
-            const contents = fs.readFileSync(outDir + filename),
-              contentsExpected = fs.readFileSync(expectedCSSDir + filename);
-            assert.ok(contents.equals(contentsExpected));
-            fs.rmSync(outDir + filename, { force: true });
-          }
-        );
+        cli("--include-hidden", "--run-once", lessDir, outDir);
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(expectedCSSDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + filename, { force: true });
       });
 
       it("should not compile the hidden variables files when flag not specified", () => {
@@ -55,13 +49,11 @@ describe("The CLI should", function () {
         fs.rmSync(compiledVariablesPath, { force: true });
         fs.rmSync(compiledOtherVariablesPath, { force: true });
 
-        return cli(lessDir, outDir).then(() => {
-          const variablesFilesWereNotCompiled =
-            !fs.existsSync(compiledVariablesPath) &&
-            !fs.existsSync(compiledOtherVariablesPath);
+        const variablesFilesWereNotCompiled =
+          !fs.existsSync(compiledVariablesPath) &&
+          !fs.existsSync(compiledOtherVariablesPath);
 
-          assert.ok(variablesFilesWereNotCompiled);
-        });
+        assert.ok(variablesFilesWereNotCompiled);
       });
     });
 
@@ -69,23 +61,22 @@ describe("The CLI should", function () {
       const cssDir = cwd + "/test/examples/with-config/css",
         filename = "/with-config.css";
       it("should load a config json", () => {
-        return cli(
+        cli(
           "--run-once",
           "--config",
           cwd + "/test/examples/with-config/less-watch-compiler.config.json"
-        ).then(() => {
-          const contents = fs.readFileSync(outDir + filename),
-            contentsExpected = fs.readFileSync(cssDir + filename);
-          assert.ok(contents.equals(contentsExpected));
+        );
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(cssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
 
-          fs.rmSync(outDir + filename, { force: true });
-        });
+        fs.rmSync(outDir + filename, { force: true });
       });
     });
   });
 });
 
-async function cli(...args) {
+function cli(...args) {
   const command = `node ${path.resolve("dist/main.js")} ${args.join(" ")}`;
-  return exec(command);
+  return execSync(command);
 }

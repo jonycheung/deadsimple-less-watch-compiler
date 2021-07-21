@@ -13,7 +13,7 @@ describe("filesearch Module", function () {
         assert.strictEqual("function", typeof filesearch.findLessImportsInFile);
       });
 
-      it("should search through a file and find LESS @import statements ", function (done) {
+      it("should search through a file and find LESS @import statements ", function () {
         var file = "./test/less/test.less";
         var result = [
             "lvl1.less",
@@ -24,7 +24,6 @@ describe("filesearch Module", function () {
           ],
           filesearchresult = filesearch.findLessImportsInFile(file);
         assert.strictEqual(result.toString(), filesearchresult.toString());
-        done();
       });
       it("should return empty array if argument isn't a file ", function (done) {
         var file = "./test/less";

@@ -2,11 +2,9 @@ var assert = require("assert"),
   Utils = require("../dist/lib/Utils.js"),
   Options = require("../dist/lib/Options.js").Options,
   sh = require("shelljs");
+const { resolve } = require("path/posix");
 
-const compileCSS = Utils.compileCSS,
-  resolveOutputPath = Utils.resolveOutputPath,
-  getDateTime = Utils.getDateTime,
-  filterFiles = Utils.filterFiles,
+const {getCommand, compileCSS, resolveOutputPath, getDateTime,filterFiles} = Utils
   Config = Options.getInstance();
 
 describe("getDateTime()", function () {
@@ -26,81 +24,79 @@ describe("compileCSS()", function () {
   it("compileCSS() function should be there", function () {
     assert.strictEqual("function", typeof compileCSS);
   });
-
-  it("should run the correct command with minified flag", function () {
+});
+describe("getCommand()", function () {
+  beforeEach(()=>{
+    Config.reset();
     Config.outputFolder = "testFolder";
-    Config.minified = true;
+    const inputPath = "test.less";
+  })
+  it("should run the correct command with minified flag", function () {
+    Config.minified = true,
+    inputPath="test.less";
     assert.strictEqual(
       'lessc -x "test.less" "testFolder/test.min.css"',
-      compileCSS("test.less", true).command
+      getCommand(inputPath, resolveOutputPath(inputPath))
     );
   });
   it("should run the correct command with enableJs flag", function () {
-    Config.outputFolder = "testFolder";
     Config.enableJs = true;
     assert.strictEqual(
       'lessc --js "test.less" "testFolder/test.css"',
-      compileCSS("test.less", true).command
+      getCommand(inputPath, resolveOutputPath(inputPath))
     );
   });
   it("should run the correct command with sourceMap flag", function () {
-    Config.outputFolder = "testFolder";
-    Config.sourceMap = true;
+    Config.sourceMap = true,
     assert.strictEqual(
       'lessc --source-map "test.less" "testFolder/test.css"',
-      compileCSS("test.less", true).command
+      getCommand(inputPath, resolveOutputPath(inputPath))
     );
   });
   it("should run the correct command with 1 plugin", function () {
-    Config.outputFolder = "testFolder";
     Config.plugins = "plugin1";
     assert.strictEqual(
       'lessc --plugin1 "test.less" "testFolder/test.css"',
-      compileCSS("test.less", true).command
+      getCommand(inputPath, resolveOutputPath(inputPath))
     );
   });
   it("should run the correct command with 2 plugins", function () {
-    Config.outputFolder = "testFolder";
     Config.plugins = "plugin1,plugin2";
     assert.strictEqual(
       'lessc --plugin1 --plugin2 "test.less" "testFolder/test.css"',
-      compileCSS("test.less", true).command
+      getCommand(inputPath, resolveOutputPath(inputPath))
     );
   });
 
   it("should run the correct command with minified flag", function () {
-    Config.outputFolder = "testFolder";
     Config.minified = true;
     assert.strictEqual(
       'lessc -x "test.less" "testFolder/test.min.css"',
-      compileCSS("test.less", true).command
+      getCommand(inputPath, resolveOutputPath(inputPath))
     );
   });
 
   it("should run the correct command with math LESS flag", function () {
-    Config.outputFolder = "testFolder";
     Config.lessArgs = "math=strict";
     assert.strictEqual(
       'lessc --math=strict "test.less" "testFolder/test.css"',
-      compileCSS("test.less", true).command
+      getCommand(inputPath, resolveOutputPath(inputPath))
     );
   });
 
   it("should run the correct command with strict-unit LESS flag", function () {
-    Config.outputFolder = "testFolder";
     Config.lessArgs = "strict-units=on";
     assert.strictEqual(
       'lessc --strict-units=on "test.less" "testFolder/test.css"',
-      compileCSS("test.less", true).command
+      getCommand(inputPath, resolveOutputPath(inputPath))
     );
   });
 
   it("should run the correct command with math, strict-unit, include-path LESS flags", function () {
-    Config.outputFolder = "testFolder";
     Config.lessArgs = "math=strict,strict-units=on,include-path=./dir1;./dir2";
     assert.strictEqual(
       'lessc --math=strict --strict-units=on --include-path=./dir1;./dir2 "test.less" "testFolder/test.css"',
-      compileCSS("test.less", true).command
+      getCommand(inputPath, resolveOutputPath(inputPath))
     );
   });
 });

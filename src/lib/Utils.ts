@@ -4,18 +4,28 @@ import FileSearch from "./fileSearch";
 import sh from "shelljs";
 import { Options } from "./Options";
 const fileSearch = new FileSearch();
+import * as child from "child_process";
 
 export function compileCSS(
-  file: string,
+  inputFilePath: string,
   test?: boolean
-): { command: string; outputFilePath: string } | undefined {
-  const outputFilePath = resolveOutputPath(file);
-  const Config = Options.getInstance();
+): child.ChildProcess | undefined {
   // As a rule, we don't compile hidden files for now. If we encounter one,
   // just return.
-  const exec = require("child_process").exec;
+  const outputFilePath = resolveOutputPath(inputFilePath);
   if (fileSearch.isHiddenFile(outputFilePath)) return undefined;
 
+  const command = getCommand(inputFilePath, outputFilePath);
+  // Run the command
+  
+  if (!test)
+    return child.exec(command)
+  else
+    return child.exec('');
+}
+
+export function getCommand(inputFilePath:string, outputFilePath:string):string{
+  const Config = Options.getInstance();
   const enableJsFlag = Config.enableJs ? " --js" : "",
     minifiedFlag = Config.minified ? " -x" : "",
     sourceMap = Config.sourceMap ? " --source-map" : "",
@@ -31,22 +41,10 @@ export function compileCSS(
       minifiedFlag +
       plugins +
       " " +
-      JSON.stringify(file) +
+      JSON.stringify(inputFilePath) +
       " " +
       outputFilePath;
-  // Run the command
-  if (!test)
-    exec(command, function (error: string, stdout: string) {
-      if (error !== null) {
-        console.log(error);
-        if (Config.runOnce) process.exit(1);
-      }
-      if (stdout) console.error(stdout);
-    });
-  return {
-    command: command,
-    outputFilePath: outputFilePath,
-  };
+    return command
 }
 
 export function getDateTime(): string {

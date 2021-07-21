@@ -21,22 +21,25 @@ export class Options {
     if (options) this.setValues(options);
   }
 
-  private setValues(options: OptionValues) {
-    this.inputOptions = options;
-    this.config = options.config;
-    this.watchFolder = options.args[0];
-    this.outputFolder = options.args[1];
-    this.mainFile = options.mainFile || options.args[2];
-    this.sourceMap = options.sourceMap;
-    this.plugins = options.plugins;
-    this.runOnce = options.runOnce;
-    this.includeHidden = options.includeHidden;
-    this.enableJs = options.enableJs;
-    this.lessArgs = options.lessArgs;
-    this.minified = options.minified;
-    this.allowedExtensions = [".less"];
-  }
-  public setValue(key:string, value:any):Options|boolean {
+  private setValues(options: OptionValues|undefined) {
+    if (options !== undefined){
+
+      this.inputOptions = options;
+      this.config = options.config;
+      this.watchFolder = options.args[0];
+      this.outputFolder = options.args[1];
+      this.mainFile = options.mainFile || options.args[2];
+      this.sourceMap = options.sourceMap;
+      this.plugins = options.plugins;
+      this.runOnce = options.runOnce;
+      this.includeHidden = options.includeHidden;
+      this.enableJs = options.enableJs;
+      this.lessArgs = options.lessArgs;
+      this.minified = options.minified;
+      this.allowedExtensions = [".less"];
+      }
+    }
+    public setValue(key:string, value:any):Options|boolean {
     if (key in this){
       [key] = value;
       return Options.instance;
@@ -63,6 +66,8 @@ export class Options {
   public static getInstance(options?: OptionValues): Options {
     if (!Options.instance) {
       Options.instance = new Options(options);
+    }else{
+      Options.instance.setValues(options);
     }
 
     return Options.instance;
