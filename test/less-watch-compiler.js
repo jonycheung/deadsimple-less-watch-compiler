@@ -8,6 +8,33 @@ const assert = require("assert"),
 
 describe("The CLI should", function () {
   describe("run correctly with these options:", function () {
+
+    describe("--main-file parameter", function () {
+      const lessDir = cwd + "/test/examples/with-main-file/less",
+        expectedCssDir = cwd + "/test/examples/with-main-file/css",
+        filename = "/with-main-file.css",
+        mainfilename = "with-main-file.less",
+        mainfileoutput = "/with-main-file.css";
+
+      it("should combine css into main file with --main-file parameter", () => {
+        cli("--run-once", lessDir, outDir, "--main-file", mainfilename);
+        const contents = fs.readFileSync(outDir + mainfileoutput),
+          contentsExpected = fs.readFileSync(expectedCssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + mainfileoutput, { force: true });
+      });
+
+      it("should combine css into main file with when mainfile is passed as 3rd parameter", () => {
+        const mainfilename = "with-main-file-2.less",
+              mainfileoutput = "/with-main-file-2.css"
+        cli("--run-once", lessDir, outDir, mainfilename);
+        const contents = fs.readFileSync(outDir + mainfileoutput),
+          contentsExpected = fs.readFileSync(expectedCssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + mainfileoutput, { force: true });
+      });
+    });
+
     describe("--run-once parameter", function () {
       it("exit after once", () => {
         cli("--run-once", "test/less", "test/css");

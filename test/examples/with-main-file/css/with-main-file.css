@@ -1,0 +1,6 @@
+.with-main-file {
+  color: black;
+}
+.with-main-file.config {
+  color: black;
+}
