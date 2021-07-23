@@ -1,0 +1,8 @@
+.with-source-map {
+  color: red;
+}
+.math {
+  a: 1 + 1;
+  b: 2px / 2;
+  c: 1px + 3px;
+}

@@ -123,6 +123,20 @@ describe("The CLI should", function () {
       });
     });
 
+    describe("--less-args parameter", function () {
+      const lessDir = cwd + "/test/examples/with-less-args/less",
+        expectedCssDir = cwd + "/test/examples/with-less-args/css",
+        filename = "/with-less-args.css";
+        
+      it("should generate the css file according to the less arguments", () => {
+        cli(lessDir, outDir, "--run-once", "--less-args", "math=strict,strict-units=on");
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(expectedCssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + filename, { force: true });
+      });
+    });
+
   });
 });
 
