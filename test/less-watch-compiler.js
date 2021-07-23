@@ -35,23 +35,26 @@ describe("The CLI should", function () {
       });
     });
 
-    describe("--run-once parameter", function () {
-      it("exit after once", () => {
-        cli("--run-once", "test/less", "test/css");
+    describe("--config parameter", function () {
+      const cssDir = cwd + "/test/examples/with-config/css",
+        filename = "/with-config.css";
+      it("should load a config json", () => {
+        cli(
+          "--run-once",
+          "--config",
+          cwd + "/test/examples/with-config/less-watch-compiler.config.json"
+        );
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(cssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+
+        fs.rmSync(outDir + filename, { force: true });
       });
     });
 
-    describe("--enable-js parameter", function () {
-      const lessDir = cwd + "/test/examples/with-js/less",
-        expectedCssDir = cwd + "/test/examples/with-js/css",
-        filename = "/with-js.css";
-
-      it("should load a config json", () => {
-        cli("--enable-js", "--run-once", lessDir, outDir);
-        const contents = fs.readFileSync(outDir + filename),
-          contentsExpected = fs.readFileSync(expectedCssDir + filename);
-        assert.ok(contents.equals(contentsExpected));
-        fs.rmSync(outDir + filename, { force: true });
+    describe("--run-once parameter", function () {
+      it("exit after once", () => {
+        cli("--run-once", "test/less", "test/css");
       });
     });
 
@@ -84,22 +87,42 @@ describe("The CLI should", function () {
       });
     });
 
-    describe("--config parameter", function () {
-      const cssDir = cwd + "/test/examples/with-config/css",
-        filename = "/with-config.css";
-      it("should load a config json", () => {
-        cli(
-          "--run-once",
-          "--config",
-          cwd + "/test/examples/with-config/less-watch-compiler.config.json"
-        );
-        const contents = fs.readFileSync(outDir + filename),
-          contentsExpected = fs.readFileSync(cssDir + filename);
-        assert.ok(contents.equals(contentsExpected));
+    describe("--enable-js parameter", function () {
+      const lessDir = cwd + "/test/examples/with-js/less",
+        expectedCssDir = cwd + "/test/examples/with-js/css",
+        filename = "/with-js.css";
 
+      it("should load a config json", () => {
+        cli("--enable-js", "--run-once", lessDir, outDir);
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(expectedCssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
         fs.rmSync(outDir + filename, { force: true });
       });
     });
+
+    describe("--source-map parameter", function () {
+      const lessDir = cwd + "/test/examples/with-source-map/less",
+        expectedCssDir = cwd + "/test/examples/with-source-map/css",
+        filename = "/with-source-map.css",
+        sourcemapfile = "/with-source-map.css.map";
+        
+        cli("--source-map", "--run-once", lessDir, outDir);
+        
+      it("should generate the css file", () => {
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(expectedCssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + filename, { force: true });
+      });
+      it("should generate the sourcemap", () => {
+        const contents = fs.readFileSync(outDir + sourcemapfile),
+          contentsExpected = fs.readFileSync(expectedCssDir + sourcemapfile);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + sourcemapfile, { force: true });
+      });
+    });
+
   });
 });
 
