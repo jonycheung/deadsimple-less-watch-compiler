@@ -6,14 +6,8 @@ define(function (require) {
   // return a value that defines the module export
   // (i.e the functionality we want to expose for consumption)
   var self = this;
-  var sys = require("util"),
-    fs = require("fs"),
+  var fs = require("fs"),
     path = require("path"),
-    events = require("events"),
-    sh = require("shelljs"),
-    extend = require("extend"),
-    exec = require("child_process").exec,
-    cwd = sh.pwd().toString(),
     FileSearch = require("./fileSearch.js"),
     Config = require("./Options.js").Options.getInstance(),
     filelist = [],
