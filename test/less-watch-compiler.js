@@ -1,116 +1,146 @@
-const { doesNotMatch } = require("assert");
-
 const assert = require("assert"),
   sh = require("shelljs"),
   cwd = sh.pwd().toString(),
   path = require("path"),
   fs = require("fs"),
-  exec = require("child_process").exec;
+  execSync = require("child_process").execSync,
+  outDir = cwd + "/test/css";
 
 describe("The CLI should", function () {
   describe("run correctly with these options:", function () {
-    describe("--run-once parameter", function () {
-      it("exit after once", () => {
-        let runCommand = async () => {
-          let result = await cli(
-            ["--run-once", "test/less", "test/css"],
-            "."
-          );
-          return result;
-        };
-        runCommand().then((result) => {
-          assert.strictEqual(result.code, 0);
-        });
+
+    describe("--main-file parameter", function () {
+      const lessDir = cwd + "/test/examples/with-main-file/less",
+        expectedCssDir = cwd + "/test/examples/with-main-file/css",
+        filename = "/with-main-file.css",
+        mainfilename = "with-main-file.less",
+        mainfileoutput = "/with-main-file.css";
+
+      it("should combine css into main file with --main-file parameter", () => {
+        cli("--run-once", lessDir, outDir, "--main-file", mainfilename);
+        const contents = fs.readFileSync(outDir + mainfileoutput),
+          contentsExpected = fs.readFileSync(expectedCssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + mainfileoutput, { force: true });
+      });
+
+      it("should combine css into main file with when mainfile is passed as 3rd parameter", () => {
+        const mainfilename = "with-main-file-2.less",
+              mainfileoutput = "/with-main-file-2.css"
+        cli("--run-once", lessDir, outDir, mainfilename);
+        const contents = fs.readFileSync(outDir + mainfileoutput),
+          contentsExpected = fs.readFileSync(expectedCssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + mainfileoutput, { force: true });
       });
     });
 
     describe("--config parameter", function () {
-      const cssDir = cwd + "/test/examples/with-config/css";
+      const cssDir = cwd + "/test/examples/with-config/css",
+        filename = "/with-config.css";
       it("should load a config json", () => {
-        let runCommand = async () => {
-          let result = await cli(
-            ["--config", "test/less-watch-compiler.config.json"],
-            "."
-          );
-          return result;
-        };
+        cli(
+          "--run-once",
+          "--config",
+          cwd + "/test/examples/with-config/less-watch-compiler.config.json"
+        );
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(cssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
 
-        runCommand().then((result) => {
-          assert.strictEqual(result.code, 0);
+        fs.rmSync(outDir + filename, { force: true });
+      });
+    });
 
-          const contents = fs.readFileSync(cssDir + "/test.css");
-          const contentsExpected = fs.readFileSync(
-            cssDir + "/test.expected.css"
-          );
-
-          assert.ok(contents.equals(contentsExpected));
-
-          fs.rmSync(cssDir + "/test.css", { force: true });
-        });
+    describe("--run-once parameter", function () {
+      it("exit after once", () => {
+        cli("--run-once", "test/less", "test/css");
       });
     });
 
     describe("--include-hidden parameter", function () {
-      const lessDir = cwd + "/test/examples/with-hidden-variables-file/less";
-      const cssDir = cwd + "/test/examples/with-hidden-variables-file/css";
+      const lessDir = cwd + "/test/examples/with-hidden-variables-file/less",
+        expectedCSSDir = cwd + "/test/examples/with-hidden-variables-file/css",
+        filename = "/with-hidden.css";
+
       it("should compile hidden files when parameter is specified", () => {
-        let runCommand = async () => {
-          let result = await cli(["--include-hidden"], lessDir, cssDir);
-          return result;
-        };
-
-        runCommand().then((result) => {
-          assert.strictEqual(result.code, 0);
-
-          const contents = fs.readFileSync(cssDir + "/main.css");
-          const contentsExpected = fs.readFileSync(cssDir + "/expected.css");
-
-          assert.ok(contents.equals(contentsExpected));
-
-          fs.rmSync(cssDir + "/main.css", { force: true });
-        });
+        cli("--include-hidden", "--run-once", lessDir, outDir);
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(expectedCSSDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + filename, { force: true });
       });
 
       it("should not compile the hidden variables files when flag not specified", () => {
-        const compiledVariablesPath = cssDir + "/_variables.css";
-        const compiledOtherVariablesPath = cssDir + "/.other-variables.css";
+        const compiledVariablesPath = outDir + "/_variables.css",
+          compiledOtherVariablesPath = outDir + "/.other-variables.css";
 
         // Make sure we don't detect compiled variables files left over from other runs
         fs.rmSync(compiledVariablesPath, { force: true });
         fs.rmSync(compiledOtherVariablesPath, { force: true });
 
-        let runCommand = async () => {
-          let result = await cli([], lessDir, cssDir);
-          return result;
-        };
+        const variablesFilesWereNotCompiled =
+          !fs.existsSync(compiledVariablesPath) &&
+          !fs.existsSync(compiledOtherVariablesPath);
 
-        runCommand().then((result) => {
-          assert.strictEqual(result.code, 0);
-
-          const variablesFilesWereNotCompiled =
-            !fs.existsSync(compiledVariablesPath) &&
-            !fs.existsSync(compiledOtherVariablesPath);
-
-          assert.ok(variablesFilesWereNotCompiled);
-        });
+        assert.ok(variablesFilesWereNotCompiled);
       });
     });
+
+    describe("--enable-js parameter", function () {
+      const lessDir = cwd + "/test/examples/with-js/less",
+        expectedCssDir = cwd + "/test/examples/with-js/css",
+        filename = "/with-js.css";
+
+      it("should load a config json", () => {
+        cli("--enable-js", "--run-once", lessDir, outDir);
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(expectedCssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + filename, { force: true });
+      });
+    });
+
+    describe("--source-map parameter", function () {
+      const lessDir = cwd + "/test/examples/with-source-map/less",
+        expectedCssDir = cwd + "/test/examples/with-source-map/css",
+        filename = "/with-source-map.css",
+        sourcemapfile = "/with-source-map.css.map";
+        
+        cli("--source-map", "--run-once", lessDir, outDir);
+        
+      it("should generate the css file", () => {
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(expectedCssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + filename, { force: true });
+      });
+      it("should generate the sourcemap", () => {
+        const contents = fs.readFileSync(outDir + sourcemapfile),
+          contentsExpected = fs.readFileSync(expectedCssDir + sourcemapfile);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + sourcemapfile, { force: true });
+      });
+    });
+
+    describe("--less-args parameter", function () {
+      const lessDir = cwd + "/test/examples/with-less-args/less",
+        expectedCssDir = cwd + "/test/examples/with-less-args/css",
+        filename = "/with-less-args.css";
+        
+      it("should generate the css file according to the less arguments", () => {
+        cli(lessDir, outDir, "--run-once", "--less-args", "math=strict,strict-units=on");
+        const contents = fs.readFileSync(outDir + filename),
+          contentsExpected = fs.readFileSync(expectedCssDir + filename);
+        assert.ok(contents.equals(contentsExpected));
+        fs.rmSync(outDir + filename, { force: true });
+      });
+    });
+
   });
 });
 
 function cli(...args) {
-  return new Promise((resolve) => {
-    const command = `node ${path.resolve(
-      "src/less-watch-compiler.js"
-    )} ${args.join(" ")}`;
-
-    exec(command, null, (error, stdout, stderr) => {
-      resolve({
-        code: error && error.code ? error.code : 0,
-        error,
-        stdout,
-        stderr,
-      });
-    });
-  });
+  const command = `node ${path.resolve("dist/less-watch-compiler.js")} ${args.join(" ")}`;
+  return execSync(command);
 }
