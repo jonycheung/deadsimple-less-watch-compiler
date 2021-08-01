@@ -41,7 +41,7 @@
     "babel-cli": "6.26.0",
     "babel-preset-env": "1.7.0",
     "cz-conventional-changelog": "3.3.0",
-    "mocha": "9.0.2"
+    "mocha": "9.0.3"
   },
   "preferGlobal": true,
   "keywords": [
