@@ -112,7 +112,7 @@ describe("resolveOutputPath()", function () {
     // Walker will always return paths relative to watchFolder
     assert.strictEqual(
       resolveOutputPath("inputFolder/inner/evenmore/afile.less"),
-      '"testFolder/nested/evenmore/afile.min.css"'
+      'testFolder/nested/evenmore/afile.min.css'
     );
   });
 
@@ -125,7 +125,7 @@ describe("resolveOutputPath()", function () {
     // it should however always land in the destination folder
     assert.strictEqual(
       resolveOutputPath("inputFolder/inner/../afile.less"),
-      '"testFolder/nested/afile.min.css"'
+      'testFolder/nested/afile.min.css'
     );
   });
 });

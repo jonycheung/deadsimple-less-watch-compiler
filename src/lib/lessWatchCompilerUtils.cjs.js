@@ -11,75 +11,76 @@ define(function (require) {
     FileSearch = require("./fileSearch.js"),
     Config = require("./Options.js").Options.getInstance(),
     filelist = [],
-    fileimportlist = {};
+    fileimportlist = {},
+    walk = require("./Utils.js").walk;
 
   var fileSearch = new FileSearch.default();
 
   var lessWatchCompilerUtilsModule = {
-    walk: function (dir, options, callback, initCallback) {
-      if (!callback) {
-        callback = options;
-        options = {};
-      }
-      if (!callback.files) callback.files = {};
-      if (!callback.pending) callback.pending = 0;
-      callback.pending += 1;
-      fs.stat(dir, function (err, stat) {
-        if (err) return callback(err);
-        callback.files[dir] = stat;
-        fs.readdir(dir, function (err, files) {
-          if (err) return callback(err);
-          callback.pending -= 1;
-          files.forEach(function (f, index) {
-            f = path.join(dir, f);
-            callback.pending += 1;
-            fs.stat(f, function (err, stat) {
-              var enoent = false,
-                done = false;
+    // walk: function (dir, options, callback, initCallback) {
+    //   if (!callback) {
+    //     callback = options;
+    //     options = {};
+    //   }
+    //   if (!callback.files) callback.files = {};
+    //   if (!callback.pending) callback.pending = 0;
+    //   callback.pending += 1;
+    //   fs.stat(dir, function (err, stat) {
+    //     if (err) return callback(err);
+    //     callback.files[dir] = stat;
+    //     fs.readdir(dir, function (err, files) {
+    //       if (err) return callback(err);
+    //       callback.pending -= 1;
+    //       files.forEach(function (f, index) {
+    //         f = path.join(dir, f);
+    //         callback.pending += 1;
+    //         fs.stat(f, function (err, stat) {
+    //           var enoent = false,
+    //             done = false;
 
-              if (err) {
-                if (err.code !== "ENOENT") {
-                  console.log(err.code);
-                  return callback(err);
-                } else {
-                  enoent = true;
-                }
-              }
-              callback.pending -= 1;
-              done = callback.pending === 0;
-              if (!enoent) {
-                callback.files[f] = stat;
-                if (stat.isDirectory()) {
-                  lessWatchCompilerUtilsModule.walk(
-                    f,
-                    options,
-                    callback,
-                    initCallback
-                  );
-                } else {
-                  if (options.ignoreDotFiles && path.basename(f)[0] === ".")
-                    return done && callback(null, callback.files);
-                  if (options.filter && options.filter(f))
-                    return done && callback(null, callback.files);
-                  initCallback && initCallback(f);
-                }
+    //           if (err) {
+    //             if (err.code !== "ENOENT") {
+    //               console.log(err.code);
+    //               return callback(err);
+    //             } else {
+    //               enoent = true;
+    //             }
+    //           }
+    //           callback.pending -= 1;
+    //           done = callback.pending === 0;
+    //           if (!enoent) {
+    //             callback.files[f] = stat;
+    //             if (stat.isDirectory()) {
+    //               lessWatchCompilerUtilsModule.walk(
+    //                 f,
+    //                 options,
+    //                 callback,
+    //                 initCallback
+    //               );
+    //             } else {
+    //               if (options.ignoreDotFiles && path.basename(f)[0] === ".")
+    //                 return done && callback(null, callback.files);
+    //               if (options.filter && options.filter(f))
+    //                 return done && callback(null, callback.files);
+    //               initCallback && initCallback(f);
+    //             }
 
-                if (done) callback(null, callback.files);
-              }
-            });
-          });
-          if (callback.pending === 0) callback(null, callback.files);
-        });
-        if (callback.pending === 0) callback(null, callback.files);
-      });
-    },
+    //             if (done) callback(null, callback.files);
+    //           }
+    //         });
+    //       });
+    //       if (callback.pending === 0) callback(null, callback.files);
+    //     });
+    //     if (callback.pending === 0) callback(null, callback.files);
+    //   });
+    // },
     //Setup fs.watchFile() for each file.
     watchTree: function (root, options, watchCallback, initCallback) {
       if (!watchCallback) {
         watchCallback = options;
         options = {};
       }
-      lessWatchCompilerUtilsModule.walk(
+      walk(
         root,
         options,
         function (err, files) {

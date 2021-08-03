@@ -144,7 +144,8 @@ function init(): void {
     });
   }
 
-  if (Config.runOnce === true) console.log("Running less-watch-compiler only once.");
+  if (Config.runOnce === true)
+    console.log("Running less-watch-compiler only once.");
   else console.log("Watching directory for file changes.");
   lessWatchCompilerUtils.watchTree(
     Config.watchFolder,
@@ -186,43 +187,45 @@ function init(): void {
             if (f == normalizedPath && !mainFilePath) {
               // Compile changed file only if a main file is there.
               const outputFilePath = resolveOutputPath(i);
-               
-              const child_process: child.ChildProcess | undefined = compileCSS(outputFilePath);
+
+              const child_process: child.ChildProcess | undefined =
+                compileCSS(outputFilePath);
 
               if (child_process !== undefined)
-                child_process.on('exit', () => {
-                console.log(
-                  "The file: " +
-                    i +
-                    " was changed because " +
-                    JSON.stringify(f) +
-                    " is specified as an import.  Recompiling " +
-                    outputFilePath +
-                    " at " +
-                    getDateTime()
-                );
-              importedFile = true;
-
-              });
+                child_process.on("exit", () => {
+                  console.log(
+                    "The file: " +
+                      i +
+                      " was changed because " +
+                      JSON.stringify(f) +
+                      " is specified as an import.  Recompiling " +
+                      outputFilePath +
+                      " at " +
+                      getDateTime()
+                  );
+                  importedFile = true;
+                });
             }
           }
         }
         if (!importedFile) {
           const path = mainFilePath || f;
           const outputFilePath = resolveOutputPath(path);
-          const child_process: child.ChildProcess | undefined = compileCSS(outputFilePath);
+          console.log("outputFilePath");
+          console.log(outputFilePath);
+          const child_process: child.ChildProcess | undefined =
+            compileCSS(outputFilePath);
           if (child_process)
-            child_process.on('exit', ()=>{
+            child_process.on("exit", () => {
               console.log(
                 "The file: " +
-                  JSON.stringify(f) +
+                  JSON.stringify(path) +
                   " was changed. Recompiling " +
                   outputFilePath +
                   " at " +
                   getDateTime()
               );
-
-          })
+            });
         }
       }
     },

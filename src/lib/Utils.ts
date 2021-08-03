@@ -5,6 +5,8 @@ import sh from "shelljs";
 import { Options } from "./Options";
 const fileSearch = new FileSearch();
 import * as child from "child_process";
+import * as fs from "fs";
+// import lessWatchCompilerUtilsModule from "./lessWatchCompilerUtils.cjs.js";
 
 export function compileCSS(
   inputFilePath: string,
@@ -15,9 +17,10 @@ export function compileCSS(
   const outputFilePath = resolveOutputPath(inputFilePath);
   if (fileSearch.isHiddenFile(outputFilePath)) return undefined;
 
+  console.log("inputFilePath "+inputFilePath)
+  console.log("outputFilePath "+outputFilePath)
   const command = getCommand(inputFilePath, outputFilePath);
   // Run the command
-  
   if (!test)
     return child.exec(command)
   else
@@ -43,7 +46,7 @@ export function getCommand(inputFilePath:string, outputFilePath:string):string{
       " " +
       JSON.stringify(inputFilePath) +
       " " +
-      outputFilePath;
+      JSON.stringify(outputFilePath);
     return command
 }
 
@@ -80,6 +83,7 @@ export function resolveOutputPath(filePath: string) {
     dirname = path.dirname(filePath);
   }
   const filename = parsedPath.name;
+  
 
   let formatted: string = path.format({
     dir: dirname,
@@ -92,8 +96,12 @@ export function resolveOutputPath(filePath: string) {
 
   const finalFullPath = path.resolve(Config.outputFolder, formatted);
   const shortPath = path.relative(cwd, finalFullPath);
+  console.log(" ======== resolveOutputPath ======== ");
+  console.log("cwd: " +cwd)
+  console.log("finalFullPath: " + finalFullPath)
+  console.log("shortPath: " +shortPath)
 
-  return JSON.stringify(shortPath);
+  return shortPath;
 }
 
 export function getLessArgs(args: string) {
@@ -118,3 +126,66 @@ export function filterFiles(f: string) {
     }
   }
 }
+
+export function walk (
+  dir: string,
+  options: { ignoreDotFiles: boolean, filter: any },
+  callback: (err: any, object?: object) => void,
+  initCallback: (file:string) => void,
+  callbackOptions: { files: { [key: string]: any }; pending: number } = {
+    files: {},
+    pending: 0,
+  }
+) {
+  callbackOptions.pending += 1;
+
+  fs.stat(dir, function (err, stat) {
+    if (err) return callback(err);
+    callbackOptions.files[dir] = stat;
+    fs.readdir(dir, function (err, files) {
+      if (err) return callback(err);
+      callbackOptions.pending -= 1;
+      files.forEach(function (f, index) {
+        f = path.join(dir, f);
+        callbackOptions.pending += 1;
+        fs.stat(f, function (err, stat) {
+          var enoent = false,
+            done = false;
+
+          if (err) {
+            if (err.code !== "ENOENT") {
+              console.log(err.code);
+              return callback(err);
+            } else {
+              enoent = true;
+            }
+          }
+          callbackOptions.pending -= 1;
+          done = callbackOptions.pending === 0;
+          if (!enoent) {
+            callbackOptions.files[f] = stat;
+            if (stat.isDirectory()) {
+              walk(
+                f,
+                options,
+                callback,
+                initCallback
+              );
+            } else {
+              if (options.ignoreDotFiles && path.basename(f)[0] === ".")
+                return done && callback(null, callbackOptions.files);
+              if (options.filter && options.filter(f))
+                return done && callback(null, callbackOptions.files);
+              initCallback && initCallback(f);
+            }
+
+            if (done) callback(null, callbackOptions.files);
+          }
+        });
+      });
+      if (callbackOptions.pending === 0)
+        callback(null, callbackOptions.files);
+    });
+    if (callbackOptions.pending === 0) callback(null, callbackOptions.files);
+  });
+};
