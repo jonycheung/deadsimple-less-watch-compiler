@@ -17,8 +17,6 @@ export function compileCSS(
   const outputFilePath = resolveOutputPath(inputFilePath);
   if (fileSearch.isHiddenFile(outputFilePath)) return undefined;
 
-  console.log("inputFilePath "+inputFilePath)
-  console.log("outputFilePath "+outputFilePath)
   const command = getCommand(inputFilePath, outputFilePath);
   // Run the command
   if (!test)
@@ -96,10 +94,6 @@ export function resolveOutputPath(filePath: string) {
 
   const finalFullPath = path.resolve(Config.outputFolder, formatted);
   const shortPath = path.relative(cwd, finalFullPath);
-  console.log(" ======== resolveOutputPath ======== ");
-  console.log("cwd: " +cwd)
-  console.log("finalFullPath: " + finalFullPath)
-  console.log("shortPath: " +shortPath)
 
   return shortPath;
 }
