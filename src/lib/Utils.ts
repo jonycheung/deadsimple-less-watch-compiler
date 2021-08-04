@@ -6,7 +6,7 @@ import { Options } from "./Options";
 const fileSearch = new FileSearch();
 import * as child from "child_process";
 import * as fs from "fs";
-// import lessWatchCompilerUtilsModule from "./lessWatchCompilerUtils.cjs.js";
+const lessWatchCompilerUtilsModule = require("./lessWatchCompilerUtils.cjs.js");
 
 export function compileCSS(
   inputFilePath: string,
@@ -19,13 +19,14 @@ export function compileCSS(
 
   const command = getCommand(inputFilePath, outputFilePath);
   // Run the command
-  if (!test)
-    return child.exec(command)
-  else
-    return child.exec('');
+  if (!test) return child.exec(command);
+  else return child.exec("");
 }
 
-export function getCommand(inputFilePath:string, outputFilePath:string):string{
+export function getCommand(
+  inputFilePath: string,
+  outputFilePath: string
+): string {
   const Config = Options.getInstance();
   const enableJsFlag = Config.enableJs ? " --js" : "",
     minifiedFlag = Config.minified ? " -x" : "",
@@ -45,7 +46,7 @@ export function getCommand(inputFilePath:string, outputFilePath:string):string{
       JSON.stringify(inputFilePath) +
       " " +
       JSON.stringify(outputFilePath);
-    return command
+  return command;
 }
 
 export function getDateTime(): string {
@@ -81,7 +82,6 @@ export function resolveOutputPath(filePath: string) {
     dirname = path.dirname(filePath);
   }
   const filename = parsedPath.name;
-  
 
   let formatted: string = path.format({
     dir: dirname,
@@ -121,11 +121,11 @@ export function filterFiles(f: string) {
   }
 }
 
-export function walk (
+export function walk(
   dir: string,
-  options: { ignoreDotFiles: boolean, filter: any },
+  options: { ignoreDotFiles: boolean; filter: any },
   callback: (err: any, object?: object) => void,
-  initCallback: (file:string) => void,
+  initCallback: (file: string) => void,
   callbackOptions: { files: { [key: string]: any }; pending: number } = {
     files: {},
     pending: 0,
@@ -159,12 +159,7 @@ export function walk (
           if (!enoent) {
             callbackOptions.files[f] = stat;
             if (stat.isDirectory()) {
-              walk(
-                f,
-                options,
-                callback,
-                initCallback
-              );
+              walk(f, options, callback, initCallback);
             } else {
               if (options.ignoreDotFiles && path.basename(f)[0] === ".")
                 return done && callback(null, callbackOptions.files);
@@ -177,9 +172,49 @@ export function walk (
           }
         });
       });
-      if (callbackOptions.pending === 0)
-        callback(null, callbackOptions.files);
+      if (callbackOptions.pending === 0) callback(null, callbackOptions.files);
     });
     if (callbackOptions.pending === 0) callback(null, callbackOptions.files);
   });
-};
+}
+
+export function watchTree(
+  root: string,
+  options: { interval: number; ignoreDotFiles: boolean; filter: any },
+  watchCallback: (
+    files: any,
+    current: any,
+    next: any,
+    fileimportlist: []
+  ) => void,
+  initCallback: (f: string) => void,
+  watchCallbackOption?: {}
+) {
+  walk(
+    root,
+    options,
+    function (err, files) {
+      if (err) throw err;
+      lessWatchCompilerUtilsModule.fileWatcher(
+        root,
+        files,
+        options,
+        [],
+        [],
+        watchCallback
+      );
+      for (var i in files) {
+        lessWatchCompilerUtilsModule.fileWatcher(
+          i,
+          files,
+          options,
+          [],
+          [],
+          watchCallback
+        );
+      }
+      watchCallback(files, null, null, []);
+    },
+    initCallback
+  );
+}

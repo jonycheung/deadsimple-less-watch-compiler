@@ -1,10 +1,9 @@
 var assert = require("assert"),
-  Utils = require("../dist/lib/Utils.js"),
   Options = require("../dist/lib/Options.js").Options,
   sh = require("shelljs");
 const { resolve } = require("path/posix");
 
-const {getCommand, compileCSS, resolveOutputPath, getDateTime,filterFiles} = Utils
+const {getCommand, compileCSS, resolveOutputPath, getDateTime,filterFiles, watchTree} = require("../dist/lib/Utils.js"),
   Config = Options.getInstance();
 
 describe("getDateTime()", function () {
@@ -25,6 +24,26 @@ describe("compileCSS()", function () {
     assert.strictEqual("function", typeof compileCSS);
   });
 });
+
+describe("watchTree()", function () {
+  it("watchTree() function should be there", function () {
+    assert.strictEqual("function", typeof(watchTree));
+  });
+  // it("watchTree() function should complete and call a callback ", async (done) => {
+  //   await runCommand(done);
+  //   function runCommand(done) {
+  //     watchTree(
+  //       testroot,
+  //       {},
+  //       function () {},
+  //       function () {}
+  //     );
+  //     assert.ok("completed");
+  //     done();
+  //   }
+  // });
+});
+
 describe("getCommand()", function () {
   beforeEach(()=>{
     Config.reset();

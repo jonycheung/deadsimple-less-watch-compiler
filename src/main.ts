@@ -16,7 +16,7 @@ import * as path from "path";
 import * as sh from "shelljs";
 import { Command } from "commander";
 import * as events from "events";
-import { compileCSS, getDateTime, resolveOutputPath } from "./lib/Utils";
+import { compileCSS, getDateTime, resolveOutputPath,watchTree } from "./lib/Utils";
 import { Options } from "./lib/Options";
 import * as child from "child_process";
 
@@ -147,7 +147,7 @@ function init(): void {
   if (Config.runOnce === true)
     console.log("Running less-watch-compiler only once.");
   else console.log("Watching directory for file changes.");
-  lessWatchCompilerUtils.watchTree(
+  watchTree(
     Config.watchFolder,
     {
       interval: 200,
