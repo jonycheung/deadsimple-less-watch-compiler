@@ -211,8 +211,6 @@ function init(): void {
         if (!importedFile) {
           const path = mainFilePath || f;
           const outputFilePath = resolveOutputPath(path);
-          console.log("outputFilePath");
-          console.log(outputFilePath);
           const child_process: child.ChildProcess | undefined =
             compileCSS(outputFilePath);
           if (child_process)
