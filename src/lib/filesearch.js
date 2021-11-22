@@ -18,6 +18,12 @@ define(function (require){
                 while (m = re.exec(fileContent)){
                     let [ , , filename ] = m;
                     // console.log('found import ' + filename);
+
+                    if (path.extname(filename).length < 1) {
+                        // console.log("The imported file does not have an explicit extension, we will assume it's .less", filename);
+                        filename = filename + ".less";
+                    }
+
                     if (m) files.push(filename);
                 }
                 return files;
