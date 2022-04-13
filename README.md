@@ -72,7 +72,7 @@ less-watch-compiler src dist main.less
 ```
 
 ## Configuration File
-By default the the configuration file is loaded from ./less-watch-compiler.config.json but can also be specified by the --config <file> option.
+By default the configuration file is loaded from ./less-watch-compiler.config.json but can also be specified by the --config <file> option.
 
 #### Example using the project tree laid out in the previous example
 
