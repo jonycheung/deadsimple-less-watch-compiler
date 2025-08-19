@@ -58,10 +58,10 @@
   dependencies:
     chalk "^4.0.0"
 
-"@types/commander@2.12.2":
-  version "2.12.2"
-  resolved "https://registry.yarnpkg.com/@types/commander/-/commander-2.12.2.tgz#183041a23842d4281478fa5d23c5ca78e6fd08ae"
-  integrity sha512-0QEFiR8ljcHp9bAbWxecjVRuAMr16ivPiGOw6KFQBVrVd0RQIcM3xKdRisH2EDWgVWujiYtHwhSkSUoAAGzH7Q==
+"@types/commander@2.12.5":
+  version "2.12.5"
+  resolved "https://registry.yarnpkg.com/@types/commander/-/commander-2.12.5.tgz#8be6f1452747452c5b744275155ff358e9eda77e"
+  integrity sha512-YXGZ/rz+s57VbzcvEV9fUoXeJlBt5HaKu5iUheiIWNsJs23bz6AnRuRiZBRVBLYyPnixNvVnuzM5pSaxr8Yp/g==
   dependencies:
     commander "*"
 
