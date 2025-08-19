@@ -111,6 +111,21 @@ describe('lessWatchCompilerUtils Module API', function () {
                 };
                 assert.equal("lessc --math=strict --strict-units=on --include-path=./dir1\;./dir2 \"test.less\" \"testFolder/test.css\"", lessWatchCompilerUtils.compileCSS("test.less", true).command);
             });
+
+            it('should not compile hidden files by default', function () {
+                lessWatchCompilerUtils.config = {
+                    outputFolder: "testFolder"
+                };
+                assert.equal(undefined, lessWatchCompilerUtils.compileCSS("_test.less", true));
+            });
+
+            it('should compile hidden files when includeHidden flag is set', function () {
+                lessWatchCompilerUtils.config = {
+                    outputFolder: "testFolder",
+                    includeHidden: true
+                };
+                assert.equal("lessc \"_test.less\" \"testFolder/_test.css\"", lessWatchCompilerUtils.compileCSS("_test.less", true).command);
+            });
         });
         describe('resolveOutputPath()', function () {
             // reset config
