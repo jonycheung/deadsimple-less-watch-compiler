@@ -66,7 +66,7 @@ function init(){
   if (programOption.sourceMap) lessWatchCompilerUtils.config.sourceMap = programOption.sourceMap;
   if (programOption.plugins) lessWatchCompilerUtils.config.plugins = programOption.plugins;
   if (programOption.runOnce) lessWatchCompilerUtils.config.runOnce = programOption.runOnce;
-  if (programOption.inludeHidden) lessWatchCompilerUtils.config.includeHidden = programOption.includeHidden;
+  if (programOption.includeHidden) lessWatchCompilerUtils.config.includeHidden = programOption.includeHidden;
   if (programOption.enableJs) lessWatchCompilerUtils.config.enableJs = programOption.enableJs;
   if (programOption.lessArgs) lessWatchCompilerUtils.config.lessArgs = programOption.lessArgs;
 
