@@ -33,7 +33,9 @@
     "less": "^4.0.0",
     "shelljs": ">= 0.4.0"
   },
-  "engine": "node 0.10.26",
+  "engines": {
+    "node": ">=18"
+  },
   "devDependencies": {
     "@types/commander": "2.12.2",
     "babel-cli": "6.26.0",
