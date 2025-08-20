@@ -7,7 +7,7 @@ version: 2
 defaults: &defaults
   working_directory: ~/repo
   docker:
-    - image: circleci/node:18
+    - image: cimg/node:24.6.0
 
 jobs:
   test:
