@@ -4,8 +4,6 @@ var assert = require("assert"),
     cwd = sh.pwd().toString();
 
 
-// TODO - Add meaningful tests duh!
-
 describe('filesearch Module', function () {
     describe('Should have the following API\'s', function () {
 
@@ -27,6 +25,17 @@ describe('filesearch Module', function () {
                     filesearchresult = filesearch.findLessImportsInFile(file);
                 assert.equal(result.toString(), filesearchresult.toString());
                 done();
+            });
+            it('should return empty array when file is missing', function () {
+                var file = "./test/less/does-not-exist.less";
+                var filesearchresult = filesearch.findLessImportsInFile(file);
+                assert.deepStrictEqual(filesearchresult, []);
+            });
+            it('should handle url() and reference @import syntaxes with flexible formatting', function () {
+                var file = "./test/less/_importVariants.less";
+                var result = ['plain-url.less', 'reference.less', 'ref-url.less', 'spaced.less', 'tight.less', 'no-semicolon.less'],
+                    filesearchresult = filesearch.findLessImportsInFile(file);
+                assert.deepStrictEqual(filesearchresult, result);
             });
         })
         describe('isHiddenFile()', function () {

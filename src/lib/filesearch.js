@@ -9,19 +9,32 @@ define(function (require){
 
     const filesearch = {
         findLessImportsInFile: function(f){
-            if (fs.statSync(f) && fs.statSync(f).isFile() === false) 
-                return []
-            else{
-                let m, files = [];
-                const fileContent = fs.readFileSync(f, 'utf8');
-                const re = /@import (\(reference\) )?['"](.*?)['"];/g;
-                while (m = re.exec(fileContent)){
-                    let [ , , filename ] = m;
-                    // console.log('found import ' + filename);
-                    if (m) files.push(filename);
-                }
-                return files;
+            let stat;
+            try {
+                stat = fs.statSync(f);
+            } catch (err) {
+                if (err.code === 'ENOENT') return [];
+                throw err;
             }
+
+            if (stat && stat.isFile() === false) return [];
+
+            let fileContent;
+            try {
+                fileContent = fs.readFileSync(f, 'utf8');
+            } catch (err) {
+                if (err.code === 'ENOENT' || err.code === 'EACCES') return [];
+                throw err;
+            }
+
+            let m, files = [];
+            // Support @import with optional (reference), optional url(), flexible whitespace, and optional trailing semicolon
+            const re = /@import\s+(?:\(reference\)\s+)?(?:url\(\s*)?['"]([^'"]+)['"]\s*\)?\s*;?/g;
+            while (m = re.exec(fileContent)){
+                let [ , filename ] = m;
+                if (filename) files.push(filename);
+            }
+            return files;
         },
         isHiddenFile: function (filename) {
             filename = path.basename(filename)

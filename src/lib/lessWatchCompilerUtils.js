@@ -100,6 +100,10 @@ define(function (require) {
       // Skip compiling hidden files unless includeHidden flag is enabled
       if (fileSearch.isHiddenFile(file) && !lessWatchCompilerUtilsModule.config.includeHidden) return
 
+      var localBinPath = path.resolve(__dirname, '../../node_modules/.bin');
+      if (process.env.PATH.indexOf(localBinPath) === -1) {
+        process.env.PATH = localBinPath + path.delimiter + process.env.PATH;
+      }
       var enableJsFlag = lessWatchCompilerUtilsModule.config.enableJs ? ' --js' : '';
       var minifiedFlag = lessWatchCompilerUtilsModule.config.minified ? ' -x' : '';
       var sourceMap = (lessWatchCompilerUtilsModule.config.sourceMap) ? ' --source-map' : '';
