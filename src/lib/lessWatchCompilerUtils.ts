@@ -88,12 +88,14 @@ const lessWatchCompilerUtilsModule = {
               state.pending -= 1;
               const done = state.pending === 0;
               if (!enoent && st) {
+                // Skip ignored files before adding to map
+                if (options.ignoreDotFiles && path.basename(filePath)[0] === '.') return void (done && callback(null, state.files));
+                if (options.filter && options.filter(filePath)) return void (done && callback(null, state.files));
+
                 state.files[filePath] = st as fs.Stats;
                 if (st.isDirectory()) {
                   processDir(filePath);
                 } else {
-                  if (options.ignoreDotFiles && path.basename(filePath)[0] === '.') return void (done && callback(null, state.files));
-                  if (options.filter && options.filter(filePath)) return void (done && callback(null, state.files));
                   initCallback && initCallback(filePath);
                 }
                 if (done) callback(null, state.files);
@@ -237,8 +239,8 @@ const lessWatchCompilerUtilsModule = {
       if (!files[f].isDirectory()) {
         if (options.ignoreDotFiles && path.basename(f)[0] === '.') return;
         if (options.filter && options.filter(f)) return;
-        fs.exists(f, (exists) => {
-          if (!exists) {
+        fs.access(f, fs.constants.F_OK, (accessErr) => {
+          if (accessErr) {
             console.log('Does not exist : ' + f);
           } else {
             fileimportlist[f] = fileSearch.findLessImportsInFile(f);
@@ -254,8 +256,8 @@ const lessWatchCompilerUtilsModule = {
               fs.stat(file, (err, stat) => {
                 if (options.ignoreDotFiles && path.basename(b)[0] === '.') return;
                 if (options.filter && options.filter(b)) return;
-                fs.exists(file, (exists) => {
-                  if (!exists) {
+                fs.access(file, fs.constants.F_OK, (accessErr) => {
+                  if (accessErr) {
                     console.log('Does not exist : ' + f);
                   } else {
                     fileimportlist[file] = fileSearch.findLessImportsInFile(file);
@@ -296,4 +298,3 @@ const lessWatchCompilerUtilsModule = {
 };
 
 export = lessWatchCompilerUtilsModule;
-

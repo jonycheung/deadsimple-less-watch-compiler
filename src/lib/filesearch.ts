@@ -33,10 +33,11 @@ const filesearch: FilesearchApi = {
       }
       throw err;
     }
-    const re = /@import (\(reference\) )?['"](.*?)['"];/g;
+    // Support @import with optional (reference), optional url(), flexible whitespace, and optional trailing semicolon
+    const re = /@import\s+(?:\(reference\)\s+)?(?:url\(\s*)?['"]([^'"]+)['"]\s*\)?\s*;?/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(fileContent))) {
-      const filename = m[2];
+      const filename = m[1];
       if (filename) files.push(filename);
     }
     return files;
@@ -49,4 +50,3 @@ const filesearch: FilesearchApi = {
 };
 
 export = filesearch;
-

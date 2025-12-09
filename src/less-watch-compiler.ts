@@ -62,15 +62,20 @@ const configPath = programOption.config
     : cwd + path.sep + programOption.config
   : 'less-watch-compiler.config.json';
 
-fs.access(configPath, fs.constants.F_OK, (err) => {
-  if (!err) {
-    const data = fs.readFileSync(configPath);
+const loadConfigAndInit = async (): Promise<void> => {
+  try {
+    await fs.promises.access(configPath, fs.constants.F_OK);
+    const data = await fs.promises.readFile(configPath, 'utf8');
     const customConfig = JSON.parse(data.toString());
     console.log('Config file ' + configPath + ' is loaded.');
     extend(true, lessWatchCompilerUtils.config, customConfig);
+  } catch (err) {
+    // No config file is fine; proceed with defaults
   }
   init();
-});
+};
+
+loadConfigAndInit();
 
 let mainFilePath: string | undefined = undefined;
 
@@ -108,12 +113,12 @@ function init(): void {
 
   if (lessWatchCompilerUtils.config.mainFile) {
     mainFilePath = path.resolve(lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile);
-    fs.exists(mainFilePath, function (exists) {
-      if (!exists) {
+    fs.promises
+      .access(mainFilePath, fs.constants.F_OK)
+      .catch(() => {
         console.log('Main file ' + mainFilePath + ' does not exist.');
         process.exit(1);
-      }
-    });
+      });
   }
 
   if (lessWatchCompilerUtils.config.runOnce === true) console.log('Running less-watch-compiler once.');
@@ -177,4 +182,3 @@ function init(): void {
     }
   );
 }
-
