@@ -17,11 +17,11 @@ jobs:
 
       - restore_cache:
           keys:
-          - v1-dependencies-{{ checksum "package.json" }}
+          - v2-dependencies-{{ checksum "yarn.lock" }}
           # fallback to using the latest cache if no exact match is found
-          - v1-dependencies-
+          - v2-dependencies-
 
-      - run: yarn
+      - run: yarn install --frozen-lockfile --check-files
       - run:
           name: Run tests
           command: yarn test
@@ -29,7 +29,7 @@ jobs:
       - save_cache:
           paths:
             - node_modules
-          key: v1-dependencies-{{ checksum "package.json" }}
+          key: v2-dependencies-{{ checksum "yarn.lock" }}
 
       - persist_to_workspace:
           root: ~/repo
