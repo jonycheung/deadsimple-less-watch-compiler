@@ -23,7 +23,16 @@ const filesearch: FilesearchApi = {
     if (!stat || stat.isFile() === false) return [];
 
     const files: string[] = [];
-    const fileContent = fs.readFileSync(filePath, 'utf8');
+    let fileContent: string;
+    try {
+      fileContent = fs.readFileSync(filePath, 'utf8');
+    } catch (err) {
+      const error = err as NodeJS.ErrnoException;
+      if (error.code === 'ENOENT' || error.code === 'EACCES') {
+        return [];
+      }
+      throw err;
+    }
     const re = /@import (\(reference\) )?['"](.*?)['"];/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(fileContent))) {
