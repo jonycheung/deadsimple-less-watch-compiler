@@ -87,7 +87,13 @@ function init(): void {
   if (programOption.enableJs !== undefined) lessWatchCompilerUtils.config.enableJs = programOption.enableJs;
   if (programOption.lessArgs) lessWatchCompilerUtils.config.lessArgs = programOption.lessArgs;
 
-  lessWatchCompilerUtils.config = Object.assign({}, lessWatchCompilerUtils.config, program.opts());
+  const cliOptions = program.opts();
+  Object.keys(cliOptions).forEach((key) => {
+    const value = (cliOptions as any)[key];
+    if (value !== undefined) {
+      (lessWatchCompilerUtils.config as any)[key] = value;
+    }
+  });
 
   if (!lessWatchCompilerUtils.config.watchFolder || !lessWatchCompilerUtils.config.outputFolder) {
     console.log('Missing arguments. Example:');
