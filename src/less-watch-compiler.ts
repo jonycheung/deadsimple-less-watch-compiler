@@ -141,7 +141,7 @@ function init(): void {
         for (const i in fileimports) {
           for (const k in fileimports[i]) {
             const hasExtension = path.extname(fileimports[i][k]).length > 1;
-            const importFile = path.join(fileimports[i][k], hasExtension ? '' : '.less');
+            const importFile = hasExtension ? fileimports[i][k] : fileimports[i][k] + '.less';
             const normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile);
 
             if (f === normalizedPath && !mainFilePath) {
