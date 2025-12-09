@@ -15,7 +15,7 @@
     "clean": "rm -R ./test/css || true && mkdir ./test/css",
     "prepublishOnly": "yarn run build",
     "commit": "git-cz -n",
-    "build": "babel src --out-dir dist",
+    "build": "tsc -p tsconfig.json",
     "start": "yarn run build && node ./dist/less-watch-compiler.js"
   },
   "repository": {
@@ -31,17 +31,22 @@
     "extend": ">= 2.0.0",
     "global": "^4.3.1",
     "less": "^4.0.0",
-    "shelljs": ">= 0.4.0"
+    "strip-ansi": "^6.0.1",
+    "string-width": "^4.2.3",
+    "shelljs": "^0.8.5"
   },
   "engines": {
     "node": ">=18"
   },
   "devDependencies": {
-    "@types/commander": "2.12.2",
-    "babel-cli": "6.26.0",
-    "babel-preset-env": "1.7.0",
+    "@types/extend": "^3.0.4",
+    "@types/node": "^20.11.17",
+    "@types/shelljs": "^0.8.15",
     "cz-conventional-changelog": "3.3.0",
-    "mocha": "9.1.1"
+    "mocha": "^11.7.5",
+    "strip-ansi": "^6.0.1",
+    "typescript": "^5.6.2",
+    "wrap-ansi": "^7.0.0"
   },
   "preferGlobal": true,
   "keywords": [
@@ -71,5 +76,10 @@
   "collective": {
     "type": "opencollective",
     "url": "https://opencollective.com/less-watch-compiler"
+  },
+  "resolutions": {
+    "shelljs": "0.8.5",
+    "glob": "10.3.10",
+    "cliui": "7.0.4"
   }
 }
