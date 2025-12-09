@@ -80,6 +80,6 @@
   "resolutions": {
     "shelljs": "0.8.5",
     "glob": "10.3.10",
-    "cliui": "7.0.4"
+    "cliui": "9.0.1"
   }
 }
