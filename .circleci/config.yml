@@ -1,8 +1,5 @@
-# Javascript Node CircleCI 2.0 configuration file
-#
-# Check {{ '/2.0/language-javascript/' | docs_url }} for more details
-#
-version: 2
+# CircleCI configuration with manual approval + version bumping releases on master
+version: 2.1
 
 defaults: &defaults
   working_directory: ~/repo
@@ -14,40 +11,126 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-
       - run: yarn install --frozen-lockfile --check-files
       - run:
           name: Run tests
           command: yarn test
-
       - persist_to_workspace:
           root: ~/repo
           paths: .
-  deploy:
+
+  release:
     <<: *defaults
+    parameters:
+      bump:
+        type: enum
+        enum: [patch, minor, major]
+        default: patch
     steps:
       - attach_workspace:
           at: ~/repo
+      - run:
+          name: Configure git user
+          command: |
+            git config --global user.email "ci@circle"
+            git config --global user.name "circleci"
+      - run:
+          name: Determine next version
+          command: |
+            current=$(node -p "require('./package.json').version")
+            bump="<< parameters.bump >>"
+            next=$(BUMP=$bump CURRENT_VERSION=$current node -e 'const bump=process.env.BUMP; const current=process.env.CURRENT_VERSION; const parts=current.split(".").map(Number); if (parts.length !== 3 || parts.some((n)=>Number.isNaN(n))) { throw new Error(`Invalid version: ${current}`); } let [maj,min,patch]=parts; if (bump==="major"){maj++;min=0;patch=0;} else if (bump==="minor"){min++;patch=0;} else {patch++;} console.log(`${maj}.${min}.${patch}`);')
+            echo "export NEXT_VERSION=$next" >> $BASH_ENV
+      - run:
+          name: Bump package.json version
+          command: |
+            node -e 'const fs=require("fs"); const path=require("path"); const pkgPath=path.join(process.cwd(),"package.json"); const pkg=require(pkgPath); const next=process.env.NEXT_VERSION; pkg.version=next; fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n");'
+      - run:
+          name: Build and test
+          command: |
+            yarn install --frozen-lockfile --check-files
+            yarn test
+      - run:
+          name: Commit version bump and tag
+          command: |
+            git add package.json yarn.lock
+            git commit -m "Release $NEXT_VERSION" || echo "Nothing to commit"
+            git tag v$NEXT_VERSION
       - run:
           name: Authenticate with registry
           command: echo "//registry.npmjs.org/:_authToken=$npm_TOKEN" > ~/repo/.npmrc
       - run:
           name: Publish package
           command: npm publish
+      - run:
+          name: Push commit and tag
+          command: |
+            git push origin HEAD
+            git push origin v$NEXT_VERSION
 
 workflows:
   version: 2
-  test-deploy:
+  test-release:
     jobs:
       - test:
           filters:
-            tags:
-              only: /.*/
-      - deploy:
+            branches:
+              only:
+                - master
+
+      - approve_patch:
+          type: approval
           requires:
             - test
           filters:
-            tags:
-              only: /^v.*/
             branches:
-              ignore: /.*/
+              only:
+                - master
+
+      - approve_minor:
+          type: approval
+          requires:
+            - test
+          filters:
+            branches:
+              only:
+                - master
+
+      - approve_major:
+          type: approval
+          requires:
+            - test
+          filters:
+            branches:
+              only:
+                - master
+
+      - release:
+          name: release_patch
+          bump: patch
+          requires:
+            - approve_patch
+          filters:
+            branches:
+              only:
+                - master
+
+      - release:
+          name: release_minor
+          bump: minor
+          requires:
+            - approve_minor
+          filters:
+            branches:
+              only:
+                - master
+
+      - release:
+          name: release_major
+          bump: major
+          requires:
+            - approve_major
+          filters:
+            branches:
+              only:
+                - master
