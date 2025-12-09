@@ -75,6 +75,12 @@ jobs:
           name: Publish package
           command: npm publish
       - run:
+          name: Trust github.com host key
+          command: |
+            mkdir -p ~/.ssh
+            ssh-keyscan github.com >> ~/.ssh/known_hosts
+            chmod 644 ~/.ssh/known_hosts
+      - run:
           name: Push commit and tag
           command: |
             git push origin HEAD
