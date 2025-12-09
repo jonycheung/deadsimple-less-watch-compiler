@@ -1,12 +1,6 @@
 # CircleCI configuration with manual approval + version bumping releases on master
 version: 2.1
 
-parameters:
-  release_bump:
-    type: enum
-    enum: [patch, minor, major]
-    default: patch
-
 defaults: &defaults
   working_directory: ~/repo
   docker:
@@ -89,7 +83,7 @@ workflows:
             branches:
               only:
                 - master
-      - approve_release:
+      - approve_patch:
           type: approval
           requires:
             - test
@@ -98,9 +92,46 @@ workflows:
               only:
                 - master
       - release:
-          bump: << pipeline.parameters.release_bump >>
+          name: release_patch
+          bump: patch
           requires:
-            - approve_release
+            - approve_patch
+          filters:
+            branches:
+              only:
+                - master
+
+      - approve_minor:
+          type: approval
+          requires:
+            - test
+          filters:
+            branches:
+              only:
+                - master
+      - release:
+          name: release_minor
+          bump: minor
+          requires:
+            - approve_minor
+          filters:
+            branches:
+              only:
+                - master
+
+      - approve_major:
+          type: approval
+          requires:
+            - test
+          filters:
+            branches:
+              only:
+                - master
+      - release:
+          name: release_major
+          bump: major
+          requires:
+            - approve_major
           filters:
             branches:
               only:
