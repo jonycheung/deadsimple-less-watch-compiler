@@ -72,5 +72,8 @@
   "collective": {
     "type": "opencollective",
     "url": "https://opencollective.com/less-watch-compiler"
+  },
+  "resolutions": {
+    "glob": "10.3.10"
   }
 }
