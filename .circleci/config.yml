@@ -15,21 +15,10 @@ jobs:
     steps:
       - checkout
 
-      - restore_cache:
-          keys:
-          - v2-dependencies-{{ checksum "yarn.lock" }}
-          # fallback to using the latest cache if no exact match is found
-          - v2-dependencies-
-
       - run: yarn install --frozen-lockfile --check-files
       - run:
           name: Run tests
           command: yarn test
-
-      - save_cache:
-          paths:
-            - node_modules
-          key: v2-dependencies-{{ checksum "yarn.lock" }}
 
       - persist_to_workspace:
           root: ~/repo
