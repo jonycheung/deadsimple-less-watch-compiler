@@ -111,7 +111,7 @@ function init(): void {
     fs.exists(mainFilePath, function (exists) {
       if (!exists) {
         console.log('Main file ' + mainFilePath + ' does not exist.');
-        process.exit();
+        process.exit(1);
       }
     });
   }
