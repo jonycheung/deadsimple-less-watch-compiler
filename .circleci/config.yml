@@ -2,12 +2,6 @@
 version: 2.1
 
 parameters:
-  release_with_approval:
-    type: boolean
-    default: false
-  release_without_approval:
-    type: boolean
-    default: false
   release_bump:
     type: enum
     enum: [patch, minor, major]
@@ -88,17 +82,7 @@ jobs:
 
 workflows:
   version: 2
-
-  test:
-    jobs:
-      - test:
-          filters:
-            branches:
-              only:
-                - master
-
-  release_with_approval:
-    when: << pipeline.parameters.release_with_approval >>
+  test-release:
     jobs:
       - test:
           filters:
@@ -117,23 +101,6 @@ workflows:
           bump: << pipeline.parameters.release_bump >>
           requires:
             - approve_release
-          filters:
-            branches:
-              only:
-                - master
-
-  release_without_approval:
-    when: << pipeline.parameters.release_without_approval >>
-    jobs:
-      - test:
-          filters:
-            branches:
-              only:
-                - master
-      - release:
-          bump: << pipeline.parameters.release_bump >>
-          requires:
-            - test
           filters:
             branches:
               only:
