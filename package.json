@@ -34,7 +34,7 @@
     "shelljs": ">= 0.4.0"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=16.9.0"
   },
   "devDependencies": {
     "@types/extend": "^3.0.4",
