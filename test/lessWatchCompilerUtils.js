@@ -2,6 +2,8 @@ var assert = require("assert"),
     lessWatchCompilerUtils = require('../dist/lib/lessWatchCompilerUtils.js'),
     sh = require('shelljs'),
     cwd = sh.pwd().toString(),
+    fs = require('fs'),
+    path = require('path'),
     testroot = cwd+'/test/less/',
     testRelative = './test/less';
 
@@ -22,6 +24,22 @@ describe('lessWatchCompilerUtils Module API', function () {
                 done();
              }
                 
+            });
+            it('walk() should respect ignoreDotFiles option', (done) => {
+                const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-'));
+                const dotFile = path.join(tmpDir, '.hidden.less');
+                const visibleFile = path.join(tmpDir, 'visible.less');
+                fs.writeFileSync(dotFile, '');
+                fs.writeFileSync(visibleFile, '');
+
+                lessWatchCompilerUtils.walk(tmpDir, { ignoreDotFiles: true }, (err, files) => {
+                    assert.ifError(err);
+                    const fileList = Object.keys(files);
+                    assert.ok(fileList.some((f) => f.endsWith('visible.less')));
+                    assert.ok(!fileList.some((f) => f.endsWith('.hidden.less')));
+                    fs.rmSync(tmpDir, { recursive: true, force: true });
+                    done();
+                }, function () {});
             });
         })
         describe('watchTree()', function () {
@@ -195,6 +213,18 @@ describe('lessWatchCompilerUtils Module API', function () {
             it('setupWatcher() function should take the correct parameters', function (done) {
                 lessWatchCompilerUtils.setupWatcher(cwd, {}, {}, function () {});
                 done();
+            });
+            it('setupWatcher() should skip watch registration when runOnce is true', function () {
+                const originalWatchFile = fs.watchFile;
+                let watched = false;
+                fs.watchFile = () => { watched = true; };
+                lessWatchCompilerUtils.config.runOnce = true;
+
+                lessWatchCompilerUtils.setupWatcher(cwd, {}, {}, function () {});
+
+                lessWatchCompilerUtils.config.runOnce = false;
+                fs.watchFile = originalWatchFile;
+                assert.equal(false, watched);
             });
         })
         describe('fileWatcher()', function () {
