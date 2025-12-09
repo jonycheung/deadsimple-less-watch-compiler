@@ -10,7 +10,16 @@ interface FilesearchApi {
 
 const filesearch: FilesearchApi = {
   findLessImportsInFile(filePath: string): string[] {
-    const stat = fs.statSync(filePath, { throwIfNoEntry: false } as any);
+    let stat: fs.Stats | undefined;
+
+    try {
+      stat = fs.statSync(filePath);
+    } catch (err) {
+      const error = err as NodeJS.ErrnoException;
+      if (error.code === 'ENOENT') return [];
+      throw err;
+    }
+
     if (!stat || stat.isFile() === false) return [];
 
     const files: string[] = [];
