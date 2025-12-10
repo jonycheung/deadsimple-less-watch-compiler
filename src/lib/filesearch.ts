@@ -38,10 +38,7 @@ const filesearch: FilesearchApi = {
     let m: RegExpExecArray | null;
     while ((m = re.exec(fileContent))) {
       const filename = m[1];
-      if (filename) {
-        const normalized = path.extname(filename) ? filename : filename + '.less';
-        files.push(normalized);
-      }
+      if (filename) files.push(filename);
     }
     return files;
   },
