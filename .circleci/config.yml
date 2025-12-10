@@ -60,6 +60,14 @@ jobs:
 
 workflows:
   version: 2
+  build:
+    jobs:
+      - test:
+          filters:
+            branches:
+              only: /.*/
+            tags:
+              ignore: /.*/
   test-release:
     jobs:
       - test:
