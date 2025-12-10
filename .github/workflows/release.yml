@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - name: Verify tag matches package.json
+        run: |
+          tag="${GITHUB_REF##*/}"
+          ver="${tag#v}"
+          pkg_ver=$(node -p "require('./package.json').version")
+          if [ "$pkg_ver" != "$ver" ]; then
+            echo "package.json version $pkg_ver does not match tag $ver"
+            exit 1
+          fi
+      - name: Install deps
+        run: yarn install --frozen-lockfile --check-files
+      - name: Build
+        run: yarn build
+      - name: Test
+        run: yarn test
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish

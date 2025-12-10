@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: ["*"]
+    tags-ignore: ["v*"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+      - name: Install deps
+        run: yarn install --frozen-lockfile --check-files
+      - name: Build
+        run: yarn build
+      - name: Test
+        run: yarn test
