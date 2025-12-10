@@ -25,7 +25,14 @@ jobs:
         with:
           ref: master
           fetch-depth: 0
-          token: ${{ secrets.RELEASE_PUSH_TOKEN }}
+          fetch-tags: true
+
+      - name: Ensure push token is set
+        run: |
+          if [ -z "${{ secrets.RELEASE_PUSH_TOKEN }}" ]; then
+            echo "RELEASE_PUSH_TOKEN secret is not configured"
+            exit 1
+          fi
 
       - name: Determine next version
         id: bump
