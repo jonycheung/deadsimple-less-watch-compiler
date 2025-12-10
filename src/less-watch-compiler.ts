@@ -32,7 +32,8 @@ program
   .name('less-watch-compiler')
   .version(packagejson.version)
   .usage('[options] <source_dir> <destination_dir> [main_file_name]')
-  .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'.")
+  .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'. (comma-separated supported)'")
+  .option('--main-files <files>', 'Comma-separated list of main files to re-compile on any change.')
   .option('--config <file>', 'Custom configuration file path.', 'less-watch-compiler.config.json')
   .option('--run-once', 'Run the compiler once without waiting for additional changes.')
   .option('--include-hidden', "Don't ignore files beginning with a '.' or a '_'")
@@ -46,6 +47,7 @@ program
 
 const programOption = program.opts<{
   mainFile?: string;
+  mainFiles?: string;
   config?: string;
   runOnce?: boolean;
   includeHidden?: boolean;
@@ -77,7 +79,7 @@ const loadConfigAndInit = async (): Promise<void> => {
 
 loadConfigAndInit();
 
-let mainFilePath: string | undefined = undefined;
+let mainFilePaths: string[] = [];
 
 function init(): void {
   const args = program.args as string[];
@@ -85,6 +87,7 @@ function init(): void {
   if (args[1]) lessWatchCompilerUtils.config.outputFolder = args[1];
   if (args[2]) lessWatchCompilerUtils.config.mainFile = args[2];
   if (programOption.mainFile) lessWatchCompilerUtils.config.mainFile = programOption.mainFile;
+  if (programOption.mainFiles) lessWatchCompilerUtils.config.mainFiles = programOption.mainFiles.split(',').map((f) => f.trim()).filter(Boolean);
   if (programOption.sourceMap !== undefined) lessWatchCompilerUtils.config.sourceMap = programOption.sourceMap;
   if (programOption.plugins) lessWatchCompilerUtils.config.plugins = programOption.plugins;
   if (programOption.runOnce !== undefined) lessWatchCompilerUtils.config.runOnce = programOption.runOnce;
@@ -111,18 +114,48 @@ function init(): void {
   lessWatchCompilerUtils.config.watchFolder = path.resolve(lessWatchCompilerUtils.config.watchFolder);
   lessWatchCompilerUtils.config.outputFolder = path.resolve(lessWatchCompilerUtils.config.outputFolder);
 
-  if (lessWatchCompilerUtils.config.mainFile) {
-    mainFilePath = path.resolve(lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile);
-    fs.promises
-      .access(mainFilePath, fs.constants.F_OK)
-      .catch(() => {
-        console.log('Main file ' + mainFilePath + ' does not exist.');
+  const collectMainFiles = (): string[] => {
+    const mainFiles: string[] = [];
+    if (lessWatchCompilerUtils.config.mainFile) {
+      mainFiles.push(lessWatchCompilerUtils.config.mainFile);
+    }
+    if (lessWatchCompilerUtils.config.mainFiles && lessWatchCompilerUtils.config.mainFiles.length > 0) {
+      mainFiles.push(...lessWatchCompilerUtils.config.mainFiles);
+    }
+    return mainFiles
+      .join(',')
+      .split(',')
+      .map((f) => f.trim())
+      .filter(Boolean)
+      .map((f) => path.resolve(lessWatchCompilerUtils.config.watchFolder as string, f));
+  };
+
+  mainFilePaths = collectMainFiles();
+
+  if (mainFilePaths.length > 0) {
+    for (const p of mainFilePaths) {
+      try {
+        fs.accessSync(p, fs.constants.F_OK);
+      } catch {
+        console.log('Main file ' + p + ' does not exist.');
         process.exit(1);
-      });
+      }
+    }
   }
 
   if (lessWatchCompilerUtils.config.runOnce === true) console.log('Running less-watch-compiler once.');
   else console.log('Watching directory for file changes.');
+
+  const compileMainFiles = () => {
+    mainFilePaths.forEach((mf) => {
+      const compileResult = lessWatchCompilerUtils.compileCSS(mf)!;
+      console.log('Recompiling ' + compileResult.outputFilePath + ' at ' + lessWatchCompilerUtils.getDateTime());
+    });
+  };
+
+  if (mainFilePaths.length > 0) {
+    compileMainFiles();
+  }
 
   lessWatchCompilerUtils.watchTree(
     lessWatchCompilerUtils.config.watchFolder,
@@ -141,42 +174,44 @@ function init(): void {
         console.log((f as string) + ' was removed.');
       } else {
         // f is a new file or changed
-        let importedFile = false;
-        const filename = (f as string).substring(lessWatchCompilerUtils.config.watchFolder!.length + 1);
-        for (const i in fileimports) {
-          for (const k in fileimports[i]) {
-            const hasExtension = path.extname(fileimports[i][k]).length > 1;
-            const importFile = hasExtension ? fileimports[i][k] : fileimports[i][k] + '.less';
-            const normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile);
+        if (mainFilePaths.length > 0) {
+          compileMainFiles();
+        } else {
+          let importedFile = false;
+          for (const i in fileimports) {
+            for (const k in fileimports[i]) {
+              const hasExtension = path.extname(fileimports[i][k]).length > 1;
+              const importFile = hasExtension ? fileimports[i][k] : fileimports[i][k] + '.less';
+              const normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile);
 
-            if (f === normalizedPath && !mainFilePath) {
-              const compileResult = lessWatchCompilerUtils.compileCSS(i)!;
-              console.log(
-                'The file: ' +
-                  i +
-                  ' was changed because ' +
-                  JSON.stringify(f) +
-                  ' is specified as an import.  Recompiling ' +
-                  compileResult.outputFilePath +
-                  ' at ' +
-                  lessWatchCompilerUtils.getDateTime()
-              );
-              importedFile = true;
+              if (f === normalizedPath) {
+                const compileResult = lessWatchCompilerUtils.compileCSS(i)!;
+                console.log(
+                  'The file: ' +
+                    i +
+                    ' was changed because ' +
+                    JSON.stringify(f) +
+                    ' is specified as an import.  Recompiling ' +
+                    compileResult.outputFilePath +
+                    ' at ' +
+                    lessWatchCompilerUtils.getDateTime()
+                );
+                importedFile = true;
+              }
             }
           }
-        }
-        if (!importedFile) {
-          const compileResult = lessWatchCompilerUtils.compileCSS(mainFilePath || (f as string))!;
-          console.log(
-            'The file: ' + JSON.stringify(f) + ' was changed. Recompiling ' + compileResult.outputFilePath + ' at ' + lessWatchCompilerUtils.getDateTime()
-          );
+          if (!importedFile) {
+            const compileResult = lessWatchCompilerUtils.compileCSS(f as string)!;
+            console.log(
+              'The file: ' + JSON.stringify(f) + ' was changed. Recompiling ' + compileResult.outputFilePath + ' at ' + lessWatchCompilerUtils.getDateTime()
+            );
+          }
         }
       }
     },
     // init function
     function (f) {
-      if (!mainFilePath || mainFilePath === f) {
-        // compile each file when main file is missing or compile main file only once
+      if (mainFilePaths.length === 0) {
         lessWatchCompilerUtils.compileCSS(f);
       }
     }

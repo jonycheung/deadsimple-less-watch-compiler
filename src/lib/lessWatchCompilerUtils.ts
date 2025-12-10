@@ -33,6 +33,7 @@ interface LessWatchCompilerConfig {
   watchFolder?: string;
   outputFolder?: string;
   mainFile?: string;
+  mainFiles?: string[];
   sourceMap?: boolean;
   plugins?: string;
   runOnce?: boolean;
