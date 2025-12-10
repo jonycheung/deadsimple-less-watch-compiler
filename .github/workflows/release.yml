@@ -35,7 +35,16 @@ jobs:
         run: yarn build
       - name: Test
         run: yarn test
-      - name: Publish to npm
+      - name: Configure npm auth
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "NPM_TOKEN secret is not set"
+            exit 1
+          fi
+          echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > ~/.npmrc
+          echo "registry=https://registry.npmjs.org/" >> ~/.npmrc
+          echo "always-auth=true" >> ~/.npmrc
+      - name: Publish to npm
         run: npm publish
