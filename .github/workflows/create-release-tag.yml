@@ -25,6 +25,7 @@ jobs:
         with:
           ref: master
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_PUSH_TOKEN }}
 
       - name: Determine next version
         id: bump
@@ -59,7 +60,9 @@ jobs:
           next="${{ steps.bump.outputs.next }}"
           node -e "const fs=require('fs'); const pkg=require('./package.json'); pkg.version='${next}'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2)+'\n');"
 
-      - name: Commit and push tag
+      - name: Commit and push tag (with PAT to trigger downstream workflows)
+        env:
+          PUSH_TOKEN: ${{ secrets.RELEASE_PUSH_TOKEN }}
         run: |
           next="${{ steps.bump.outputs.next }}"
           git config user.name "github-actions"
@@ -67,5 +70,5 @@ jobs:
           git add package.json
           git commit -m "chore: release v$next"
           git tag "v$next"
-          git push origin master
-          git push origin "v$next"
+          git push https://"$PUSH_TOKEN"@github.com/${{ github.repository }}.git HEAD:master
+          git push https://"$PUSH_TOKEN"@github.com/${{ github.repository }}.git "v$next"
