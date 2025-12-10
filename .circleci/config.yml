@@ -62,6 +62,9 @@ jobs:
       - run:
           name: Publish package
           command: npm publish
+      - add_ssh_keys:
+          fingerprints:
+            - "8f:9f:42:ea:41:fd:c4:a4:fc:f2:c5:99:5b:95:96:c5"
       - run:
           name: Trust github.com host key
           command: |
