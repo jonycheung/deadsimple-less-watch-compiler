@@ -1,0 +1,71 @@
+name: Create Release Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Select the release increment
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    environment: release-tags
+    steps:
+      - name: Checkout master with tags
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Determine next version
+        id: bump
+        run: |
+          bump="${{ github.event.inputs.bump }}"
+          current=$(node -p "require('./package.json').version")
+
+          IFS='.' read -r maj min patch <<< "$current"
+          if [[ -z "$maj" || -z "$min" || -z "$patch" ]]; then
+            echo "Invalid current version: $current"
+            exit 1
+          fi
+
+          case "$bump" in
+            major) ((maj+=1)); min=0; patch=0 ;;
+            minor) ((min+=1)); patch=0 ;;
+            patch) ((patch+=1)) ;;
+            *) echo "Unknown bump: $bump"; exit 1 ;;
+          esac
+
+          next="$maj.$min.$patch"
+
+          if git rev-parse -q --verify "refs/tags/v$next" >/dev/null; then
+            echo "Tag v$next already exists"
+            exit 1
+          fi
+
+          echo "next=$next" >> "$GITHUB_OUTPUT"
+
+      - name: Update package.json version
+        run: |
+          next="${{ steps.bump.outputs.next }}"
+          node -e "const fs=require('fs'); const pkg=require('./package.json'); pkg.version='${next}'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2)+'\n');"
+
+      - name: Commit and push tag
+        run: |
+          next="${{ steps.bump.outputs.next }}"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add package.json
+          git commit -m "chore: release v$next"
+          git tag "v$next"
+          git push origin master
+          git push origin "v$next"
