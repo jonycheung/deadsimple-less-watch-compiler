@@ -33,7 +33,7 @@
     "less": "^4.0.0",
     "strip-ansi": "^6.0.1",
     "string-width": "^4.2.3",
-    "shelljs": "^0.8.5"
+    "shelljs": "^0.10.0"
   },
   "engines": {
     "node": ">=18"
@@ -41,7 +41,7 @@
   "devDependencies": {
     "@types/extend": "^3.0.4",
     "@types/node": "^20.11.17",
-    "@types/shelljs": "^0.8.15",
+    "@types/shelljs": "^0.10.0",
     "cz-conventional-changelog": "3.3.0",
     "mocha": "^11.7.5",
     "strip-ansi": "^6.0.1",
@@ -78,7 +78,7 @@
     "url": "https://opencollective.com/less-watch-compiler"
   },
   "resolutions": {
-    "shelljs": "0.8.5",
+    "shelljs": "^0.10.0",
     "glob": "10.3.10",
     "cliui": "7.0.4"
   }
