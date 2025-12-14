@@ -40,7 +40,7 @@
   },
   "devDependencies": {
     "@types/extend": "^3.0.4",
-    "@types/node": "^20.11.17",
+    "@types/node": "^24.0.0",
     "@types/shelljs": "^0.8.15",
     "cz-conventional-changelog": "3.3.0",
     "mocha": "^11.7.5",
