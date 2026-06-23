@@ -143,27 +143,20 @@ function init(): void {
         // f is a new file or changed
         let importedFile = false;
         const filename = (f as string).substring(lessWatchCompilerUtils.config.watchFolder!.length + 1);
-        for (const i in fileimports) {
-          for (const k in fileimports[i]) {
-            const hasExtension = path.extname(fileimports[i][k]).length > 1;
-            const importFile = hasExtension ? fileimports[i][k] : fileimports[i][k] + '.less';
-            const normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile);
-
-            if (f === normalizedPath && !mainFilePath) {
-              const compileResult = lessWatchCompilerUtils.compileCSS(i)!;
-              console.log(
-                'The file: ' +
-                  i +
-                  ' was changed because ' +
-                  JSON.stringify(f) +
-                  ' is specified as an import.  Recompiling ' +
-                  compileResult.outputFilePath +
-                  ' at ' +
-                  lessWatchCompilerUtils.getDateTime()
-              );
-              importedFile = true;
-            }
-          }
+        const filesToCompile = mainFilePath ? [] : lessWatchCompilerUtils.getFilesToRecompileForImportChange(f as string, fileimports);
+        for (const i of filesToCompile) {
+          const compileResult = lessWatchCompilerUtils.compileCSS(i)!;
+          console.log(
+            'The file: ' +
+              i +
+              ' was changed because ' +
+              JSON.stringify(f) +
+              ' is specified as an import.  Recompiling ' +
+              compileResult.outputFilePath +
+              ' at ' +
+              lessWatchCompilerUtils.getDateTime()
+          );
+          importedFile = true;
         }
         if (!importedFile) {
           const compileResult = lessWatchCompilerUtils.compileCSS(mainFilePath || (f as string))!;

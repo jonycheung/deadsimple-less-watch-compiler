@@ -294,6 +294,39 @@ const lessWatchCompilerUtilsModule = {
         );
       }
     }
+  },
+
+  resolveImportedFilePath(sourceFile: string, importedFile: string): string {
+    const hasExtension = path.extname(importedFile).length > 1;
+    const importFile = hasExtension ? importedFile : importedFile + '.less';
+    return path.normalize(path.dirname(sourceFile) + path.sep + importFile);
+  },
+
+  getFilesToRecompileForImportChange(changedFile: string, importsByFile: Record<string, string[]>): string[] {
+    const filesToCompile: string[] = [];
+    const queue: string[] = [path.normalize(changedFile)];
+    const visited = new Set<string>(queue);
+
+    while (queue.length > 0) {
+      const targetImport = queue.shift() as string;
+      for (const sourceFile in importsByFile) {
+        const imports = importsByFile[sourceFile] || [];
+        for (const importedFile of imports) {
+          if (lessWatchCompilerUtilsModule.resolveImportedFilePath(sourceFile, importedFile) === targetImport) {
+            if (filesToCompile.indexOf(sourceFile) === -1) filesToCompile.push(sourceFile);
+
+            const normalizedSource = path.normalize(sourceFile);
+            if (!visited.has(normalizedSource)) {
+              visited.add(normalizedSource);
+              queue.push(normalizedSource);
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    return filesToCompile;
   }
 };
 

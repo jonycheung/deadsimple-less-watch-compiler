@@ -201,6 +201,34 @@ describe('lessWatchCompilerUtils Module API', function () {
             });
 
         })
+        describe('getFilesToRecompileForImportChange()', function () {
+            it('should recompile direct and transitive importers when a nested import changes', function () {
+                const importsByFile = {};
+                importsByFile[path.join(cwd, 'test/less/homepage.less')] = ['theme.less'];
+                importsByFile[path.join(cwd, 'test/less/theme.less')] = ['colors.less'];
+                importsByFile[path.join(cwd, 'test/less/other.less')] = ['theme.less'];
+                importsByFile[path.join(cwd, 'test/less/colors.less')] = [];
+
+                const changedFile = path.join(cwd, 'test/less/colors.less');
+                const filesToCompile = lessWatchCompilerUtils.getFilesToRecompileForImportChange(changedFile, importsByFile);
+
+                assert.deepStrictEqual(filesToCompile, [
+                    path.join(cwd, 'test/less/theme.less'),
+                    path.join(cwd, 'test/less/homepage.less'),
+                    path.join(cwd, 'test/less/other.less')
+                ]);
+            });
+
+            it('should resolve extensionless imports as less files', function () {
+                const importsByFile = {};
+                importsByFile[path.join(cwd, 'test/less/app.less')] = ['./partials/colors'];
+
+                const changedFile = path.join(cwd, 'test/less/partials/colors.less');
+                const filesToCompile = lessWatchCompilerUtils.getFilesToRecompileForImportChange(changedFile, importsByFile);
+
+                assert.deepStrictEqual(filesToCompile, [path.join(cwd, 'test/less/app.less')]);
+            });
+        })
         describe('getDateTime()', function () {
             it('getDateTime() function should be there and has value', function () {
                 assert.equal(true, lessWatchCompilerUtils.getDateTime().length > 0);
