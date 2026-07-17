@@ -157,7 +157,7 @@ Alternativelly, you can checkout the code and run things locally like this:
 node less-watch-compiler.js [options]
 ```
 
-To run unit tests: `yarn test` or `npm test` (see test/test.js).
+To run unit tests: `yarn test` or `npm test` (see the suites under `test/`).
 
 ## Contributors
 

@@ -27,6 +27,14 @@ describe('filesearch Module', function () {
         var filesearchresult = filesearch.findLessImportsInFile(file);
         assert.deepStrictEqual(filesearchresult, []);
       });
+      it('should not throw on a missing extensionless path (issue #117)', function () {
+        var filesearchresult = filesearch.findLessImportsInFile('./test/examples/issue-117/less/color');
+        assert.deepStrictEqual(filesearchresult, []);
+      });
+      it('should extract extensionless @import targets as written (issue #117)', function () {
+        var filesearchresult = filesearch.findLessImportsInFile('./test/examples/issue-117/less/site.less');
+        assert.deepStrictEqual(filesearchresult, ['color']);
+      });
       it('should handle url() and reference @import syntaxes with flexible formatting', function () {
         var file = './test/less/_importVariants.less';
         var result = ['plain-url.less', 'reference.less', 'ref-url.less', 'spaced.less', 'tight.less', 'no-semicolon.less'],

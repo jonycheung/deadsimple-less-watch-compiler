@@ -99,7 +99,9 @@ describe('The CLI should', function () {
         filename = '/with-source-map.css',
         sourcemapfile = '/with-source-map.css.map';
 
-      cli('--source-map', '--run-once', lessDir, outDir);
+      before(() => {
+        cli('--source-map', '--run-once', lessDir, outDir);
+      });
 
       it('should generate the css file', () => {
         const contents = fs.readFileSync(outDir + filename),
