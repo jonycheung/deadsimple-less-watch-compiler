@@ -1,7 +1,10 @@
 import fs from 'fs';
 import path from 'path';
-import { exec } from 'child_process';
 import fileSearch = require('./filesearch');
+import lessOptions = require('./lessOptions');
+
+// The less package ships no type definitions
+const less = require('less');
 
 interface WalkOptions {
   ignoreDotFiles?: boolean;
@@ -22,8 +25,8 @@ interface InitCallback {
 }
 
 interface CompileResult {
-  command: string;
   outputFilePath: string;
+  options: lessOptions.LessRenderOptions;
 }
 
 interface LessWatchCompilerConfig {
@@ -137,34 +140,66 @@ const lessWatchCompilerUtilsModule = {
     );
   },
 
-  getLessArgs(args: string): string {
-    const arr = args.split(',');
-    return ' --' + arr.join(' --');
-  },
-
   compileCSS(file: string, test?: boolean): CompileResult | undefined {
     const outputFilePath = this.resolveOutputPath(file);
 
     // Skip compiling hidden files unless includeHidden flag is enabled
     if (fileSearch.isHiddenFile(file) && !lessWatchCompilerUtilsModule.config.includeHidden) return;
 
-    const enableJsFlag = lessWatchCompilerUtilsModule.config.enableJs ? ' --js' : '';
-    const minifiedFlag = lessWatchCompilerUtilsModule.config.minified ? ' -x' : '';
-    const sourceMap = lessWatchCompilerUtilsModule.config.sourceMap ? ' --source-map' : '';
-    const lessArgs = lessWatchCompilerUtilsModule.config.lessArgs ? this.getLessArgs(lessWatchCompilerUtilsModule.config.lessArgs) : '';
-    const plugins = lessWatchCompilerUtilsModule.config.plugins ? ' --' + lessWatchCompilerUtilsModule.config.plugins.split(',').join(' --') : '';
-    const command = 'lessc' + lessArgs + sourceMap + enableJsFlag + minifiedFlag + plugins + ' ' + JSON.stringify(file) + ' ' + outputFilePath;
+    const outPath: string = JSON.parse(outputFilePath);
+    const options = lessOptions.buildRenderOptions({
+      inputFilePath: file,
+      outputFilePath: outPath,
+      enableJs: lessWatchCompilerUtilsModule.config.enableJs,
+      minified: lessWatchCompilerUtilsModule.config.minified,
+      sourceMap: lessWatchCompilerUtilsModule.config.sourceMap,
+      lessArgs: lessWatchCompilerUtilsModule.config.lessArgs
+    });
 
-    if (!test)
-      exec(command, (error, stdout) => {
-        if (error !== null) {
-          console.log(error);
+    if (!test) {
+      lessWatchCompilerUtilsModule
+        .renderLess(file, outPath, options)
+        .catch((error: Error & { line?: number; column?: number; filename?: string; extract?: string[] }) => {
+          console.log(lessWatchCompilerUtilsModule.formatLessError(error));
           if (lessWatchCompilerUtilsModule.config.runOnce) process.exit(1);
-        }
-        if (stdout) console.error(stdout);
-      });
+        });
+    }
 
-    return { command, outputFilePath };
+    return { outputFilePath, options };
+  },
+
+  async renderLess(file: string, outPath: string, options: lessOptions.LessRenderOptions): Promise<void> {
+    const renderOptions = { ...options };
+    if (lessWatchCompilerUtilsModule.config.plugins) {
+      renderOptions.plugins = await lessOptions.loadPlugins(lessWatchCompilerUtilsModule.config.plugins, less, renderOptions);
+    }
+    const input = await fs.promises.readFile(file, 'utf8');
+    const result = await less.render(input, renderOptions);
+    await fs.promises.mkdir(path.dirname(path.resolve(outPath)), { recursive: true });
+    await fs.promises.writeFile(outPath, result.css, 'utf8');
+    if (result.map) {
+      await fs.promises.writeFile(outPath + '.map', result.map, 'utf8');
+    }
+  },
+
+  formatLessError(error: Error & { line?: number; column?: number; filename?: string; extract?: string[]; type?: string }): string {
+    if (error.line === undefined && error.filename === undefined) return String(error.stack || error.message || error);
+    const kind = error.type ? error.type + 'Error' : 'Error';
+    let message = kind + ': ' + error.message;
+    if (error.filename) {
+      message += ' in ' + error.filename;
+      if (error.line !== undefined) message += ' on line ' + error.line + ', column ' + error.column + ':';
+    }
+    if (error.extract) {
+      const firstLine = error.line !== undefined ? error.line - 1 : 0;
+      message +=
+        '\n' +
+        error.extract
+          .filter((line: string) => line !== undefined)
+          .map((line: string, index: number) => firstLine + index + ' ' + line)
+          .join('\n');
+    }
+    return message;
   },
 
   resolveOutputPath(filePath: string): string {
