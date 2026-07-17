@@ -2,8 +2,8 @@ name: CI
 
 on:
   push:
-    branches: ["*"]
-    tags-ignore: ["v*"]
+    branches: ['*']
+    tags-ignore: ['v*']
   pull_request:
 
 jobs:
@@ -19,7 +19,13 @@ jobs:
           cache: yarn
       - name: Install deps
         run: yarn install --frozen-lockfile --check-files
+      - name: Lint
+        run: yarn lint
+      - name: Format check
+        run: yarn format:check
+      - name: Typecheck
+        run: yarn typecheck
       - name: Build
         run: yarn build
-      - name: Test
-        run: yarn test
+      - name: Test (with coverage)
+        run: yarn coverage

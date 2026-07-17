@@ -1,7 +1,6 @@
 ---
 name: Bug report
 about: Create a report to help us improve
-
 ---
 
 **Which version are you using (less-watch-compiler --version to find out)?**
@@ -13,12 +12,13 @@ A clear and concise description of what the bug is.
 
 **To Reproduce**
 Steps to reproduce the behavior:
+
 1. My folder setup is ...
-  ─ tests
-      └── css
-      │    └─  styles.css
-      └───less
-              └─   styles.less
+   ─ tests
+   └── css
+   │ └─ styles.css
+   └───less
+   └─ styles.less
 2. The command I ran is `less-watch-compiler test/less test/css`
 3. Something went wrong... What is it?
 
@@ -32,7 +32,8 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **Desktop (please complete the following information):**
- - OS: [e.g. Mac OSX 10.13.6]
+
+- OS: [e.g. Mac OSX 10.13.6]
 
 **Additional context**
 Add any other context about the problem here.

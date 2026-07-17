@@ -1,0 +1,25 @@
+/**
+Test Comments
+@Author: Jony
+ */
+.lvl0 {
+  color: black;
+}
+.lvl1 {
+  color: black;
+}
+.lvl1 .lvl2 {
+  color: black;
+}
+.lvl2 {
+  color: black;
+}
+.lvl3 {
+  color: black;
+}
+.hidden {
+  color: black;
+}
+.hidden2 {
+  color: transparent;
+}

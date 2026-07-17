@@ -1,0 +1,6 @@
+{
+  "watchFolder": "test/examples/with-minified/less",
+  "outputFolder": "test/css",
+  "minified": true,
+  "runOnce": true
+}

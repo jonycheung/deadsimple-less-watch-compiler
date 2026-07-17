@@ -11,6 +11,11 @@
   ],
   "scripts": {
     "test": "yarn run build && yarn run clean && npx mocha --exit",
+    "coverage": "yarn run build && yarn run clean && npx c8 --reporter=text --reporter=lcov mocha --exit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "postversion": "git push && git push --tags",
     "clean": "rm -R ./test/css || true && mkdir ./test/css",
     "prepublishOnly": "yarn run build",
@@ -26,27 +31,25 @@
     "less-watch-compiler": "dist/less-watch-compiler.js"
   },
   "dependencies": {
-    "amdefine": ">= 0.1.0",
     "commander": "^8.0.0",
     "extend": ">= 2.0.0",
-    "global": "^4.3.1",
-    "less": "^4.0.0",
-    "strip-ansi": "^6.0.1",
-    "string-width": "^4.2.3",
-    "shelljs": "^0.8.5"
+    "less": "^4.0.0"
   },
   "engines": {
     "node": ">=18"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/extend": "^3.0.4",
     "@types/node": "^20.11.17",
-    "@types/shelljs": "^0.8.15",
+    "c8": "^12.0.0",
     "cz-conventional-changelog": "3.3.0",
+    "eslint": "^10.7.0",
+    "eslint-config-prettier": "^10.1.8",
     "mocha": "^11.7.5",
-    "strip-ansi": "^6.0.1",
+    "prettier": "^3.9.5",
     "typescript": "^5.6.2",
-    "wrap-ansi": "^7.0.0"
+    "typescript-eslint": "^8.64.0"
   },
   "preferGlobal": true,
   "keywords": [
@@ -78,7 +81,6 @@
     "url": "https://opencollective.com/less-watch-compiler"
   },
   "resolutions": {
-    "shelljs": "0.8.5",
     "glob": "10.3.10",
     "cliui": "7.0.4"
   }

@@ -1,0 +1,5 @@
+dist/
+coverage/
+test/examples/
+test/less/
+yarn.lock

@@ -1,8 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import events from 'events';
-import sh from 'shelljs';
-import extend from 'extend';
 import { exec } from 'child_process';
 import fileSearch = require('./filesearch');
 
@@ -45,7 +42,7 @@ interface LessWatchCompilerConfig {
 
 type WalkCompleteCallback = (err: NodeJS.ErrnoException | null, files: FilesMap | null) => void;
 
-const cwd = sh.pwd().toString();
+const cwd = process.cwd();
 const defaultAllowedExtensions = ['.less'];
 
 const filelist: string[] = [];
@@ -86,21 +83,21 @@ const lessWatchCompilerUtilsModule = {
               }
 
               state.pending -= 1;
-              const done = state.pending === 0;
               if (!enoent && st) {
-                // Skip ignored files before adding to map
-                if (options.ignoreDotFiles && path.basename(filePath)[0] === '.') return void (done && callback(null, state.files));
-                if (options.filter && options.filter(filePath)) return void (done && callback(null, state.files));
+                // Dotfile/dotfolder skipping applies to everything; the extension
+                // filter must only apply to files, or directories never recurse
+                if (options.ignoreDotFiles && path.basename(filePath)[0] === '.') return void finalize(null);
+                if (!st.isDirectory() && options.filter && options.filter(filePath)) return void finalize(null);
 
                 state.files[filePath] = st as fs.Stats;
                 if (st.isDirectory()) {
                   processDir(filePath);
                 } else {
-                  initCallback && initCallback(filePath);
+                  if (initCallback) initCallback(filePath);
                 }
-                if (done) callback(null, state.files);
-              } else if (done) {
-                callback(null, state.files);
+                finalize(null);
+              } else {
+                finalize(null);
               }
             });
           });
@@ -175,10 +172,9 @@ const lessWatchCompilerUtilsModule = {
     const parsedPath = path.parse(fullPath);
 
     // Only empty when unit testing it seems
-    let relativePath: string | null = null;
-    let dirname: string | null = null;
+    let dirname: string;
     if (lessWatchCompilerUtilsModule.config.watchFolder) {
-      relativePath = path.relative(lessWatchCompilerUtilsModule.config.watchFolder, fullPath);
+      const relativePath = path.relative(lessWatchCompilerUtilsModule.config.watchFolder, fullPath);
       dirname = path.dirname(relativePath);
     } else {
       dirname = path.dirname(filePath);
@@ -192,7 +188,7 @@ const lessWatchCompilerUtilsModule = {
     });
 
     // No matter the path of the main file, the output must always land in the output folder
-    formatted = formatted.replace(/^(\.\.[\/\\])+/, '');
+    formatted = formatted.replace(/^(\.\.[/\\])+/, '');
 
     const finalFullPath = path.resolve(lessWatchCompilerUtilsModule.config.outputFolder || '', formatted);
     const shortPath = path.relative(cwd, finalFullPath);
@@ -278,7 +274,14 @@ const lessWatchCompilerUtilsModule = {
     });
   },
 
-  fileWatcher(f: string, files: FilesMap, options: WalkOptions, filelistArr: string[], fileimportlistObj: Record<string, string[]>, watchCallback: WatchCallback): void {
+  fileWatcher(
+    f: string,
+    files: FilesMap,
+    options: WalkOptions,
+    filelistArr: string[],
+    fileimportlistObj: Record<string, string[]>,
+    watchCallback: WatchCallback
+  ): void {
     if (filelistArr.indexOf(f) !== -1) return;
     filelistArr[filelistArr.length] = f;
 
@@ -286,12 +289,7 @@ const lessWatchCompilerUtilsModule = {
     lessWatchCompilerUtilsModule.setupWatcher(f, files, options, watchCallback);
     for (const i in fileimportlistObj[f]) {
       if (filelistArr.indexOf(fileimportlistObj[f][i]) === -1) {
-        lessWatchCompilerUtilsModule.setupWatcher(
-          path.normalize(path.dirname(f) + path.sep + fileimportlistObj[f][i]),
-          files,
-          options,
-          watchCallback
-        );
+        lessWatchCompilerUtilsModule.setupWatcher(path.normalize(path.dirname(f) + path.sep + fileimportlistObj[f][i]), files, options, watchCallback);
       }
     }
   }
