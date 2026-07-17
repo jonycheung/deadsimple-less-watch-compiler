@@ -11,7 +11,10 @@ describe('lessOptions Module', function () {
       assert.deepStrictEqual(lessOptions.splitTopLevelCommas('c=rgba(1, 2, 3, 0.5),d=4'), ['c=rgba(1, 2, 3, 0.5)', 'd=4']);
     });
     it('keeps commas inside quoted values intact', function () {
-      assert.deepStrictEqual(lessOptions.splitTopLevelCommas("modify-var='font-stack=Arial, sans-serif',compress"), ["modify-var='font-stack=Arial, sans-serif'", 'compress']);
+      assert.deepStrictEqual(lessOptions.splitTopLevelCommas("modify-var='font-stack=Arial, sans-serif',compress"), [
+        "modify-var='font-stack=Arial, sans-serif'",
+        'compress'
+      ]);
     });
     it('keeps commas inside plugin option payloads intact', function () {
       assert.deepStrictEqual(lessOptions.splitTopLevelCommas("my-plugin='a,b',other-plugin"), ["my-plugin='a,b'", 'other-plugin']);
