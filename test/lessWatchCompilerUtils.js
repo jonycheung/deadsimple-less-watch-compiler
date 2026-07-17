@@ -58,11 +58,13 @@ describe('lessWatchCompilerUtils Module API', function () {
         assert.strictEqual('function', typeof lessWatchCompilerUtils.watchTree);
       });
       it('watchTree() function should complete and call a callback ', function (done) {
+        let doneCalled = false;
         lessWatchCompilerUtils.watchTree(
           testroot,
           {},
           (f, curr, prev) => {
-            if (typeof f === 'object' && curr === null && prev === null) {
+            if (!doneCalled && typeof f === 'object' && curr === null && prev === null) {
+              doneCalled = true;
               done();
             }
           },
