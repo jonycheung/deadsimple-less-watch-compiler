@@ -57,18 +57,17 @@ describe('lessWatchCompilerUtils Module API', function () {
       it('watchTree() function should be there', function () {
         assert.strictEqual('function', typeof lessWatchCompilerUtils.watchTree);
       });
-      it('watchTree() function should complete and call a callback ', async (done) => {
-        await runCommand(done);
-        function runCommand(done) {
-          lessWatchCompilerUtils.watchTree(
-            testroot,
-            {},
-            function () {},
-            function () {}
-          );
-          assert.ok('completed');
-          done();
-        }
+      it('watchTree() function should complete and call a callback ', function (done) {
+        lessWatchCompilerUtils.watchTree(
+          testroot,
+          {},
+          (f, curr, prev) => {
+            if (typeof f === 'object' && curr === null && prev === null) {
+              done();
+            }
+          },
+          function () {}
+        );
       });
     });
     describe('compileCSS()', function () {
