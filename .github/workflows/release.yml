@@ -20,6 +20,7 @@ jobs:
         with:
           node-version: 20
           cache: yarn
+          registry-url: 'https://registry.npmjs.org'
       - name: Verify tag matches package.json
         run: |
           tag="${GITHUB_REF##*/}"
@@ -36,4 +37,7 @@ jobs:
       - name: Test
         run: yarn test
       - name: Publish to npm
-        run: npm publish --provenance
+        run: |
+          npm i -g npm@latest
+          npm --version
+          npm publish --provenance --access public
