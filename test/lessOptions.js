@@ -10,6 +10,13 @@ describe('lessOptions Module', function () {
     it('keeps commas inside parentheses intact', function () {
       assert.deepStrictEqual(lessOptions.splitTopLevelCommas('c=rgba(1, 2, 3, 0.5),d=4'), ['c=rgba(1, 2, 3, 0.5)', 'd=4']);
     });
+    it('keeps commas inside quoted values intact', function () {
+      assert.deepStrictEqual(lessOptions.splitTopLevelCommas("modify-var='font-stack=Arial, sans-serif',compress"), ["modify-var='font-stack=Arial, sans-serif'", 'compress']);
+    });
+    it('keeps commas inside plugin option payloads intact', function () {
+      assert.deepStrictEqual(lessOptions.splitTopLevelCommas("my-plugin='a,b',other-plugin"), ["my-plugin='a,b'", 'other-plugin']);
+      assert.deepStrictEqual(lessOptions.splitTopLevelCommas('my-plugin=(a,b),other-plugin'), ['my-plugin=(a,b)', 'other-plugin']);
+    });
   });
 
   describe('buildRenderOptions()', function () {
@@ -36,6 +43,20 @@ describe('lessOptions Module', function () {
         lessArgs: 'global-var=brand=#336699'
       });
       assert.deepStrictEqual(options.globalVars, { brand: '#336699' });
+    });
+    it('routes source-map arguments into the sourceMap options object', function () {
+      const options = lessOptions.buildRenderOptions({
+        inputFilePath: 'in.less',
+        outputFilePath: 'out.css',
+        sourceMap: true,
+        lessArgs: 'source-map-rootpath=/static/,source-map-basepath=/src/,source-map-url=/maps/out.css.map,source-map-include-source,source-map-inline'
+      });
+      assert.equal(options.sourceMap.sourceMapRootpath, '/static/');
+      assert.equal(options.sourceMap.sourceMapBasepath, '/src/');
+      assert.equal(options.sourceMap.sourceMapURL, '/maps/out.css.map');
+      assert.equal(options.sourceMap.outputSourceFiles, true);
+      assert.equal(options.sourceMap.sourceMapFileInline, true);
+      assert.equal(options.sourceMapRootpath, undefined);
     });
   });
 

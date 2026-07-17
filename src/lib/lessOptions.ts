@@ -24,7 +24,29 @@ export function splitTopLevelCommas(value: string): string[] {
   const parts: string[] = [];
   let depth = 0;
   let current = '';
+  let quote: string | undefined;
+  let escaped = false;
   for (const ch of value) {
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      current += ch;
+      escaped = true;
+      continue;
+    }
+    if (quote) {
+      current += ch;
+      if (ch === quote) quote = undefined;
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      quote = ch;
+      current += ch;
+      continue;
+    }
     if (ch === '(') depth++;
     else if (ch === ')' && depth > 0) depth--;
     if (ch === ',' && depth === 0) {
@@ -174,6 +196,23 @@ export function buildRenderOptions(input: RenderOptionsInput): LessRenderOptions
       sourceMapBasepath: path.dirname(inputFile),
       sourceMapRootpath: path.relative(path.dirname(output + '.map'), path.dirname(inputFile))
     };
+
+    // lessc routes source-map-* CLI arguments into the nested sourceMap
+    // options object. Move any corresponding values parsed from lessArgs out
+    // of the top-level render options so Less applies them to the map.
+    const sourceMapArgNames: Record<string, string> = {
+      sourceMapRootpath: 'sourceMapRootpath',
+      sourceMapBasepath: 'sourceMapBasepath',
+      sourceMapUrl: 'sourceMapURL',
+      sourceMapIncludeSource: 'outputSourceFiles',
+      sourceMapInline: 'sourceMapFileInline'
+    };
+    for (const [optionName, sourceMapName] of Object.entries(sourceMapArgNames)) {
+      if (optionName in options) {
+        sourceMapOptions[sourceMapName] = options[optionName];
+        delete options[optionName];
+      }
+    }
     options.sourceMap = sourceMapOptions;
   }
 
@@ -205,7 +244,7 @@ export async function loadPlugins(pluginList: string, less: LessApi, renderOptio
   const pluginManager = new less.PluginManager(less);
   const fileManager = new less.FileManager();
   const plugins: unknown[] = [];
-  for (const rawName of pluginList.split(',')) {
+  for (const rawName of splitTopLevelCommas(pluginList)) {
     const splitup = rawName.match(/^([^=]+)(=(.*))?/);
     if (!splitup) continue;
     const name = splitup[1].trim();
