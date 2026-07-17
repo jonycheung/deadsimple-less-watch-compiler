@@ -106,6 +106,14 @@ describe('Characterization: exit codes', function () {
       (err) => err.status !== 0
     );
   });
+
+  it('exits non-zero when the specified main file does not exist', () => {
+    assert.throws(
+      () => execSync(`node ${cliPath} --run-once test/less test/css no-such-main.less`, { stdio: 'pipe' }),
+      (err) => err.status !== 0,
+      'a missing main file must abort with a non-zero exit code'
+    );
+  });
 });
 
 describe('Characterization: watch-mode startup (issue #117)', function () {

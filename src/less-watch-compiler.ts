@@ -94,14 +94,6 @@ function init(): void {
   if (programOption.enableJs !== undefined) lessWatchCompilerUtils.config.enableJs = programOption.enableJs;
   if (programOption.lessArgs) lessWatchCompilerUtils.config.lessArgs = programOption.lessArgs;
 
-  const cliOptions = program.opts();
-  Object.keys(cliOptions).forEach((key) => {
-    const value = (cliOptions as any)[key];
-    if (value !== undefined) {
-      (lessWatchCompilerUtils.config as any)[key] = value;
-    }
-  });
-
   if (!lessWatchCompilerUtils.config.watchFolder || !lessWatchCompilerUtils.config.outputFolder) {
     console.log('Missing arguments. Example:');
     console.log('\tnode less-watch-compiler.js FOLDER_TO_WATCH FOLDER_TO_OUTPUT');
@@ -115,10 +107,12 @@ function init(): void {
 
   if (lessWatchCompilerUtils.config.mainFile) {
     mainFilePath = path.resolve(lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile);
-    fs.promises.access(mainFilePath, fs.constants.F_OK).catch(() => {
+    // Check synchronously so a missing main file aborts before any watcher
+    // is registered, instead of racing the walk in a floating promise
+    if (!fs.existsSync(mainFilePath)) {
       console.log('Main file ' + mainFilePath + ' does not exist.');
       process.exit(1);
-    });
+    }
   }
 
   if (lessWatchCompilerUtils.config.runOnce === true) console.log('Running less-watch-compiler once.');
