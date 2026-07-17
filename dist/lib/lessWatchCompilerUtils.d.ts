@@ -1,4 +1,5 @@
 import fs from 'fs';
+import lessOptions = require('./lessOptions');
 interface WalkOptions {
     ignoreDotFiles?: boolean;
     filter?: (filePath: string) => boolean;
@@ -14,8 +15,8 @@ interface InitCallback {
     (f: string): void;
 }
 interface CompileResult {
-    command: string;
     outputFilePath: string;
+    options: lessOptions.LessRenderOptions;
 }
 interface LessWatchCompilerConfig {
     watchFolder?: string;
@@ -35,8 +36,15 @@ declare const lessWatchCompilerUtilsModule: {
     config: LessWatchCompilerConfig;
     walk(dir: string, options: WalkOptions, callback: WalkCompleteCallback, initCallback?: InitCallback): void;
     watchTree(root: string, options: WalkOptions | WatchCallback, watchCallback?: WatchCallback, initCallback?: InitCallback): void;
-    getLessArgs(args: string): string;
     compileCSS(file: string, test?: boolean): CompileResult | undefined;
+    renderLess(file: string, outPath: string, options: lessOptions.LessRenderOptions): Promise<void>;
+    formatLessError(error: Error & {
+        line?: number;
+        column?: number;
+        filename?: string;
+        extract?: string[];
+        type?: string;
+    }): string;
     resolveOutputPath(filePath: string): string;
     filterFiles(f: string): boolean;
     getDateTime(): string;
