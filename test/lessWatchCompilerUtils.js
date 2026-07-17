@@ -79,75 +79,81 @@ describe('lessWatchCompilerUtils Module API', function () {
       it('compileCSS() function should be there', function () {
         assert.equal('function', typeof lessWatchCompilerUtils.compileCSS);
       });
-      it('should run the correct command with minified flag', function () {
+      it('should map the minified flag to compress and a .min.css output', function () {
         lessWatchCompilerUtils.config = {
           outputFolder: 'testFolder',
           minified: true
         };
-        assert.equal('lessc -x "test.less" "testFolder/test.min.css"', lessWatchCompilerUtils.compileCSS('test.less', true).command);
+        const result = lessWatchCompilerUtils.compileCSS('test.less', true);
+        assert.equal(result.outputFilePath, '"testFolder/test.min.css"');
+        assert.equal(result.options.compress, true);
       });
-      it('should run the correct command with enableJs flag', function () {
+      it('should map the enableJs flag to javascriptEnabled', function () {
         lessWatchCompilerUtils.config = {
           outputFolder: 'testFolder',
           enableJs: true
         };
-        assert.equal('lessc --js "test.less" "testFolder/test.css"', lessWatchCompilerUtils.compileCSS('test.less', true).command);
+        const result = lessWatchCompilerUtils.compileCSS('test.less', true);
+        assert.equal(result.outputFilePath, '"testFolder/test.css"');
+        assert.equal(result.options.javascriptEnabled, true);
       });
-      it('should run the correct command with sourceMap flag', function () {
+      it('should map the sourceMap flag to lessc-compatible source map options', function () {
         lessWatchCompilerUtils.config = {
           outputFolder: 'testFolder',
           sourceMap: true
         };
-        assert.equal('lessc --source-map "test.less" "testFolder/test.css"', lessWatchCompilerUtils.compileCSS('test.less', true).command);
+        const result = lessWatchCompilerUtils.compileCSS('test.less', true);
+        assert.deepStrictEqual(result.options.sourceMap, {
+          sourceMapInputFilename: 'test.less',
+          sourceMapOutputFilename: 'test.css',
+          sourceMapFullFilename: 'testFolder/test.css.map',
+          sourceMapFilename: 'test.css.map',
+          sourceMapBasepath: '.',
+          sourceMapRootpath: '..'
+        });
       });
-      it('should run the correct command with 1 plugin', function () {
+      it('should resolve the input filename to an absolute path for import resolution', function () {
         lessWatchCompilerUtils.config = {
-          outputFolder: 'testFolder',
-          plugins: 'plugin1'
+          outputFolder: 'testFolder'
         };
-        assert.equal('lessc --plugin1 "test.less" "testFolder/test.css"', lessWatchCompilerUtils.compileCSS('test.less', true).command);
-      });
-      it('should run the correct command with 2 plugins', function () {
-        lessWatchCompilerUtils.config = {
-          outputFolder: 'testFolder',
-          plugins: 'plugin1,plugin2'
-        };
-        assert.equal('lessc --plugin1 --plugin2 "test.less" "testFolder/test.css"', lessWatchCompilerUtils.compileCSS('test.less', true).command);
+        const result = lessWatchCompilerUtils.compileCSS('test.less', true);
+        assert.equal(result.options.filename, path.resolve('test.less'));
       });
 
-      it('should run the correct command with minified flag', function () {
-        lessWatchCompilerUtils.config = {
-          outputFolder: 'testFolder',
-          minified: true
-        };
-        assert.equal('lessc -x "test.less" "testFolder/test.min.css"', lessWatchCompilerUtils.compileCSS('test.less', true).command);
-      });
-
-      it('should run the correct command with math LESS flag', function () {
+      it('should map the math LESS flag', function () {
         lessWatchCompilerUtils.config = {
           outputFolder: 'testFolder',
           lessArgs: 'math=strict'
         };
-        assert.equal('lessc --math=strict "test.less" "testFolder/test.css"', lessWatchCompilerUtils.compileCSS('test.less', true).command);
+        assert.equal(lessWatchCompilerUtils.compileCSS('test.less', true).options.math, 'strict');
       });
 
-      it('should run the correct command with strict-unit LESS flag', function () {
+      it('should map the strict-units LESS flag to a boolean', function () {
         lessWatchCompilerUtils.config = {
           outputFolder: 'testFolder',
           lessArgs: 'strict-units=on'
         };
-        assert.equal('lessc --strict-units=on "test.less" "testFolder/test.css"', lessWatchCompilerUtils.compileCSS('test.less', true).command);
+        assert.equal(lessWatchCompilerUtils.compileCSS('test.less', true).options.strictUnits, true);
       });
 
-      it('should run the correct command with math, strict-unit, include-path LESS flags', function () {
+      it('should map math, strict-units, and include-path together', function () {
         lessWatchCompilerUtils.config = {
           outputFolder: 'testFolder',
           lessArgs: 'math=strict,strict-units=on,include-path=./dir1;./dir2'
         };
-        assert.equal(
-          'lessc --math=strict --strict-units=on --include-path=./dir1;./dir2 "test.less" "testFolder/test.css"',
-          lessWatchCompilerUtils.compileCSS('test.less', true).command
-        );
+        const options = lessWatchCompilerUtils.compileCSS('test.less', true).options;
+        assert.equal(options.math, 'strict');
+        assert.equal(options.strictUnits, true);
+        assert.deepStrictEqual(options.paths, ['./dir1', './dir2']);
+      });
+
+      it('should keep commas inside parentheses in modify-var values (issue #103)', function () {
+        lessWatchCompilerUtils.config = {
+          outputFolder: 'testFolder',
+          lessArgs: "modify-var='text-color=rgba(23, 34, 45, 0.5)'"
+        };
+        const options = lessWatchCompilerUtils.compileCSS('test.less', true).options;
+        assert.deepStrictEqual(options.modifyVars, { 'text-color': 'rgba(23, 34, 45, 0.5)' });
       });
 
       it('should not compile hidden files by default', function () {
@@ -162,7 +168,7 @@ describe('lessWatchCompilerUtils Module API', function () {
           outputFolder: 'testFolder',
           includeHidden: true
         };
-        assert.equal('lessc "_test.less" "testFolder/_test.css"', lessWatchCompilerUtils.compileCSS('_test.less', true).command);
+        assert.equal(lessWatchCompilerUtils.compileCSS('_test.less', true).outputFilePath, '"testFolder/_test.css"');
       });
     });
     describe('resolveOutputPath()', function () {
