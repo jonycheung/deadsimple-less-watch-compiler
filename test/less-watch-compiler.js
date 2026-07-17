@@ -1,6 +1,5 @@
 const assert = require("assert"),
-  sh = require("shelljs"),
-  cwd = sh.pwd().toString(),
+  cwd = process.cwd(),
   path = require("path"),
   fs = require("fs"),
   execSync = require("child_process").execSync,

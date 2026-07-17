@@ -1,7 +1,6 @@
 var assert = require("assert"),
     filesearch = require('../dist/lib/filesearch.js'),
-    sh = require('shelljs'),
-    cwd = sh.pwd().toString();
+    cwd = process.cwd();
 
 
 describe('filesearch Module', function () {

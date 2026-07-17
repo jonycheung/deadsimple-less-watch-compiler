@@ -1,8 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import events from 'events';
-import sh from 'shelljs';
-import extend from 'extend';
 import { exec } from 'child_process';
 import fileSearch = require('./filesearch');
 
@@ -45,7 +42,7 @@ interface LessWatchCompilerConfig {
 
 type WalkCompleteCallback = (err: NodeJS.ErrnoException | null, files: FilesMap | null) => void;
 
-const cwd = sh.pwd().toString();
+const cwd = process.cwd();
 const defaultAllowedExtensions = ['.less'];
 
 const filelist: string[] = [];

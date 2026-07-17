@@ -13,15 +13,14 @@
 */
 import fs from 'fs';
 import path from 'path';
-import sh from 'shelljs';
 import extend from 'extend';
 import { Command } from 'commander';
 import events from 'events';
 import lessWatchCompilerUtils = require('./lib/lessWatchCompilerUtils');
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const packagejson = require('../package.json');
 
-const cwd = sh.pwd().toString();
+const cwd = process.cwd();
 
 // bypass maxlistener errors because more files means more listeners #90
 events.EventEmitter.defaultMaxListeners = 0;

@@ -1,7 +1,6 @@
 var assert = require("assert"),
     lessWatchCompilerUtils = require('../dist/lib/lessWatchCompilerUtils.js'),
-    sh = require('shelljs'),
-    cwd = sh.pwd().toString(),
+    cwd = process.cwd(),
     fs = require('fs'),
     path = require('path'),
     testroot = cwd+'/test/less/',
