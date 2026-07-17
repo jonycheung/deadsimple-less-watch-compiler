@@ -140,6 +140,50 @@ const lessWatchCompilerUtilsModule = {
     );
   },
 
+  /**
+   * Build the standard change handler shared by the CLI and the programmatic
+   * API: recompiles the importing parent when a changed file is someone's
+   * @import, otherwise compiles the main file (when set) or the changed file.
+   */
+  makeWatchHandler(
+    mainFilePath: string | undefined,
+    notify: {
+      onRemove?: (file: string) => void;
+      onCompile?: (file: string, result: CompileResult) => void;
+      onImportCompile?: (importingFile: string, changedFile: string, result: CompileResult) => void;
+    }
+  ): WatchCallback {
+    return function (f, curr, prev, fileimports) {
+      if (typeof f === 'object' && prev === null && curr === null) {
+        // Finished walking the tree
+        return;
+      } else if ((curr as fs.Stats).nlink === 0) {
+        // f was removed
+        if (notify.onRemove) notify.onRemove(f as string);
+      } else {
+        // f is a new file or changed
+        let importedFile = false;
+        for (const i in fileimports) {
+          for (const k in fileimports[i]) {
+            const hasExtension = path.extname(fileimports[i][k]).length > 1;
+            const importFile = hasExtension ? fileimports[i][k] : fileimports[i][k] + '.less';
+            const normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile);
+
+            if (f === normalizedPath && !mainFilePath) {
+              const compileResult = lessWatchCompilerUtilsModule.compileCSS(i);
+              if (compileResult && notify.onImportCompile) notify.onImportCompile(i, f as string, compileResult);
+              importedFile = true;
+            }
+          }
+        }
+        if (!importedFile) {
+          const compileResult = lessWatchCompilerUtilsModule.compileCSS(mainFilePath || (f as string));
+          if (compileResult && notify.onCompile) notify.onCompile(f as string, compileResult);
+        }
+      }
+    };
+  },
+
   compileCSS(file: string, test?: boolean): CompileResult | undefined {
     const outputFilePath = this.resolveOutputPath(file);
 

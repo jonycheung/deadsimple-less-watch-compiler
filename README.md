@@ -119,6 +119,7 @@ less-watch-compiler
     -h, --help                                                               output usage information
     -V, --version                                                            output the version number
     --main-file <file>                                                       Specify <file> as the file to always re-compile e.g. '--main-file style.less'.
+    --init                                                                   Create a less-watch-compiler.config.json template in the current directory and exit.
     --config <file>                                                          Custom configuration file path. (default: "less-watch-compiler.config.json")
     --run-once                                                               Run the compiler once without waiting for additional changes.
     --include-hidden                                                         Don't ignore files beginning with a '.' or a '_'
@@ -134,6 +135,29 @@ less-watch-compiler
 - By default, this script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array in `config.json`.
 - Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed by adding `"includeHidden:true` in the config file.
 - When `--run-once` used, compilation will fail on first error
+
+## Programmatic API
+
+The package can also be used as a library:
+
+```js
+const { compileFile, watch } = require('less-watch-compiler');
+
+// Compile one file (returns a Promise with the output path)
+await compileFile('less/style.less', 'css', { minified: true });
+
+// Compile everything under a folder, then keep watching for changes
+watch(
+  'less',
+  'css',
+  { sourceMap: true },
+  {
+    onCompile: (changedFile, outputFilePath) => console.log(changedFile, '->', outputFilePath)
+  }
+);
+```
+
+`compileFile(inputFilePath, outputFolder, options?)` and `watch(watchFolder, outputFolder, options?, listeners?)` accept the same options as the config file (`minified`, `sourceMap`, `enableJs`, `lessArgs`, `plugins`, and for `watch` also `mainFile`, `includeHidden`, `allowedExtensions`). TypeScript definitions are bundled. Note that the compiler keeps its configuration in module-level state, so one configuration per process applies at a time.
 
 ### Using the source files
 
