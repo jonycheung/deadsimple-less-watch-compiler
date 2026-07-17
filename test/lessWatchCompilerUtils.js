@@ -12,21 +12,24 @@ describe('lessWatchCompilerUtils Module API', function () {
       it('walk() function should be there', function () {
         assert.equal('function', typeof lessWatchCompilerUtils.walk);
       });
-      it('walk() function should return an object of files ', async (done) => {
-        await runCommand(done);
-        function runCommand(done) {
-          lessWatchCompilerUtils.walk(
-            testroot,
-            {},
-            (err, files) => {
+      it('walk() function should return an object of files ', (done) => {
+        lessWatchCompilerUtils.walk(
+          testroot,
+          {},
+          (err, files) => {
+            try {
+              assert.ifError(err);
+              assert.ok(files);
               for (var i in files) {
                 assert.equal('object', typeof files[i]);
               }
-            },
-            function () {}
-          );
-          done();
-        }
+              done();
+            } catch (e) {
+              done(e);
+            }
+          },
+          function () {}
+        );
       });
       it('walk() should respect ignoreDotFiles option', (done) => {
         const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-'));
