@@ -1,10 +1,10 @@
 {
-    "allowedExtensions":[".less"],
-    "enableJs": true,
-    "minified": true,
-    "includeHidden": true,
-    "sourceMap": true,
-    "plugins": "plugin1,plugin2",
-    "watchFolder": "test/less",
-    "outputFolder": "test/css"
+  "allowedExtensions": [".less"],
+  "enableJs": true,
+  "minified": true,
+  "includeHidden": true,
+  "sourceMap": true,
+  "plugins": "plugin1,plugin2",
+  "watchFolder": "test/less",
+  "outputFolder": "test/css"
 }

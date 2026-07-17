@@ -1,11 +1,5 @@
 {
-  "extends": [
-    "config:base"
-  ],
-  "labels": [
-     "renovate"
-   ],
-  "assignees":[
-    "jonycheung"
-   ]
+  "extends": ["config:base"],
+  "labels": ["renovate"],
+  "assignees": ["jonycheung"]
 }

@@ -1,10 +1,10 @@
 {
-    "allowedExtensions":[".less"],
-    "enableJs": false,
-    "runOnce": true,
-    "minified": false,
-    "sourceMap": false,
-    "plugins": "",
-    "watchFolder": "test/examples/with-config/css",
-    "outputFolder": "test/examples/with-config/css"
+  "allowedExtensions": [".less"],
+  "enableJs": false,
+  "runOnce": true,
+  "minified": false,
+  "sourceMap": false,
+  "plugins": "",
+  "watchFolder": "test/examples/with-config/css",
+  "outputFolder": "test/examples/with-config/css"
 }

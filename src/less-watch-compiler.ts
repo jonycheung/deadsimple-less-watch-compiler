@@ -39,7 +39,10 @@ program
   .option('--enable-js', 'Less.js Option: To enable inline JavaScript in less files.')
   .option('--source-map', 'Less.js Option: To generate source map for css files.')
   .option('--plugins <plugin-a>,<plugin-b>', 'Less.js Option: To specify plugins separated by commas.')
-  .option('--less-args <k1>=<v1>,<k2>=<v2>', "Less.js Option: To specify any other less options e.g. '--less-args math=strict,strict-units=on,include-path=.\\/dir1\\;.\\/dir2'.")
+  .option(
+    '--less-args <k1>=<v1>,<k2>=<v2>',
+    "Less.js Option: To specify any other less options e.g. '--less-args math=strict,strict-units=on,include-path=.\\/dir1\\;.\\/dir2'."
+  )
   .allowUnknownOption(false)
   .parse(process.argv);
 
@@ -68,7 +71,7 @@ const loadConfigAndInit = async (): Promise<void> => {
     const customConfig = JSON.parse(data.toString());
     console.log('Config file ' + configPath + ' is loaded.');
     extend(true, lessWatchCompilerUtils.config, customConfig);
-  } catch (err) {
+  } catch {
     // No config file is fine; proceed with defaults
   }
   init();
@@ -112,12 +115,10 @@ function init(): void {
 
   if (lessWatchCompilerUtils.config.mainFile) {
     mainFilePath = path.resolve(lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile);
-    fs.promises
-      .access(mainFilePath, fs.constants.F_OK)
-      .catch(() => {
-        console.log('Main file ' + mainFilePath + ' does not exist.');
-        process.exit(1);
-      });
+    fs.promises.access(mainFilePath, fs.constants.F_OK).catch(() => {
+      console.log('Main file ' + mainFilePath + ' does not exist.');
+      process.exit(1);
+    });
   }
 
   if (lessWatchCompilerUtils.config.runOnce === true) console.log('Running less-watch-compiler once.');
@@ -141,7 +142,6 @@ function init(): void {
       } else {
         // f is a new file or changed
         let importedFile = false;
-        const filename = (f as string).substring(lessWatchCompilerUtils.config.watchFolder!.length + 1);
         for (const i in fileimports) {
           for (const k in fileimports[i]) {
             const hasExtension = path.extname(fileimports[i][k]).length > 1;
