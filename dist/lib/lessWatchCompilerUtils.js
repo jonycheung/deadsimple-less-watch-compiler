@@ -43,14 +43,13 @@ const lessWatchCompilerUtilsModule = {
                                 }
                             }
                             state.pending -= 1;
-                            const done = state.pending === 0;
                             if (!enoent && st) {
                                 // Dotfile/dotfolder skipping applies to everything; the extension
                                 // filter must only apply to files, or directories never recurse
                                 if (options.ignoreDotFiles && path_1.default.basename(filePath)[0] === '.')
-                                    return void (done && callback(null, state.files));
+                                    return void finalize(null);
                                 if (!st.isDirectory() && options.filter && options.filter(filePath))
-                                    return void (done && callback(null, state.files));
+                                    return void finalize(null);
                                 state.files[filePath] = st;
                                 if (st.isDirectory()) {
                                     processDir(filePath);
@@ -59,11 +58,10 @@ const lessWatchCompilerUtilsModule = {
                                     if (initCallback)
                                         initCallback(filePath);
                                 }
-                                if (done)
-                                    callback(null, state.files);
+                                finalize(null);
                             }
-                            else if (done) {
-                                callback(null, state.files);
+                            else {
+                                finalize(null);
                             }
                         });
                     });
