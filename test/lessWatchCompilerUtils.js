@@ -247,6 +247,44 @@ describe('lessWatchCompilerUtils Module API', function () {
         fs.watchFile = originalWatchFile;
         assert.equal(false, watched);
       });
+      it('setupWatcher() should not unwatch after a transient missing-file poll', function () {
+        const originalWatchFile = fs.watchFile;
+        const originalUnwatchFile = fs.unwatchFile;
+        let watchListener;
+        let unwatched = false;
+        const watchedFile = path.join(cwd, 'test/less/test.less');
+
+        fs.watchFile = (file, _opts, listener) => {
+          if (file === watchedFile) watchListener = listener;
+        };
+        fs.unwatchFile = () => {
+          unwatched = true;
+        };
+
+        lessWatchCompilerUtils.setupWatcher(watchedFile, {}, {}, function () {});
+        assert.equal('function', typeof watchListener);
+
+        watchListener(
+          {
+            nlink: 0,
+            mtime: new Date(0),
+            isDirectory: function () {
+              return false;
+            }
+          },
+          {
+            nlink: 1,
+            mtime: new Date(),
+            isDirectory: function () {
+              return false;
+            }
+          }
+        );
+
+        fs.watchFile = originalWatchFile;
+        fs.unwatchFile = originalUnwatchFile;
+        assert.equal(false, unwatched);
+      });
     });
     describe('fileWatcher()', function () {
       it('fileWatcher() function should be there', function () {

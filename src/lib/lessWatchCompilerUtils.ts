@@ -267,7 +267,7 @@ const lessWatchCompilerUtilsModule = {
           });
         });
       }
-      if ((c as fs.Stats).nlink === 0) {
+      if ((c as fs.Stats).nlink === 0 && (p as fs.Stats).nlink === 0) {
         delete files[f];
         fs.unwatchFile(f);
       }
