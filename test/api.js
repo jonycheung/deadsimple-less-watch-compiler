@@ -42,6 +42,34 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
     );
   });
 
+  it('compileFile() with cache: true skips recompiling an unchanged file, and recompiles once the source changes', async function () {
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-api-cache-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const cacheOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(cacheOutDir);
+    const lessFile = path.join(lessDir, 'cached.less');
+    const cachePath = path.join(tmpDir, 'cache.json');
+    const staleMarker = '/* stale marker */';
+    fs.writeFileSync(lessFile, '.a { color: red; }');
+
+    try {
+      const output = await api.compileFile(lessFile, cacheOutDir, { cache: true, cachePath });
+      assert.ok(fs.readFileSync(output, 'utf8').includes('red'));
+
+      fs.writeFileSync(output, staleMarker);
+      await api.compileFile(lessFile, cacheOutDir, { cache: true, cachePath });
+      assert.equal(fs.readFileSync(output, 'utf8'), staleMarker, 'a cache hit must not rewrite the output file');
+
+      fs.writeFileSync(lessFile, '.a { color: blue; }');
+      await api.compileFile(lessFile, cacheOutDir, { cache: true, cachePath });
+      assert.ok(fs.readFileSync(output, 'utf8').includes('blue'), 'a real source change must still trigger a recompile');
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('watch() throws synchronously when mainFile does not exist, instead of watching silently forever', function () {
     assert.throws(() => api.watch('test/less', 'test/css', { mainFile: 'no-such-main.less', runOnce: true }), /no-such-main\.less does not exist/);
   });

@@ -36,6 +36,11 @@ program
   .option('--config <file>', 'Custom configuration file path.', 'less-watch-compiler.config.json')
   .option('--run-once', 'Run the compiler once without waiting for additional changes.')
   .option('--include-hidden', "Don't ignore files beginning with a '.' or a '_'")
+  .option(
+    '--cache',
+    'Skip recompiling a file (under --run-once) when its content and full @import closure are unchanged since the last cached run. Off by default; for CI, restore the cache file between runs.'
+  )
+  .option('--cache-path <file>', "Cache file path when --cache is set. Defaults to '<cwd>/.less-watch-compiler-cache.json'.")
   // Less Options
   .option('--enable-js', 'Less.js Option: To enable inline JavaScript in less files.')
   .option('--source-map', 'Less.js Option: To generate source map for css files.')
@@ -57,6 +62,8 @@ const programOption = program.opts<{
   sourceMap?: boolean;
   plugins?: string;
   lessArgs?: string;
+  cache?: boolean;
+  cachePath?: string;
 }>();
 
 if (programOption.init) {
@@ -72,7 +79,8 @@ if (programOption.init) {
     sourceMap: false,
     minified: false,
     enableJs: false,
-    includeHidden: false
+    includeHidden: false,
+    cache: false
   };
   fs.writeFileSync(scaffoldPath, JSON.stringify(scaffold, null, 2) + '\n', 'utf8');
   console.log('Created ' + scaffoldPath + '. Adjust watchFolder/outputFolder and run less-watch-compiler.');
@@ -115,6 +123,8 @@ function init(): void {
   if (programOption.includeHidden !== undefined) lessWatchCompilerUtils.config.includeHidden = programOption.includeHidden;
   if (programOption.enableJs !== undefined) lessWatchCompilerUtils.config.enableJs = programOption.enableJs;
   if (programOption.lessArgs) lessWatchCompilerUtils.config.lessArgs = programOption.lessArgs;
+  if (programOption.cache !== undefined) lessWatchCompilerUtils.config.cache = programOption.cache;
+  if (programOption.cachePath) lessWatchCompilerUtils.config.cachePath = programOption.cachePath;
 
   if (!lessWatchCompilerUtils.config.watchFolder || !lessWatchCompilerUtils.config.outputFolder) {
     console.log('Missing arguments. Example:');

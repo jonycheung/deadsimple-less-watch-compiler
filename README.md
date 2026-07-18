@@ -138,7 +138,9 @@ less-watch-compiler
   "plugins": "plugin1,plugin2",
   "lessArgs": "option1=1,option2=2",
   "runOnce": false,
-  "enableJs": true
+  "enableJs": true,
+  "cache": false,
+  "cachePath": "<optional_cache_file_path>"
 }
 ```
 
@@ -155,14 +157,30 @@ less-watch-compiler
     --source-map                                                             Less.js Option: To generate source map for css files.
     --plugins <plugin-a>,<plugin-b>                                          Less.js Option: To specify plugins separated by commas.
     --less-args <less-arg1>=<less-arg1-value>,<less-arg1>=<less-arg2-value>  Less.js Option: To specify any other less options e.g. '--less-args math=strict,strict-units=on,include-path=./dir1\;./dir2'.
+    --cache                                                                  Skip recompiling a file (under --run-once) when its content and full @import closure are unchanged since the last cached run.
+    --cache-path <file>                                                     Cache file path when --cache is set. Defaults to '<cwd>/.less-watch-compiler-cache.json'.
 
 ## Please note:
 
-- By default, "minified" is turned on to always compress/minify output. You can set the minification to false by adding `"minified":false` in the config file.
+- By default, "minified" is turned off (full, uncompressed CSS output). Set `"minified":true` in the config file to compress output and write `.min.css` files instead.
 - By default, "sourceMap" is turned off. You can generating sourcemap to true by adding `"sourceMap":true` in the config file.
 - By default, this script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array in `config.json`.
 - Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed by adding `"includeHidden:true` in the config file.
 - When `--run-once` used, compilation will fail on first error
+
+## Incremental compilation for CI
+
+`--run-once` recompiles every matching file on every invocation. For CI, where the same tree is often rebuilt across runs with only a handful of files actually changed, `--cache` (or `"cache": true` in the config file) skips recompiling a file when nothing that affects its output has changed:
+
+```bash
+less-watch-compiler --run-once --cache less css
+```
+
+- Off by default, and only applies to `--run-once` (and `compileFile()` in the [programmatic API](#programmatic-api)) — a live watch session always recompiles on a real change, so caching has nothing to add there.
+- **Content-based, not timestamp-based.** Each file's cache key hashes its own content plus the content of every file it `@import`s, transitively. This is deliberate: CI checkouts and restored caches don't reliably preserve mtimes, so a cache keyed on timestamps would be wrong (or useless) in exactly the environment this feature targets.
+- **Whole-cache invalidation on option changes.** Changing any compile-affecting option (`--less-args`, `--plugins`, `--enable-js`, `--source-map`, `--minified`) or upgrading `less`/`less-watch-compiler` invalidates the entire cache at once, rather than trying to track which options affect which files.
+- The cache file (default `.less-watch-compiler-cache.json` in the current directory, override with `--cache-path <file>` / `"cachePath"`) is plain JSON. In CI, restore/save it the same way you'd cache `node_modules` (e.g. keyed on a lockfile hash) so it persists across runs.
+- **Known limitation:** dependency detection for the cache key covers standard `@import "file"` / `@import (reference) "file"` statements resolved relative to the importing file. It does not currently follow imports that only resolve via `--less-args include-path=...`, or recognize other Less import modifiers (`(less)`, `(css)`, `(inline)`, `(multiple)`, etc.) — a file that depends on something _only_ through one of those won't invalidate the cache when that dependency changes. If your project relies on either, either avoid `--cache` for now or keep an eye on [issue #212](https://github.com/jonycheung/deadsimple-less-watch-compiler/issues/212) for a fix that sources the dependency list from `less.render()`'s own import resolution instead of a custom parser.
 
 ## Programmatic API
 
@@ -185,7 +203,7 @@ watch(
 );
 ```
 
-`compileFile(inputFilePath, outputFolder, options?)` and `watch(watchFolder, outputFolder, options?, listeners?)` accept the same options as the config file (`minified`, `sourceMap`, `enableJs`, `lessArgs`, `plugins`, and for `watch` also `mainFile`, `includeHidden`, `allowedExtensions`). TypeScript definitions are bundled. Note that the compiler keeps its configuration in module-level state, so one configuration per process applies at a time.
+`compileFile(inputFilePath, outputFolder, options?)` and `watch(watchFolder, outputFolder, options?, listeners?)` accept the same options as the config file (`minified`, `sourceMap`, `enableJs`, `lessArgs`, `plugins`, `cache`, `cachePath`, and for `watch` also `mainFile`, `includeHidden`, `allowedExtensions`). `compileFile()` honors `cache`/`cachePath` directly (see [Incremental compilation for CI](#incremental-compilation-for-ci) above); `watch()` accepts them for config-shape parity but doesn't use them, since a live watch session always recompiles on a real change. TypeScript definitions are bundled. Note that the compiler keeps its configuration in module-level state, so one configuration per process applies at a time.
 
 ### Using the source files
 
