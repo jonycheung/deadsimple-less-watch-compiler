@@ -656,6 +656,76 @@ describe('lessWatchCompilerUtils Module API', function () {
           }
         );
       });
+
+      it('never chases or produces standalone output for a non-.less @import target (issue #59 review follow-up)', function (done) {
+        // main.less -> reset.css -> fonts.css. Less doesn't inline a plain
+        // `@import "x.css"` by default (it stays a literal @import url(...)
+        // reference in the output), so following such a target's own
+        // imports for recompile purposes is both pointless and, by treating
+        // it as its own watchable/compilable entry, wrong: it must never
+        // produce a standalone .css output of its own, and editing
+        // something *it* imports must not propagate at all.
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-css-import-'));
+        const outDir = path.join(tmpDir, 'css');
+        fs.mkdirSync(outDir);
+        fs.writeFileSync(path.join(tmpDir, 'main.less'), '@import "reset.css";\n.a { color: red; }');
+        fs.writeFileSync(path.join(tmpDir, 'reset.css'), '@import "fonts.css";');
+        fs.writeFileSync(path.join(tmpDir, 'fonts.css'), '/* fonts */');
+
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir, outputFolder: outDir };
+
+        function cleanup() {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          { interval: 30, filter: lessWatchCompilerUtils.filterFiles },
+          lessWatchCompilerUtils.makeWatchHandler(undefined, {}),
+          function (f) {
+            lessWatchCompilerUtils.compileCSS(f);
+          }
+        );
+
+        waitForFileContent(
+          path.join(outDir, 'main.css'),
+          (c) => c.includes('red'),
+          3000,
+          (err) => {
+            if (err) {
+              cleanup();
+              return done(err);
+            }
+            setTimeout(() => {
+              fs.writeFileSync(path.join(tmpDir, 'fonts.css'), '/* changed */');
+              // Give the (if unguarded) chase through reset.css a dedicated
+              // window to prove itself before a control file's own compile
+              // could otherwise mask a race.
+              setTimeout(() => {
+                // A control file, started only now, proves the watcher is
+                // still alive and reacting normally.
+                fs.writeFileSync(path.join(tmpDir, 'control.less'), '.z { color: green; }');
+                waitForFileContent(
+                  path.join(outDir, 'control.css'),
+                  (c) => c.includes('green'),
+                  5000,
+                  (err2) => {
+                    try {
+                      if (err2) throw err2;
+                      assert.ok(!fs.existsSync(path.join(outDir, 'reset.css')), 'a non-.less @import target must never produce its own standalone output');
+                      cleanup();
+                      done();
+                    } catch (e) {
+                      cleanup();
+                      done(e);
+                    }
+                  }
+                );
+              }, 500);
+            }, 100);
+          }
+        );
+      });
     });
     describe('makeWatchHandler()', function () {
       let originalCompileCSS;
