@@ -52,6 +52,26 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
+      it('walk() should respect the exclude pattern, for both files and directories (issue #72)', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-exclude-'));
+        fs.mkdirSync(path.join(tmpDir, 'node_modules', 'some-pkg'), { recursive: true });
+        fs.writeFileSync(path.join(tmpDir, 'node_modules', 'some-pkg', 'style.less'), '');
+        fs.writeFileSync(path.join(tmpDir, 'mine.less'), '');
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          { exclude: /node_modules/ },
+          (err, files) => {
+            assert.ifError(err);
+            const fileList = Object.keys(files);
+            assert.ok(fileList.some((f) => f.endsWith('mine.less')));
+            assert.ok(!fileList.some((f) => f.includes('node_modules')), 'the excluded directory must not be recursed into at all');
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+            done();
+          },
+          function () {}
+        );
+      });
     });
     describe('watchTree()', function () {
       it('watchTree() function should be there', function () {
@@ -253,6 +273,154 @@ describe('lessWatchCompilerUtils Module API', function () {
                   done();
                 }
               );
+            }, 100);
+          }
+        );
+      });
+
+      it('never watches or compiles a file added that matches the exclude pattern (issue #72)', function (done) {
+        // Regression note: this must exercise a FILE directly inside the
+        // already-watched root, not a file inside a newly-created excluded
+        // directory. A newly-created directory is discovered via the
+        // readdir-rescan path, which (on this branch, independent of the
+        // exclude feature) is also where issue #73's extension-filter bug
+        // lives — a directory-based test would pass regardless of whether
+        // the exclude check below does anything, confounding the result.
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-exclude-'));
+        const outDir = path.join(tmpDir, 'css');
+        fs.mkdirSync(outDir);
+        fs.writeFileSync(path.join(tmpDir, 'existing.less'), '.x { color: red; }');
+
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir, outputFolder: outDir };
+
+        function cleanup() {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          { interval: 30, filter: lessWatchCompilerUtils.filterFiles, exclude: /excluded-file/ },
+          function (f, curr) {
+            if (typeof f === 'object' && curr === null) return;
+            if (curr && curr.nlink !== 0) lessWatchCompilerUtils.compileCSS(f);
+          },
+          function (f) {
+            lessWatchCompilerUtils.compileCSS(f);
+          }
+        );
+
+        waitForFileContent(
+          path.join(outDir, 'existing.css'),
+          (c) => c.includes('red'),
+          3000,
+          (err) => {
+            if (err) {
+              cleanup();
+              return done(err);
+            }
+            setTimeout(() => {
+              fs.writeFileSync(path.join(tmpDir, 'excluded-file.less'), '.pkg { color: blue; }');
+              // Give the (if unguarded) readdir-rescan/compile chain for the
+              // excluded file a dedicated window to prove itself before a
+              // control file's own compile could otherwise mask a race.
+              setTimeout(() => {
+                // A control file, started only now, proves the watcher is
+                // still alive and reacting normally.
+                fs.writeFileSync(path.join(tmpDir, 'control.less'), '.z { color: green; }');
+                waitForFileContent(
+                  path.join(outDir, 'control.css'),
+                  (c) => c.includes('green'),
+                  5000,
+                  (err2) => {
+                    try {
+                      if (err2) throw err2;
+                      assert.ok(
+                        !fs.existsSync(path.join(outDir, 'excluded-file.css')),
+                        'a file matching the exclude pattern should never be watched or compiled'
+                      );
+                      cleanup();
+                      done();
+                    } catch (e) {
+                      cleanup();
+                      done(e);
+                    }
+                  }
+                );
+              }, 500);
+            }, 100);
+          }
+        );
+      });
+
+      it('never watches or recompiles because of an @import target that matches the exclude pattern (issue #72)', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-exclude-import-'));
+        const outDir = path.join(tmpDir, 'css');
+        fs.mkdirSync(outDir);
+        fs.mkdirSync(path.join(tmpDir, 'excluded-dir'));
+        fs.writeFileSync(path.join(tmpDir, 'excluded-dir', 'style.less'), '.pkg { color: blue; }');
+        fs.writeFileSync(path.join(tmpDir, 'main.less'), '@import "excluded-dir/style.less";\n.a { color: red; }');
+
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir, outputFolder: outDir };
+
+        function cleanup() {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+
+        // Use the real makeWatchHandler(), not the simplified inline
+        // callback used elsewhere in this file -- only makeWatchHandler()
+        // implements "recompile the importing parent when the changed file
+        // is one of its imports", which is the exact path this regression
+        // goes through (issue #72 follow-up: fileWatcher() used to register
+        // an @import target with setupWatcher() unconditionally, bypassing
+        // exclude).
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          { interval: 30, filter: lessWatchCompilerUtils.filterFiles, exclude: /excluded-dir/ },
+          lessWatchCompilerUtils.makeWatchHandler(undefined, {}),
+          function (f) {
+            lessWatchCompilerUtils.compileCSS(f);
+          }
+        );
+
+        waitForFileContent(
+          path.join(outDir, 'main.css'),
+          (c) => c.includes('blue') && c.includes('red'),
+          3000,
+          (err) => {
+            if (err) {
+              cleanup();
+              return done(err);
+            }
+            setTimeout(() => {
+              fs.writeFileSync(path.join(tmpDir, 'excluded-dir', 'style.less'), '.pkg { color: green; }');
+              // Give the (if unguarded) @import-target watch a dedicated
+              // window to prove itself before a control file's own compile
+              // could otherwise mask a race.
+              setTimeout(() => {
+                // A control file, started only now, proves the watcher is
+                // still alive and reacting normally.
+                fs.writeFileSync(path.join(tmpDir, 'control.less'), '.z { color: yellow; }');
+                waitForFileContent(
+                  path.join(outDir, 'control.css'),
+                  (c) => c.includes('yellow'),
+                  5000,
+                  (err2) => {
+                    try {
+                      if (err2) throw err2;
+                      const mainCss = fs.readFileSync(path.join(outDir, 'main.css'), 'utf8');
+                      assert.ok(
+                        mainCss.includes('blue') && !mainCss.includes('green'),
+                        'editing an @import target matching the exclude pattern must not recompile the importing file'
+                      );
+                      cleanup();
+                      done();
+                    } catch (e) {
+                      cleanup();
+                      done(e);
+                    }
+                  }
+                );
+              }, 500);
             }, 100);
           }
         );
@@ -663,6 +831,42 @@ describe('lessWatchCompilerUtils Module API', function () {
         assert.equal(false, lessWatchCompilerUtils.filterFiles('_file.less'));
         assert.equal(false, lessWatchCompilerUtils.filterFiles('.file.less'));
         lessWatchCompilerUtils.config = {};
+      });
+    });
+    describe('resolveExcludePattern()', function () {
+      it('resolveExcludePattern() function should be there', function () {
+        assert.equal('function', typeof lessWatchCompilerUtils.resolveExcludePattern);
+      });
+      it('excludes node_modules and .git by default, without any user pattern', function () {
+        const pattern = lessWatchCompilerUtils.resolveExcludePattern();
+        assert.ok(pattern.test('/project/node_modules/pkg/style.less'));
+        assert.ok(pattern.test('/project/.git/HEAD'));
+        assert.ok(!pattern.test('/project/less/style.less'));
+      });
+      it('does not false-positive on names that merely contain node_modules or .git as a substring', function () {
+        const pattern = lessWatchCompilerUtils.resolveExcludePattern();
+        assert.ok(!pattern.test('/project/my-node_modules-backup/style.less'));
+        assert.ok(!pattern.test('/project/.gitignore'));
+      });
+      it('adds a user pattern on top of the defaults rather than replacing them', function () {
+        const pattern = lessWatchCompilerUtils.resolveExcludePattern('dist');
+        assert.ok(pattern.test('/project/node_modules/pkg/style.less'), 'default exclusion must still apply');
+        assert.ok(pattern.test('/project/dist/style.less'), 'user pattern must also apply');
+        assert.ok(!pattern.test('/project/less/style.less'));
+      });
+      it('throws a clean error referencing just the user pattern when it is not a valid regex', function () {
+        assert.throws(() => lessWatchCompilerUtils.resolveExcludePattern('['), /Unterminated character class/);
+      });
+      it('rejects a pattern with catastrophic backtracking potential instead of accepting it silently', function () {
+        // exclude is tested against every path on every scan; a pattern like
+        // this can take exponential time on certain inputs and hang the
+        // watcher, so it must be rejected up front rather than accepted and
+        // only discovered to be a problem once it actually pathologically
+        // backtracks against some path in the tree.
+        assert.throws(() => lessWatchCompilerUtils.resolveExcludePattern('(x+x+)+y'), /catastrophic backtracking/);
+      });
+      it('accepts an ordinary user pattern that safe-regex2 does not flag', function () {
+        assert.doesNotThrow(() => lessWatchCompilerUtils.resolveExcludePattern('dist|build'));
       });
     });
     describe('getDateTime()', function () {

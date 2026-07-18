@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import safeRegex = require('safe-regex2');
 import fileSearch = require('./filesearch');
 import lessOptions = require('./lessOptions');
 import cache = require('./cache');
@@ -11,6 +12,11 @@ interface WalkOptions {
   ignoreDotFiles?: boolean;
   filter?: (filePath: string) => boolean;
   interval?: number;
+  // Unlike filter (which only ever applies to files -- see #73), exclude
+  // applies to both files and directories: it's for keeping the walk out of
+  // whole subtrees entirely (e.g. node_modules, #72), not for narrowing
+  // which files within an otherwise-watched directory count as compilable.
+  exclude?: RegExp;
 }
 
 interface FilesMap {
@@ -45,12 +51,21 @@ interface LessWatchCompilerConfig {
   allowedExtensions?: string[];
   cache?: boolean;
   cachePath?: string;
+  exclude?: string;
 }
 
 type WalkCompleteCallback = (err: NodeJS.ErrnoException | null, files: FilesMap | null) => void;
 
 const cwd = process.cwd();
 const defaultAllowedExtensions = ['.less'];
+// node_modules and .git are near-universally unwanted in the watch tree (large,
+// churn heavily, never contain anything this tool should compile) and typing
+// them out by hand on every invocation is exactly the friction --exclude (#72)
+// was meant to remove, so they're excluded unconditionally rather than only
+// when a user thinks to ask for it. Anchored to path-segment boundaries so a
+// directory like "my-node_modules-backup" or a file like ".gitignore" isn't
+// caught by accident.
+const defaultExcludePattern = /(?:^|[\\/])(?:node_modules|\.git)(?:[\\/]|$)/;
 
 const filelist: string[] = [];
 const fileimportlist: Record<string, string[]> = {};
@@ -91,9 +106,12 @@ const lessWatchCompilerUtilsModule = {
 
               state.pending -= 1;
               if (!enoent && st) {
-                // Dotfile/dotfolder skipping applies to everything; the extension
-                // filter must only apply to files, or directories never recurse
+                // Dotfile/dotfolder skipping and the exclude pattern apply to
+                // everything (a directory match keeps the walk from ever
+                // descending into it); the extension filter must only apply
+                // to files, or directories never recurse
                 if (options.ignoreDotFiles && path.basename(filePath)[0] === '.') return void finalize(null);
+                if (options.exclude && options.exclude.test(filePath)) return void finalize(null);
                 if (!st.isDirectory() && options.filter && options.filter(filePath)) return void finalize(null);
 
                 state.files[filePath] = st as fs.Stats;
@@ -319,6 +337,25 @@ const lessWatchCompilerUtilsModule = {
     }
   },
 
+  /**
+   * Combine the always-on node_modules/.git exclusion with an optional
+   * user-supplied pattern (added, not replacing the default -- a user
+   * excluding something unrelated, e.g. --exclude dist, shouldn't silently
+   * stop excluding node_modules). Throws if userPattern is not a valid
+   * regex, or is rejected by safe-regex2 as having unbounded star height
+   * (e.g. `(x+x+)+y`) -- exclude is tested against every path in the tree
+   * on every scan, so a catastrophic pattern would hang the watcher.
+   * Callers decide how to surface the throw (CLI exits, API throws).
+   */
+  resolveExcludePattern(userPattern?: string): RegExp {
+    if (!userPattern) return defaultExcludePattern;
+    const userRegex = new RegExp(userPattern);
+    if (!safeRegex(userRegex)) {
+      throw new Error('pattern is not safe from catastrophic backtracking (exceeds the allowed repetition/star-height limit)');
+    }
+    return new RegExp(`(?:${defaultExcludePattern.source})|(?:${userRegex.source})`);
+  },
+
   getDateTime(): string {
     const date = new Date();
     let hour: number | string = date.getHours();
@@ -410,6 +447,12 @@ const lessWatchCompilerUtilsModule = {
               fs.stat(file, (err, stat) => {
                 if (err || !stat) return; // raced with a delete between readdir and stat
                 if (options.ignoreDotFiles && path.basename(b)[0] === '.') return;
+                // Unlike the extension filter below, exclude applies to
+                // directories too -- a newly-created excluded directory
+                // (e.g. node_modules reappearing after a reinstall) must
+                // never start being watched, the same way walk() already
+                // keeps the initial scan out of it entirely.
+                if (options.exclude && options.exclude.test(file)) return;
                 // The extension filter must only apply to files -- a new
                 // directory (e.g. one created after startup) never matches
                 // an allowed extension, so applying the filter to it too
@@ -477,6 +520,12 @@ const lessWatchCompilerUtilsModule = {
       const hasExtension = path.extname(importSpec).length > 1;
       const importFile = hasExtension ? importSpec : importSpec + '.less';
       const importPath = path.normalize(path.dirname(f) + path.sep + importFile);
+      // Mirror the directory-walk exclude guard here: an @import target
+      // resolving into an excluded path (e.g. --exclude node_modules) must
+      // not be watched, or editing it would still trigger the importing
+      // parent's recompile even though the subtree is supposed to be kept
+      // out entirely (issue #72).
+      if (options.exclude && options.exclude.test(importPath)) continue;
       if (filelistArr.indexOf(importPath) === -1) {
         filelistArr[filelistArr.length] = importPath;
         lessWatchCompilerUtilsModule.setupWatcher(importPath, files, options, watchCallback);

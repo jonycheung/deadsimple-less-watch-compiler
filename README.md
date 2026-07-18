@@ -140,7 +140,8 @@ less-watch-compiler
   "runOnce": false,
   "enableJs": true,
   "cache": false,
-  "cachePath": "<optional_cache_file_path>"
+  "cachePath": "<optional_cache_file_path>",
+  "exclude": "<optional_regex_pattern>"
 }
 ```
 
@@ -159,6 +160,7 @@ less-watch-compiler
     --less-args <less-arg1>=<less-arg1-value>,<less-arg1>=<less-arg2-value>  Less.js Option: To specify any other less options e.g. '--less-args math=strict,strict-units=on,include-path=./dir1\;./dir2'.
     --cache                                                                  Skip recompiling a file (under --run-once) when its content and full @import closure are unchanged since the last cached run.
     --cache-path <file>                                                     Cache file path when --cache is set. Defaults to '<cwd>/.less-watch-compiler-cache.json'.
+    --exclude <pattern>                                                     Additional regex pattern for paths to never watch or compile, e.g. '--exclude dist'. node_modules and .git are always excluded.
 
 ## Please note:
 
@@ -166,6 +168,8 @@ less-watch-compiler
 - By default, "sourceMap" is turned off. You can generating sourcemap to true by adding `"sourceMap":true` in the config file.
 - By default, this script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array in `config.json`.
 - Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed by adding `"includeHidden:true` in the config file.
+- `node_modules` and `.git` are always excluded from the watch and compile, no flag needed.
+- `--exclude <pattern>` (or `"exclude"` in the config file) adds an additional regex pattern for files or directories to keep out of the watch and compile entirely — it doesn't replace the `node_modules`/`.git` default, it adds to it. Unlike `allowedExtensions`, which only narrows which files count as compilable, `exclude` also stops the walk from descending into matching directories at all (e.g. `--exclude dist`). An invalid regex pattern exits with an error.
 - When `--run-once` used, compilation will fail on first error
 
 ## Incremental compilation for CI
@@ -203,7 +207,7 @@ watch(
 );
 ```
 
-`compileFile(inputFilePath, outputFolder, options?)` and `watch(watchFolder, outputFolder, options?, listeners?)` accept the same options as the config file (`minified`, `sourceMap`, `enableJs`, `lessArgs`, `plugins`, `cache`, `cachePath`, and for `watch` also `mainFile`, `includeHidden`, `allowedExtensions`). `compileFile()` honors `cache`/`cachePath` directly (see [Incremental compilation for CI](#incremental-compilation-for-ci) above); `watch()` accepts them for config-shape parity but doesn't use them, since a live watch session always recompiles on a real change. TypeScript definitions are bundled. Note that the compiler keeps its configuration in module-level state, so one configuration per process applies at a time.
+`compileFile(inputFilePath, outputFolder, options?)` and `watch(watchFolder, outputFolder, options?, listeners?)` accept the same options as the config file (`minified`, `sourceMap`, `enableJs`, `lessArgs`, `plugins`, `cache`, `cachePath`, and for `watch` also `mainFile`, `includeHidden`, `allowedExtensions`, `exclude`). `compileFile()` honors `cache`/`cachePath` directly (see [Incremental compilation for CI](#incremental-compilation-for-ci) above); `watch()` accepts them for config-shape parity but doesn't use them, since a live watch session always recompiles on a real change. `watch()` always excludes `node_modules` and `.git`; `exclude` adds to that rather than replacing it, and an invalid pattern throws synchronously. TypeScript definitions are bundled. Note that the compiler keeps its configuration in module-level state, so one configuration per process applies at a time.
 
 ### Using the source files
 
