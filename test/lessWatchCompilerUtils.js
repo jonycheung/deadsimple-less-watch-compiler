@@ -589,6 +589,73 @@ describe('lessWatchCompilerUtils Module API', function () {
           done();
         }, 500);
       });
+
+      it('recompiles the top-level entry file when a doubly-nested hidden partial changes (issue #59)', function (done) {
+        // homepage.less -> _theme.less -> _colors.less, both partials named
+        // with the conventional leading underscore (never compiled on their
+        // own). This exercises two compounding bugs together: (1)
+        // setupWatcher()'s per-file change callback used to apply the
+        // filter/hidden check before ever invoking watchCallback, silently
+        // swallowing changes to hidden @import targets entirely; and (2)
+        // makeWatchHandler() used to only check one hop of the import graph,
+        // so even with (1) fixed, a change to _colors.less would recompile
+        // _theme.less but never reach homepage.less two levels up.
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-transitive-'));
+        const outDir = path.join(tmpDir, 'css');
+        fs.mkdirSync(outDir);
+        fs.writeFileSync(path.join(tmpDir, 'homepage.less'), '@import "_theme.less";\n.a { color: red; }');
+        fs.writeFileSync(path.join(tmpDir, '_theme.less'), '@import "_colors.less";\n.theme { .mixin(); }');
+        fs.writeFileSync(path.join(tmpDir, '_colors.less'), '.mixin() { color: blue; }');
+
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir, outputFolder: outDir };
+
+        function cleanup() {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          { interval: 30, filter: lessWatchCompilerUtils.filterFiles },
+          lessWatchCompilerUtils.makeWatchHandler(undefined, {}),
+          function (f) {
+            lessWatchCompilerUtils.compileCSS(f);
+          }
+        );
+
+        waitForFileContent(
+          path.join(outDir, 'homepage.css'),
+          (c) => c.includes('blue') && c.includes('red'),
+          3000,
+          (err) => {
+            if (err) {
+              cleanup();
+              return done(err);
+            }
+            setTimeout(() => {
+              fs.writeFileSync(path.join(tmpDir, '_colors.less'), '.mixin() { color: green; }');
+              waitForFileContent(
+                path.join(outDir, 'homepage.css'),
+                (c) => c.includes('green'),
+                5000,
+                (err2) => {
+                  try {
+                    if (err2) throw err2;
+                    assert.ok(
+                      !fs.existsSync(path.join(outDir, '_theme.css')) && !fs.existsSync(path.join(outDir, '_colors.css')),
+                      'hidden partials must never produce their own standalone output'
+                    );
+                    cleanup();
+                    done();
+                  } catch (e) {
+                    cleanup();
+                    done(e);
+                  }
+                }
+              );
+            }, 100);
+          }
+        );
+      });
     });
     describe('makeWatchHandler()', function () {
       let originalCompileCSS;
@@ -677,6 +744,63 @@ describe('lessWatchCompilerUtils Module API', function () {
         const fileimports = { '/a/main.less': ['partial.less'] };
         handler(changedFile, { nlink: 1 }, {}, fileimports);
         assert.deepStrictEqual(calls, ['compiled:/a/main.less', 'onCompile-for-change:' + changedFile]);
+      });
+
+      it('recompiles every ancestor in a multi-level @import chain, not just the direct importer (issue #59)', function () {
+        const calls = [];
+        lessWatchCompilerUtils.compileCSS = (file) => {
+          calls.push('compiled:' + file);
+          return { outputFilePath: '"' + file + '.css"' };
+        };
+        const handler = lessWatchCompilerUtils.makeWatchHandler(undefined, {
+          onImportCompile: (importingFile, changedFile) => calls.push('onImportCompile:' + importingFile + '<-' + changedFile)
+        });
+        // homepage.less -> theme.less -> colors.less
+        const changedFile = path.normalize('/a/colors.less');
+        const fileimports = {
+          '/a/homepage.less': ['theme.less'],
+          '/a/theme.less': ['colors.less']
+        };
+        handler(changedFile, { nlink: 1 }, {}, fileimports);
+        assert.deepStrictEqual(
+          calls.sort(),
+          [
+            'compiled:' + path.normalize('/a/theme.less'),
+            'compiled:' + path.normalize('/a/homepage.less'),
+            'onImportCompile:' + path.normalize('/a/theme.less') + '<-' + changedFile,
+            'onImportCompile:' + path.normalize('/a/homepage.less') + '<-' + changedFile
+          ].sort()
+        );
+      });
+
+      it('does not loop forever on a circular @import chain', function () {
+        const calls = [];
+        lessWatchCompilerUtils.compileCSS = (file) => {
+          calls.push('compiled:' + file);
+          return { outputFilePath: '"' + file + '.css"' };
+        };
+        const handler = lessWatchCompilerUtils.makeWatchHandler(undefined, {
+          onImportCompile: (importingFile, changedFile) => calls.push('onImportCompile:' + importingFile + '<-' + changedFile)
+        });
+        // a.less <-> b.less import each other: since each one is a genuine
+        // (transitive, via the cycle) ancestor of the other, editing b.less
+        // legitimately recompiles both exactly once each -- the point of
+        // this test is that the walk terminates rather than looping forever
+        // chasing the cycle, not that only one side gets recompiled.
+        const fileimports = {
+          '/a/a.less': ['b.less'],
+          '/a/b.less': ['a.less']
+        };
+        handler(path.normalize('/a/b.less'), { nlink: 1 }, {}, fileimports);
+        assert.deepStrictEqual(
+          calls.sort(),
+          [
+            'compiled:' + path.normalize('/a/a.less'),
+            'compiled:' + path.normalize('/a/b.less'),
+            'onImportCompile:' + path.normalize('/a/a.less') + '<-' + path.normalize('/a/b.less'),
+            'onImportCompile:' + path.normalize('/a/b.less') + '<-' + path.normalize('/a/b.less')
+          ].sort()
+        );
       });
     });
     describe('compileCSS()', function () {
