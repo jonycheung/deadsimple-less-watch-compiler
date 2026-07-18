@@ -5,7 +5,7 @@
 const assert = require('assert'),
   path = require('path'),
   fs = require('fs'),
-  { execSync, spawn } = require('child_process'),
+  { execSync, execFileSync, spawn } = require('child_process'),
   cwd = process.cwd(),
   outDir = path.join(cwd, 'test', 'css'),
   cliPath = path.resolve('dist/less-watch-compiler.js');
@@ -213,6 +213,52 @@ describe('Characterization: exit codes', function () {
       (err) => err.status !== 0,
       'a missing main file must abort with a non-zero exit code'
     );
+  });
+
+  it('still finishes writing every other file when one file fails to compile (issue #213)', () => {
+    // compileCSS() kicks off renderLess() for every discovered file without
+    // awaiting it, so under --run-once many files compile concurrently. If
+    // the failing file's error surfaces before the others' async I/O
+    // completes, calling process.exit(1) immediately (rather than setting
+    // process.exitCode and letting the event loop drain) can kill the
+    // process mid-write, losing or truncating output for files that would
+    // otherwise have compiled successfully.
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-issue213-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const cssDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    const validCount = 60;
+    for (let i = 1; i <= validCount; i++) {
+      let content = '.sel-' + i + ' {\n';
+      for (let j = 1; j <= 40; j++) content += '  prop-' + j + ': value-' + j + ';\n';
+      content += '}\n';
+      fs.writeFileSync(path.join(lessDir, 'file' + i + '.less'), content);
+    }
+    fs.writeFileSync(path.join(lessDir, 'broken.less'), '.broken { color: @undefined-variable; }');
+
+    let threw = false;
+    try {
+      // execFileSync (args as an array, no shell) rather than execSync with
+      // an interpolated string: lessDir/cssDir are built from os.tmpdir(),
+      // which isn't a literal, so a shell string is both unnecessary and
+      // fragile (breaks on a path containing a space, and is the shape
+      // CodeQL flags as command construction from an uncontrolled value).
+      execFileSync(process.execPath, [cliPath, '--run-once', lessDir, cssDir], { stdio: 'pipe' });
+    } catch (err) {
+      threw = true;
+      assert.notEqual(err.status, 0, 'a compile failure among many files must still exit non-zero');
+    }
+    assert.ok(threw, 'expected a non-zero exit');
+
+    const produced = fs.existsSync(cssDir) ? fs.readdirSync(cssDir).filter((f) => f.endsWith('.css')) : [];
+    assert.equal(produced.length, validCount, 'every file that would have compiled successfully must still be written');
+    for (const f of produced) {
+      const content = fs.readFileSync(path.join(cssDir, f), 'utf8');
+      assert.ok(content.trim().endsWith('}'), f + ' was truncated mid-write: ' + JSON.stringify(content));
+    }
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 });
 
