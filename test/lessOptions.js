@@ -20,6 +20,9 @@ describe('lessOptions Module', function () {
       assert.deepStrictEqual(lessOptions.splitTopLevelCommas("my-plugin='a,b',other-plugin"), ["my-plugin='a,b'", 'other-plugin']);
       assert.deepStrictEqual(lessOptions.splitTopLevelCommas('my-plugin=(a,b),other-plugin'), ['my-plugin=(a,b)', 'other-plugin']);
     });
+    it('treats a backslash-escaped comma as a literal, not a delimiter', function () {
+      assert.deepStrictEqual(lessOptions.splitTopLevelCommas('a\\,b,c'), ['a\\,b', 'c']);
+    });
   });
 
   describe('buildRenderOptions()', function () {
@@ -97,6 +100,84 @@ describe('lessOptions Module', function () {
           lessArgs: 'strict-units=' + alias
         });
         assert.equal(options.strictUnits, true);
+      });
+    });
+
+    it('maps x/compress lessArgs to compress (distinct from the minified config flag)', function () {
+      assert.equal(lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'x' }).compress, true);
+      assert.equal(lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'compress=no' }).compress, false);
+    });
+
+    it('maps sm/strict-math to the math option', function () {
+      assert.equal(lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'sm' }).math, 'strict');
+      assert.equal(lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'strict-math=off' }).math, 'always');
+    });
+
+    it('maps js and no-js to javascriptEnabled', function () {
+      assert.equal(lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'js' }).javascriptEnabled, true);
+      assert.equal(lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'no-js' }).javascriptEnabled, false);
+    });
+
+    it('splits include-path on both ; and : (POSIX)', function () {
+      const options = lessOptions.buildRenderOptions({
+        inputFilePath: 'in.less',
+        outputFilePath: 'out.css',
+        lessArgs: 'include-path=./dir1:./dir2;./dir3'
+      });
+      assert.deepStrictEqual(options.paths, ['./dir1', './dir2', './dir3']);
+    });
+
+    it('maps insecure and ie-compat to their boolean flags', function () {
+      const options = lessOptions.buildRenderOptions({
+        inputFilePath: 'in.less',
+        outputFilePath: 'out.css',
+        lessArgs: 'insecure,ie-compat'
+      });
+      assert.equal(options.insecure, true);
+      assert.equal(options.ieCompat, true);
+    });
+
+    it('maps l/lint to lint', function () {
+      assert.equal(lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'l' }).lint, true);
+      assert.equal(lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'lint' }).lint, true);
+    });
+
+    it('maps rp/rootpath, normalizing backslashes to forward slashes', function () {
+      const options = lessOptions.buildRenderOptions({
+        inputFilePath: 'in.less',
+        outputFilePath: 'out.css',
+        lessArgs: 'rootpath=some\\windows\\path'
+      });
+      assert.equal(options.rootpath, 'some/windows/path');
+    });
+
+    it('maps relative-urls to rewriteUrls: all', function () {
+      const options = lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'relative-urls' });
+      assert.equal(options.rewriteUrls, 'all');
+    });
+
+    it('maps ru/rewrite-urls, defaulting to all when no value is given', function () {
+      assert.equal(lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'ru' }).rewriteUrls, 'all');
+      assert.equal(
+        lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'rewrite-urls=local' }).rewriteUrls,
+        'local'
+      );
+    });
+
+    it('maps url-args to urlArgs', function () {
+      const options = lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'url-args=v=123' });
+      assert.equal(options.urlArgs, 'v=123');
+    });
+
+    it('maps line-numbers to dumpLineNumbers', function () {
+      const options = lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: 'line-numbers=comments' });
+      assert.equal(options.dumpLineNumbers, 'comments');
+    });
+
+    ['no-color', 's', 'silent', 'verbose'].forEach((flag) => {
+      it(`treats ${flag} as a presentation-only no-op (no render option set)`, function () {
+        const options = lessOptions.buildRenderOptions({ inputFilePath: 'in.less', outputFilePath: 'out.css', lessArgs: flag });
+        assert.deepStrictEqual(Object.keys(options), ['filename']);
       });
     });
   });
