@@ -168,6 +168,19 @@ describe('--cache (opt-in incremental compilation for --run-once)', function () 
     assert.notEqual(fs.readFileSync(outFile, 'utf8'), staleMarker, 'an option change must force recompilation even with --cache');
   });
 
+  it('recompiles (regenerating the .map file) when --source-map is used and a partial cache restore is missing the .map sidecar', () => {
+    // Regression test: a CI cache restore that brought back the .css but not
+    // its .css.map sidecar must not be treated as a hit -- the tool always
+    // writes both together for a real compile, so serving only one is wrong.
+    cli('--run-once', '--cache', '--cache-path', cachePath, '--source-map', lessDir, outDir);
+    const mapFile = outFile + '.map';
+    assert.ok(fs.existsSync(mapFile), 'sanity check: a real compile with --source-map writes a .map file');
+
+    fs.rmSync(mapFile);
+    cli('--run-once', '--cache', '--cache-path', cachePath, '--source-map', lessDir, outDir);
+    assert.ok(fs.existsSync(mapFile), 'the .map file must be regenerated when missing, even though the .css cache entry looked unchanged');
+  });
+
   it('does not create a cache file when --cache is not set', () => {
     cli('--run-once', lessDir, outDir);
     assert.ok(!fs.existsSync(cachePath));

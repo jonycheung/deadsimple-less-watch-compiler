@@ -62,6 +62,15 @@ export async function compileFile(inputFilePath: string, outputFolder: string, o
   };
   const outputFilePath: string = JSON.parse(lessWatchCompilerUtils.resolveOutputPath(input));
 
+  const renderOptions = lessOptions.buildRenderOptions({
+    inputFilePath: input,
+    outputFilePath,
+    enableJs: options.enableJs,
+    minified: options.minified,
+    sourceMap: options.sourceMap,
+    lessArgs: options.lessArgs
+  });
+
   let cachePath: string | undefined;
   let fingerprintInput: Record<string, unknown> | undefined;
   if (options.cache) {
@@ -73,17 +82,10 @@ export async function compileFile(inputFilePath: string, outputFolder: string, o
       lessArgs: options.lessArgs,
       plugins: options.plugins
     };
-    if (cache.isUpToDate(cachePath, fingerprintInput, input, outputFilePath)) return outputFilePath;
+    const mapPath = lessOptions.sourceMapFilePath(renderOptions, outputFilePath);
+    if (cache.isUpToDate(cachePath, fingerprintInput, input, outputFilePath, mapPath ? [mapPath] : [])) return outputFilePath;
   }
 
-  const renderOptions = lessOptions.buildRenderOptions({
-    inputFilePath: input,
-    outputFilePath,
-    enableJs: options.enableJs,
-    minified: options.minified,
-    sourceMap: options.sourceMap,
-    lessArgs: options.lessArgs
-  });
   await lessWatchCompilerUtils.renderLess(input, outputFilePath, renderOptions);
   if (cachePath && fingerprintInput) cache.record(cachePath, fingerprintInput, input, outputFilePath);
   return outputFilePath;

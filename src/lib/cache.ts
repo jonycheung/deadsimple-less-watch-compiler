@@ -143,13 +143,26 @@ const cacheApi = {
     return configuredPath ? path.resolve(configuredPath) : path.join(process.cwd(), DEFAULT_CACHE_FILENAME);
   },
 
-  isUpToDate(cachePath: string, fingerprintInput: Record<string, unknown>, inputFilePath: string, outputFilePath: string): boolean {
+  // expectedFiles: additional output files (e.g. a .css.map sidecar) that
+  // must also exist for a cache hit to be valid. A real compile always
+  // produces them together with outputFilePath, so a restored/partial cache
+  // that's missing one of them must not be treated as up to date.
+  isUpToDate(
+    cachePath: string,
+    fingerprintInput: Record<string, unknown>,
+    inputFilePath: string,
+    outputFilePath: string,
+    expectedFiles: string[] = []
+  ): boolean {
     const fingerprint = computeFingerprint(fingerprintInput);
     const cache = load(cachePath, fingerprint);
     const entry = cache.entries[relativeKey(inputFilePath)];
     if (!entry) return false;
     if (entry.outputFilePath !== relativeKey(outputFilePath)) return false;
     if (!fs.existsSync(outputFilePath)) return false;
+    for (const f of expectedFiles) {
+      if (!fs.existsSync(f)) return false;
+    }
     const hash = hashClosure(inputFilePath);
     return hash !== undefined && hash === entry.hash;
   },

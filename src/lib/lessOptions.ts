@@ -18,6 +18,17 @@ export interface RenderOptionsInput {
 
 export type LessRenderOptions = Record<string, unknown>;
 
+// A real compile writes a separate .map file next to the output whenever
+// source maps are enabled and not inlined (inline maps are embedded as a
+// data URI in the CSS itself, so there's no sidecar). Shared by renderLess()
+// (to decide whether to write it) and the cache (to require its presence
+// for a hit to be valid).
+export function sourceMapFilePath(options: LessRenderOptions, outputFilePath: string): string | undefined {
+  const sourceMapOptions = options.sourceMap as { sourceMapFileInline?: boolean } | undefined;
+  if (sourceMapOptions && !sourceMapOptions.sourceMapFileInline) return outputFilePath + '.map';
+  return undefined;
+}
+
 // Split on commas that are not inside parentheses, so values such as
 // modify-var='c=rgba(1, 2, 3, 0.5)' survive intact (issue #103)
 export function splitTopLevelCommas(value: string): string[] {

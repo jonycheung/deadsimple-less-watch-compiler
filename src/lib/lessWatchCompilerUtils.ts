@@ -222,7 +222,8 @@ const lessWatchCompilerUtilsModule = {
           lessArgs: config.lessArgs,
           plugins: config.plugins
         };
-        if (cache.isUpToDate(cachePath, fingerprintInput, file, outPath)) {
+        const mapPath = lessOptions.sourceMapFilePath(options, outPath);
+        if (cache.isUpToDate(cachePath, fingerprintInput, file, outPath, mapPath ? [mapPath] : [])) {
           return { outputFilePath, options, cached: true };
         }
       }
@@ -252,9 +253,9 @@ const lessWatchCompilerUtilsModule = {
     // When sourceMapFileInline is set, the map is embedded as a data URI in
     // result.css already; a separate .map file would be redundant (and
     // lessc itself never writes one in that mode).
-    const sourceMapOptions = options.sourceMap as { sourceMapFileInline?: boolean } | undefined;
-    if (result.map && !sourceMapOptions?.sourceMapFileInline) {
-      await fs.promises.writeFile(outPath + '.map', result.map, 'utf8');
+    const mapPath = lessOptions.sourceMapFilePath(options, outPath);
+    if (result.map && mapPath) {
+      await fs.promises.writeFile(mapPath, result.map, 'utf8');
     }
   },
 

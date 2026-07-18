@@ -3,10 +3,19 @@ const assert = require('assert'),
   fs = require('fs'),
   cwd = process.cwd();
 
+// Each test needs a fresh module instance (to simulate a new process's
+// module-level state, e.g. for "does the cache survive a restart" tests).
+// Every fresh instance registers its own process.on('exit', flush) the
+// first time it's used, so instances created here are tracked and their
+// exit listener is removed in afterEach -- otherwise the accumulate across
+// this file's tests and can trip MaxListenersExceededWarning.
+let liveInstances = [];
 function freshCache() {
   const resolved = require.resolve('../dist/lib/cache.js');
   delete require.cache[resolved];
-  return require('../dist/lib/cache.js');
+  const instance = require('../dist/lib/cache.js');
+  liveInstances.push(instance);
+  return instance;
 }
 
 describe('cache Module', function () {
@@ -25,6 +34,8 @@ describe('cache Module', function () {
   });
 
   afterEach(function () {
+    for (const instance of liveInstances) process.removeListener('exit', instance.flush);
+    liveInstances = [];
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
@@ -73,6 +84,19 @@ describe('cache Module', function () {
     cache.record(cachePath, fp, lessFile, outFile);
     fs.rmSync(outFile);
     assert.equal(cache.isUpToDate(cachePath, fp, lessFile, outFile), false);
+  });
+
+  it('reports a miss when a recorded expected file (e.g. a .css.map sidecar) is missing', function () {
+    // Regression test: a partially-restored CI cache (e.g. the .css was
+    // restored but the .css.map sidecar was not) must not be treated as a
+    // hit just because outputFilePath itself exists.
+    const mapFile = outFile + '.map';
+    fs.writeFileSync(mapFile, '{}');
+    const cache = freshCache();
+    cache.record(cachePath, fp, lessFile, outFile);
+    assert.equal(cache.isUpToDate(cachePath, fp, lessFile, outFile, [mapFile]), true, 'sanity check: hit while the map file is present');
+    fs.rmSync(mapFile);
+    assert.equal(cache.isUpToDate(cachePath, fp, lessFile, outFile, [mapFile]), false, 'a missing expected file must force a miss');
   });
 
   it('invalidates the whole cache when the option fingerprint changes', function () {
