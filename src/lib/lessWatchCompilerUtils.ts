@@ -359,15 +359,27 @@ const lessWatchCompilerUtilsModule = {
         // unwatched, so fs.watchFile's own next poll independently detects
         // the reappearance (a new mtime) as a normal change below and
         // triggers a recompile through the existing path.
+        //
+        // Snapshot the last-confirmed-present stat (undefined if the path
+        // was never confirmed) so a stale timer can tell it's stale: if a
+        // recreate is observed before this timer fires, files[f] is
+        // reassigned to a new object below, and this timer's snapshot no
+        // longer matches. Without this, a second, unrelated missing poll
+        // (e.g. rapid consecutive non-atomic saves) landing just as this
+        // timer checks could be mistaken for confirmation of the original
+        // poll's removal and unwatch a file that's still actively in use.
+        const lastKnownStat = files[f];
         const debounceMs = Math.max(options.interval !== undefined ? options.interval : 0, 300);
         setTimeout(() => {
+          if (files[f] !== lastKnownStat) return;
           fs.access(f, fs.constants.F_OK, (accessErr) => {
             if (!accessErr) return;
+            if (files[f] !== lastKnownStat) return;
             // A path that never existed also fires this callback once, on
             // its very first poll (e.g. a broken/not-yet-created @import
             // target watched preemptively) -- not a removal, and there's
             // nothing to notify since files[f] was never confirmed present.
-            const existed = !!files[f];
+            const existed = !!lastKnownStat;
             delete files[f];
             fs.unwatchFile(f);
             if (existed && !(options.ignoreDotFiles && path.basename(f)[0] === '.') && !(options.filter && options.filter(f))) {

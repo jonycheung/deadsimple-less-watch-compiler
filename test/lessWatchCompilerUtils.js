@@ -285,6 +285,61 @@ describe('lessWatchCompilerUtils Module API', function () {
         }, 100);
       });
 
+      it('ignores a stale removal-debounce timer superseded by a later delete+recreate (issue #197 follow-up)', function (done) {
+        // A first missing poll schedules a recheck timer. If, before that
+        // timer fires, the file is recreated and then deleted *again*, the
+        // first timer's fs.access check can land exactly inside that SECOND
+        // gap and mistake it for confirmation of the FIRST poll's removal --
+        // unwatching a file that's still actively being saved. The timer
+        // must recognize it's been superseded and do nothing.
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-stale-timer-'));
+        const file = path.join(tmpDir, 'main.less');
+        fs.writeFileSync(file, '.a { color: red; }');
+        const files = { [file]: fs.statSync(file) };
+        const events = [];
+
+        function cleanup() {
+          fs.unwatchFile(file);
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+
+        lessWatchCompilerUtils.setupWatcher(file, files, { interval: 30 }, (f, curr) => {
+          events.push(curr.nlink === 0 ? 'removed' : 'changed');
+        });
+
+        // t=100: delete #1 (schedules a recheck ~300ms later, at ~t=400+).
+        setTimeout(() => {
+          fs.unlinkSync(file);
+          setTimeout(() => {
+            // t=150: recreate -- delete #1's timer is now stale.
+            fs.writeFileSync(file, '.a { color: green; }');
+            setTimeout(() => {
+              // t=350: delete #2, shortly before delete #1's ~400ms recheck fires.
+              fs.unlinkSync(file);
+              setTimeout(() => {
+                // t=450: recreate again -- this should end up alive and watched.
+                fs.writeFileSync(file, '.a { color: blue; }');
+                setTimeout(() => {
+                  // A later, unrelated real edit must still be detected.
+                  fs.writeFileSync(file, '.a { color: purple; }');
+                  setTimeout(() => {
+                    try {
+                      assert.ok(!events.includes('removed'), 'no removal event should fire across this sequence; got: ' + JSON.stringify(events));
+                      assert.ok(events.includes('changed'), 'at least the later edits must still be detected; got: ' + JSON.stringify(events));
+                      cleanup();
+                      done();
+                    } catch (e) {
+                      cleanup();
+                      done(e);
+                    }
+                  }, 500);
+                }, 750);
+              }, 100);
+            }, 200);
+          }, 50);
+        }, 100);
+      });
+
       it('does not fire the watch callback for a path that never existed (e.g. a broken @import target)', function (done) {
         // setupWatcher() is called directly by fileWatcher() for @import
         // targets, which may not resolve to a real file. fs.watchFile fires
