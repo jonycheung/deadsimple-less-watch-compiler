@@ -2,16 +2,21 @@
   "name": "less-watch-compiler",
   "version": "1.18.1",
   "description": "A command that watches folders(and subfolders) for file changes and automatically compile the less css files into css. This is a file system watcher and compiler.",
-  "main": "dist/less-watch-compiler.js",
-  "directories": {
-    "test": "tests"
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "test": "yarn run build && yarn run clean && npx mocha --exit",
-    "coverage": "yarn run build && yarn run clean && npx c8 --reporter=text --reporter=lcov --check-coverage --statements 88 --branches 75 --functions 95 --lines 88 mocha --exit",
+    "coverage": "yarn run build && yarn run clean && npx c8 --reporter=text --reporter=lcov --check-coverage --statements 93 --branches 80 --functions 85 --lines 93 mocha --exit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

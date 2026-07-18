@@ -32,6 +32,7 @@ program
   .version(packagejson.version)
   .usage('[options] <source_dir> <destination_dir> [main_file_name]')
   .option('--main-file <file>', "Specify <file> as the file to always re-compile e.g. '--main-file style.less'.")
+  .option('--init', 'Create a less-watch-compiler.config.json template in the current directory and exit.')
   .option('--config <file>', 'Custom configuration file path.', 'less-watch-compiler.config.json')
   .option('--run-once', 'Run the compiler once without waiting for additional changes.')
   .option('--include-hidden', "Don't ignore files beginning with a '.' or a '_'")
@@ -48,6 +49,7 @@ program
 
 const programOption = program.opts<{
   mainFile?: string;
+  init?: boolean;
   config?: string;
   runOnce?: boolean;
   includeHidden?: boolean;
@@ -56,6 +58,26 @@ const programOption = program.opts<{
   plugins?: string;
   lessArgs?: string;
 }>();
+
+if (programOption.init) {
+  const scaffoldPath = path.join(cwd, 'less-watch-compiler.config.json');
+  if (fs.existsSync(scaffoldPath)) {
+    console.log(scaffoldPath + ' already exists; leaving it untouched.');
+    process.exit(1);
+  }
+  const scaffold = {
+    watchFolder: 'less',
+    outputFolder: 'css',
+    runOnce: false,
+    sourceMap: false,
+    minified: false,
+    enableJs: false,
+    includeHidden: false
+  };
+  fs.writeFileSync(scaffoldPath, JSON.stringify(scaffold, null, 2) + '\n', 'utf8');
+  console.log('Created ' + scaffoldPath + '. Adjust watchFolder/outputFolder and run less-watch-compiler.');
+  process.exit(0);
+}
 
 // Check if configuration file exists
 const configPath = programOption.config
@@ -126,46 +148,28 @@ function init(): void {
       ignoreDotFiles: !lessWatchCompilerUtils.config.includeHidden,
       filter: lessWatchCompilerUtils.filterFiles
     },
-    function (f, curr, prev, fileimports) {
-      if (typeof f === 'object' && prev === null && curr === null) {
-        // Finished walking the tree
-        return;
-      } else if ((curr as fs.Stats).nlink === 0) {
-        // f was removed
-        console.log((f as string) + ' was removed.');
-      } else {
-        // f is a new file or changed
-        let importedFile = false;
-        for (const i in fileimports) {
-          for (const k in fileimports[i]) {
-            const hasExtension = path.extname(fileimports[i][k]).length > 1;
-            const importFile = hasExtension ? fileimports[i][k] : fileimports[i][k] + '.less';
-            const normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile);
-
-            if (f === normalizedPath && !mainFilePath) {
-              const compileResult = lessWatchCompilerUtils.compileCSS(i)!;
-              console.log(
-                'The file: ' +
-                  i +
-                  ' was changed because ' +
-                  JSON.stringify(f) +
-                  ' is specified as an import.  Recompiling ' +
-                  compileResult.outputFilePath +
-                  ' at ' +
-                  lessWatchCompilerUtils.getDateTime()
-              );
-              importedFile = true;
-            }
-          }
-        }
-        if (!importedFile) {
-          const compileResult = lessWatchCompilerUtils.compileCSS(mainFilePath || (f as string))!;
-          console.log(
-            'The file: ' + JSON.stringify(f) + ' was changed. Recompiling ' + compileResult.outputFilePath + ' at ' + lessWatchCompilerUtils.getDateTime()
-          );
-        }
+    lessWatchCompilerUtils.makeWatchHandler(mainFilePath, {
+      onRemove(f) {
+        console.log(f + ' was removed.');
+      },
+      onImportCompile(importingFile, changedFile, compileResult) {
+        console.log(
+          'The file: ' +
+            importingFile +
+            ' was changed because ' +
+            JSON.stringify(changedFile) +
+            ' is specified as an import.  Recompiling ' +
+            compileResult.outputFilePath +
+            ' at ' +
+            lessWatchCompilerUtils.getDateTime()
+        );
+      },
+      onCompile(f, compileResult) {
+        console.log(
+          'The file: ' + JSON.stringify(f) + ' was changed. Recompiling ' + compileResult.outputFilePath + ' at ' + lessWatchCompilerUtils.getDateTime()
+        );
       }
-    },
+    }),
     // init function
     function (f) {
       if (!mainFilePath || mainFilePath === f) {

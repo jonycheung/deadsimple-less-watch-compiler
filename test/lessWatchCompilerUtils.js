@@ -258,6 +258,95 @@ describe('lessWatchCompilerUtils Module API', function () {
         }, 500);
       });
     });
+    describe('makeWatchHandler()', function () {
+      let originalCompileCSS;
+      beforeEach(function () {
+        originalCompileCSS = lessWatchCompilerUtils.compileCSS;
+      });
+      afterEach(function () {
+        lessWatchCompilerUtils.compileCSS = originalCompileCSS;
+      });
+
+      it('makeWatchHandler() function should be there', function () {
+        assert.equal('function', typeof lessWatchCompilerUtils.makeWatchHandler);
+      });
+
+      it('is a no-op for the initial "finished walking" call', function () {
+        const calls = [];
+        lessWatchCompilerUtils.compileCSS = () => {
+          calls.push('compiled');
+          return { outputFilePath: '"out.css"' };
+        };
+        const handler = lessWatchCompilerUtils.makeWatchHandler(undefined, {
+          onCompile: () => calls.push('onCompile'),
+          onImportCompile: () => calls.push('onImportCompile'),
+          onRemove: () => calls.push('onRemove')
+        });
+        handler({}, null, null, {});
+        assert.deepStrictEqual(calls, []);
+      });
+
+      it('notifies onRemove and does not compile when a file is removed (nlink === 0)', function () {
+        const calls = [];
+        lessWatchCompilerUtils.compileCSS = () => {
+          calls.push('compiled');
+          return { outputFilePath: '"out.css"' };
+        };
+        const handler = lessWatchCompilerUtils.makeWatchHandler(undefined, {
+          onRemove: (f) => calls.push('onRemove:' + f)
+        });
+        handler('/a/b.less', { nlink: 0 }, {}, {});
+        assert.deepStrictEqual(calls, ['onRemove:/a/b.less']);
+      });
+
+      it("compiles the changed file directly when it isn't anyone's import", function () {
+        const calls = [];
+        lessWatchCompilerUtils.compileCSS = (file) => {
+          calls.push('compiled:' + file);
+          return { outputFilePath: '"' + file + '.css"' };
+        };
+        const handler = lessWatchCompilerUtils.makeWatchHandler(undefined, {
+          onCompile: (f, result) => calls.push('onCompile:' + f + '->' + result.outputFilePath)
+        });
+        handler('/a/standalone.less', { nlink: 1 }, {}, {});
+        assert.deepStrictEqual(calls, ['compiled:/a/standalone.less', 'onCompile:/a/standalone.less->"/a/standalone.less.css"']);
+      });
+
+      it('recompiles the importing parent when the changed file is one of its imports', function () {
+        const calls = [];
+        lessWatchCompilerUtils.compileCSS = (file) => {
+          calls.push('compiled:' + file);
+          return { outputFilePath: '"' + file + '.css"' };
+        };
+        const handler = lessWatchCompilerUtils.makeWatchHandler(undefined, {
+          onCompile: (f) => calls.push('onCompile:' + f),
+          onImportCompile: (importingFile, changedFile) => calls.push('onImportCompile:' + importingFile + '<-' + changedFile)
+        });
+        const changedFile = path.normalize('/a/partial.less');
+        const fileimports = { '/a/main.less': ['partial.less'] };
+        handler(changedFile, { nlink: 1 }, {}, fileimports);
+        assert.deepStrictEqual(calls, ['compiled:/a/main.less', 'onImportCompile:/a/main.less<-' + changedFile]);
+      });
+
+      it('always recompiles mainFile when configured, ignoring import relationships', function () {
+        const calls = [];
+        lessWatchCompilerUtils.compileCSS = (file) => {
+          calls.push('compiled:' + file);
+          return { outputFilePath: '"main.css"' };
+        };
+        const handler = lessWatchCompilerUtils.makeWatchHandler('/a/main.less', {
+          onCompile: (f) => calls.push('onCompile-for-change:' + f),
+          onImportCompile: () => calls.push('onImportCompile')
+        });
+        const changedFile = path.normalize('/a/partial.less');
+        // Even though partial.less is a declared import of main.less, the
+        // "f === normalizedPath && !mainFilePath" guard never matches once
+        // mainFilePath is set, so onImportCompile must never fire here.
+        const fileimports = { '/a/main.less': ['partial.less'] };
+        handler(changedFile, { nlink: 1 }, {}, fileimports);
+        assert.deepStrictEqual(calls, ['compiled:/a/main.less', 'onCompile-for-change:' + changedFile]);
+      });
+    });
     describe('compileCSS()', function () {
       // reset config
       lessWatchCompilerUtils.config = {};
