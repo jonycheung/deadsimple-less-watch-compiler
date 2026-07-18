@@ -155,6 +155,7 @@ less-watch-compiler
     --config <file>                                                          Custom configuration file path. (default: "less-watch-compiler.config.json")
     --run-once                                                               Run the compiler once without waiting for additional changes.
     --include-hidden                                                         Don't ignore files beginning with a '.' or a '_'
+    --minified                                                               Less.js Option: Produce compressed output with a '.min.css' extension.
     --enable-js                                                              Less.js Option: To enable inline JavaScript in less files.
     --source-map                                                             Less.js Option: To generate source map for css files.
     --plugins <plugin-a>,<plugin-b>                                          Less.js Option: To specify plugins separated by commas.
@@ -167,7 +168,7 @@ less-watch-compiler
 
 ## Please note:
 
-- By default, "minified" is turned off (full, uncompressed CSS output). Set `"minified":true` in the config file to compress output and write `.min.css` files instead.
+- By default, "minified" is turned off (full, uncompressed CSS output). Set `"minified":true` in the config file, or pass `--minified` on the CLI, to compress output and write `.min.css` files instead.
 - By default, "sourceMap" is turned off. You can generating sourcemap to true by adding `"sourceMap":true` in the config file.
 - By default, this script only compiles files with `.less` extension. More file extensions can be added by modifying the `allowedExtensions` array in `config.json`.
 - Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed by adding `"includeHidden:true` in the config file.

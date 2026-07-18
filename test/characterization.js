@@ -64,10 +64,21 @@ describe('Characterization: golden-file output parity', function () {
     });
   });
 
-  describe('minified config option', function () {
+  describe('minified option (config key and --minified CLI flag, issue #46)', function () {
     it('produces a byte-identical .min.css when the config file sets minified: true', () => {
       resetOutDir();
       cli('--config', 'test/examples/with-minified/less-watch-compiler.config.json');
+      const produced = fs.readFileSync(path.join(outDir, 'with-minified.min.css'));
+      const golden = fs.readFileSync(path.join(cwd, 'test', 'examples', 'with-minified', 'css', 'with-minified.min.css'));
+      assert.ok(produced.equals(golden));
+      resetOutDir();
+    });
+
+    it('produces the same byte-identical .min.css via the --minified CLI flag, with no config file', () => {
+      // --minified was documented as a config-file-only key with no CLI flag
+      // exposing it; this is the flag-based equivalent of the test above.
+      resetOutDir();
+      cli('--run-once', '--minified', 'test/examples/with-minified/less', outDir);
       const produced = fs.readFileSync(path.join(outDir, 'with-minified.min.css'));
       const golden = fs.readFileSync(path.join(cwd, 'test', 'examples', 'with-minified', 'css', 'with-minified.min.css'));
       assert.ok(produced.equals(golden));

@@ -48,6 +48,7 @@ program
   .option('--banner', "Prepend a 'generated file, do not edit' comment to compiled CSS.")
   .option('--banner-text <text>', 'Custom banner text to use instead of the default message. Implies --banner.')
   // Less Options
+  .option('--minified', "Less.js Option: Produce compressed output with a '.min.css' extension.")
   .option('--enable-js', 'Less.js Option: To enable inline JavaScript in less files.')
   .option('--source-map', 'Less.js Option: To generate source map for css files.')
   .option('--plugins <plugin-a>,<plugin-b>', 'Less.js Option: To specify plugins separated by commas.')
@@ -64,6 +65,7 @@ const programOption = program.opts<{
   config?: string;
   runOnce?: boolean;
   includeHidden?: boolean;
+  minified?: boolean;
   enableJs?: boolean;
   sourceMap?: boolean;
   plugins?: string;
@@ -127,6 +129,7 @@ function init(): void {
   if (args[2]) lessWatchCompilerUtils.config.mainFile = args[2];
   if (programOption.mainFile) lessWatchCompilerUtils.config.mainFile = programOption.mainFile;
   if (programOption.sourceMap !== undefined) lessWatchCompilerUtils.config.sourceMap = programOption.sourceMap;
+  if (programOption.minified !== undefined) lessWatchCompilerUtils.config.minified = programOption.minified;
   if (programOption.plugins) lessWatchCompilerUtils.config.plugins = programOption.plugins;
   if (programOption.runOnce !== undefined) lessWatchCompilerUtils.config.runOnce = programOption.runOnce;
   if (programOption.includeHidden !== undefined) lessWatchCompilerUtils.config.includeHidden = programOption.includeHidden;
