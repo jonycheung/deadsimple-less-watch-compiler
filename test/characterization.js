@@ -75,6 +75,35 @@ describe('Characterization: golden-file output parity', function () {
     });
   });
 
+  describe('--less-args source-map-inline', function () {
+    it('embeds the map as a data URI and writes no separate .map file, without --source-map', () => {
+      resetOutDir();
+      cli('--run-once', '--less-args', 'source-map-inline', 'test/examples/with-source-map/less', 'test/css');
+      const css = fs.readFileSync(path.join(outDir, 'with-source-map.css'), 'utf8');
+      assert.ok(css.includes('sourceMappingURL=data:application/json;base64,'), 'the map must be embedded as a data URI');
+      assert.ok(!fs.existsSync(path.join(outDir, 'with-source-map.css.map')), 'no separate .map file should be written in inline mode');
+      resetOutDir();
+    });
+  });
+
+  describe('--plugins parameter', function () {
+    it('loads a less plugin by its short name and applies it (byte-identical to golden)', () => {
+      resetOutDir();
+      cli('--run-once', '--plugins', 'clean-css', 'test/examples/with-plugin/less', 'test/css');
+      const produced = fs.readFileSync(path.join(outDir, 'with-plugin.css'));
+      const golden = fs.readFileSync(path.join(cwd, 'test', 'examples', 'with-plugin', 'css', 'with-plugin.css'));
+      assert.ok(produced.equals(golden));
+      resetOutDir();
+    });
+
+    it('exits non-zero under --run-once when a plugin cannot be loaded', () => {
+      assert.throws(
+        () => execSync(`node ${cliPath} --run-once --plugins no-such-plugin test/examples/with-plugin/less test/css`, { stdio: 'pipe' }),
+        (err) => err.status !== 0
+      );
+    });
+  });
+
   describe('config auto-discovery from cwd (issue #128)', function () {
     it('loads less-watch-compiler.config.json from the working directory when no arguments are given', () => {
       resetOutDir();

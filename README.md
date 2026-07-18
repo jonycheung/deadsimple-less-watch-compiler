@@ -16,21 +16,7 @@ Parts of this script is modified from Mikeal Rogers's watch script (https://gith
 
 ## Prerequisites
 
-> The commands below may need to be prefixed with `sudo` depending upon your system
-
-Install [LESS](http://www.lesscss.org/) and make sure the `lessc` binary is accessible to the script. Installing LESS with the `-g`(global) flag will make the binary accessible to your system.
-
-### [yarn](https://yarnpkg.com/)
-
-```bash
-yarn global add less
-```
-
-### [npm](https://www.npmjs.com/)
-
-```bash
-npm install -g less
-```
+None beyond [Node.js](https://nodejs.org/) (>= 18). [LESS](http://www.lesscss.org/) is bundled as a dependency and compilation happens in-process — a separate global `lessc` installation is no longer required.
 
 ## Installation
 
