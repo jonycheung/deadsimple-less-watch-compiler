@@ -5,7 +5,7 @@
 const assert = require('assert'),
   path = require('path'),
   fs = require('fs'),
-  { execSync, spawn } = require('child_process'),
+  { execSync, execFileSync, spawn } = require('child_process'),
   cwd = process.cwd(),
   outDir = path.join(cwd, 'test', 'css'),
   cliPath = path.resolve('dist/less-watch-compiler.js');
@@ -239,7 +239,12 @@ describe('Characterization: exit codes', function () {
 
     let threw = false;
     try {
-      execSync(`node ${cliPath} --run-once ${lessDir} ${cssDir}`, { stdio: 'pipe' });
+      // execFileSync (args as an array, no shell) rather than execSync with
+      // an interpolated string: lessDir/cssDir are built from os.tmpdir(),
+      // which isn't a literal, so a shell string is both unnecessary and
+      // fragile (breaks on a path containing a space, and is the shape
+      // CodeQL flags as command construction from an uncontrolled value).
+      execFileSync(process.execPath, [cliPath, '--run-once', lessDir, cssDir], { stdio: 'pipe' });
     } catch (err) {
       threw = true;
       assert.notEqual(err.status, 0, 'a compile failure among many files must still exit non-zero');
