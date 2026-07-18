@@ -32,6 +32,12 @@ export interface CompileOptions {
   cache?: boolean;
   /** Cache file path when cache is enabled. Defaults to '<cwd>/.less-watch-compiler-cache.json'. */
   cachePath?: string;
+  /**
+   * Prepend a comment to compiled CSS. `true` uses a default "generated
+   * file, don't edit" message; a string is custom banner text (multi-line
+   * strings are wrapped as a block comment). Off by default.
+   */
+  banner?: boolean | string;
 }
 
 export interface WatchOptions extends CompileOptions {
@@ -88,7 +94,8 @@ export async function compileFile(inputFilePath: string, outputFolder: string, o
       minified: options.minified,
       sourceMap: options.sourceMap,
       lessArgs: options.lessArgs,
-      plugins: options.plugins
+      plugins: options.plugins,
+      banner: options.banner
     };
     const mapPath = lessOptions.sourceMapFilePath(renderOptions, outputFilePath);
     if (cache.isUpToDate(cachePath, fingerprintInput, input, outputFilePath, mapPath ? [mapPath] : [])) return outputFilePath;

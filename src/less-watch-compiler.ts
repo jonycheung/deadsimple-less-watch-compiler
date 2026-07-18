@@ -45,6 +45,8 @@ program
     '--exclude <pattern>',
     "Additional regex pattern for paths to never watch or compile, e.g. '--exclude dist'. node_modules and .git are always excluded."
   )
+  .option('--banner', "Prepend a 'generated file, do not edit' comment to compiled CSS.")
+  .option('--banner-text <text>', 'Custom banner text to use instead of the default message. Implies --banner.')
   // Less Options
   .option('--enable-js', 'Less.js Option: To enable inline JavaScript in less files.')
   .option('--source-map', 'Less.js Option: To generate source map for css files.')
@@ -69,6 +71,8 @@ const programOption = program.opts<{
   cache?: boolean;
   cachePath?: string;
   exclude?: string;
+  banner?: boolean;
+  bannerText?: string;
 }>();
 
 if (programOption.init) {
@@ -131,6 +135,8 @@ function init(): void {
   if (programOption.cache !== undefined) lessWatchCompilerUtils.config.cache = programOption.cache;
   if (programOption.cachePath) lessWatchCompilerUtils.config.cachePath = programOption.cachePath;
   if (programOption.exclude) lessWatchCompilerUtils.config.exclude = programOption.exclude;
+  if (programOption.bannerText) lessWatchCompilerUtils.config.banner = programOption.bannerText;
+  else if (programOption.banner !== undefined) lessWatchCompilerUtils.config.banner = programOption.banner;
 
   if (!lessWatchCompilerUtils.config.watchFolder || !lessWatchCompilerUtils.config.outputFolder) {
     console.log('Missing arguments. Example:');
