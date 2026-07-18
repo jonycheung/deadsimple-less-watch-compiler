@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import safeRegex = require('safe-regex2');
 import fileSearch = require('./filesearch');
 import lessOptions = require('./lessOptions');
 import cache = require('./cache');
@@ -341,11 +342,17 @@ const lessWatchCompilerUtilsModule = {
    * user-supplied pattern (added, not replacing the default -- a user
    * excluding something unrelated, e.g. --exclude dist, shouldn't silently
    * stop excluding node_modules). Throws if userPattern is not a valid
-   * regex; callers decide how to surface that (CLI exits, API throws).
+   * regex, or is rejected by safe-regex2 as having unbounded star height
+   * (e.g. `(x+x+)+y`) -- exclude is tested against every path in the tree
+   * on every scan, so a catastrophic pattern would hang the watcher.
+   * Callers decide how to surface the throw (CLI exits, API throws).
    */
   resolveExcludePattern(userPattern?: string): RegExp {
     if (!userPattern) return defaultExcludePattern;
     const userRegex = new RegExp(userPattern);
+    if (!safeRegex(userRegex)) {
+      throw new Error('pattern is not safe from catastrophic backtracking (exceeds the allowed repetition/star-height limit)');
+    }
     return new RegExp(`(?:${defaultExcludePattern.source})|(?:${userRegex.source})`);
   },
 

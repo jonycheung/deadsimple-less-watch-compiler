@@ -796,6 +796,17 @@ describe('lessWatchCompilerUtils Module API', function () {
       it('throws a clean error referencing just the user pattern when it is not a valid regex', function () {
         assert.throws(() => lessWatchCompilerUtils.resolveExcludePattern('['), /Unterminated character class/);
       });
+      it('rejects a pattern with catastrophic backtracking potential instead of accepting it silently', function () {
+        // exclude is tested against every path on every scan; a pattern like
+        // this can take exponential time on certain inputs and hang the
+        // watcher, so it must be rejected up front rather than accepted and
+        // only discovered to be a problem once it actually pathologically
+        // backtracks against some path in the tree.
+        assert.throws(() => lessWatchCompilerUtils.resolveExcludePattern('(x+x+)+y'), /catastrophic backtracking/);
+      });
+      it('accepts an ordinary user pattern that safe-regex2 does not flag', function () {
+        assert.doesNotThrow(() => lessWatchCompilerUtils.resolveExcludePattern('dist|build'));
+      });
     });
     describe('getDateTime()', function () {
       it('getDateTime() function should be there and has value', function () {
