@@ -71,6 +71,192 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
+      it('supports the 2-argument overload (options omitted, callback as the 2nd argument)', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-watchtree2-'));
+        fs.writeFileSync(path.join(tmpDir, 'a.less'), '');
+        lessWatchCompilerUtils.watchTree(tmpDir, (f, curr, prev) => {
+          if (typeof f === 'object' && curr === null && prev === null) {
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+            done();
+          }
+        });
+      });
+    });
+    describe('live watch mode (real fs.watchFile polling)', function () {
+      this.timeout(10000);
+
+      function waitForFileContent(filePath, predicate, timeoutMs, cb) {
+        const start = Date.now();
+        (function poll() {
+          fs.readFile(filePath, 'utf8', (err, content) => {
+            if (!err && predicate(content)) return cb(null, content);
+            if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for ' + filePath + '; last content: ' + (content || err)));
+            setTimeout(poll, 40);
+          });
+        })();
+      }
+
+      it('recompiles the output file when a watched .less file is edited', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-edit-'));
+        const outDir = path.join(tmpDir, 'css');
+        fs.mkdirSync(outDir);
+        const lessFile = path.join(tmpDir, 'live.less');
+        fs.writeFileSync(lessFile, '.a { color: red; }');
+
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir, outputFolder: outDir };
+
+        function cleanup() {
+          fs.unwatchFile(lessFile);
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          { interval: 30, filter: lessWatchCompilerUtils.filterFiles },
+          function (f, curr) {
+            if (typeof f === 'object' && curr === null) return; // initial walk done
+            if (curr && curr.nlink !== 0) lessWatchCompilerUtils.compileCSS(f);
+          },
+          function (f) {
+            lessWatchCompilerUtils.compileCSS(f);
+          }
+        );
+
+        waitForFileContent(
+          path.join(outDir, 'live.css'),
+          (c) => c.includes('red'),
+          3000,
+          (err) => {
+            if (err) {
+              cleanup();
+              return done(err);
+            }
+            fs.writeFileSync(lessFile, '.a { color: blue; }');
+            waitForFileContent(
+              path.join(outDir, 'live.css'),
+              (c) => c.includes('blue'),
+              5000,
+              (err2, finalContent) => {
+                cleanup();
+                if (err2) return done(err2);
+                assert.ok(finalContent.includes('blue'));
+                done();
+              }
+            );
+          }
+        );
+      });
+
+      it('detects and compiles a new .less file added to a watched directory', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-newfile-'));
+        const outDir = path.join(tmpDir, 'css');
+        fs.mkdirSync(outDir);
+        fs.writeFileSync(path.join(tmpDir, 'existing.less'), '.x { color: red; }');
+
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir, outputFolder: outDir };
+
+        function cleanup() {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          { interval: 30, filter: lessWatchCompilerUtils.filterFiles },
+          function (f, curr) {
+            if (typeof f === 'object' && curr === null) return;
+            if (curr && curr.nlink !== 0) lessWatchCompilerUtils.compileCSS(f);
+          },
+          function (f) {
+            lessWatchCompilerUtils.compileCSS(f);
+          }
+        );
+
+        waitForFileContent(
+          path.join(outDir, 'existing.css'),
+          (c) => c.includes('red'),
+          3000,
+          (err) => {
+            if (err) {
+              cleanup();
+              return done(err);
+            }
+            setTimeout(() => {
+              fs.writeFileSync(path.join(tmpDir, 'new-file.less'), '.y { color: green; }');
+              waitForFileContent(
+                path.join(outDir, 'new-file.css'),
+                (c) => c.includes('green'),
+                5000,
+                (err2) => {
+                  cleanup();
+                  if (err2) return done(err2);
+                  done();
+                }
+              );
+            }, 100);
+          }
+        );
+      });
+
+      it('invokes the watch callback with nlink 0 (and does not crash) when a watched file is deleted', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-remove-'));
+        const outDir = path.join(tmpDir, 'css');
+        fs.mkdirSync(outDir);
+        const lessFile = path.join(tmpDir, 'gone.less');
+        fs.writeFileSync(lessFile, '.a { color: red; }');
+
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir, outputFolder: outDir };
+
+        function cleanup() {
+          fs.unwatchFile(lessFile);
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          { interval: 30, filter: lessWatchCompilerUtils.filterFiles },
+          function (f, curr) {
+            if (typeof f === 'object' && curr === null) return;
+            if (curr && curr.nlink === 0 && f === lessFile) {
+              try {
+                assert.equal(f, lessFile);
+                cleanup();
+                done();
+              } catch (e) {
+                cleanup();
+                done(e);
+              }
+            }
+          },
+          function (f) {
+            lessWatchCompilerUtils.compileCSS(f);
+          }
+        );
+
+        setTimeout(() => {
+          fs.unlinkSync(lessFile);
+        }, 200);
+      });
+
+      it('does not fire the watch callback for a path that never existed (e.g. a broken @import target)', function (done) {
+        // setupWatcher() is called directly by fileWatcher() for @import
+        // targets, which may not resolve to a real file. fs.watchFile fires
+        // once with curr.nlink === 0 AND prev.nlink === 0 the first time it
+        // polls such a path -- that must not be reported as a removal.
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-neverexisted-'));
+        const neverExisted = path.join(tmpDir, 'never-existed.less');
+        let fired = false;
+
+        lessWatchCompilerUtils.setupWatcher(neverExisted, {}, { interval: 30 }, () => {
+          fired = true;
+        });
+
+        setTimeout(() => {
+          fs.unwatchFile(neverExisted);
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          assert.equal(fired, false, 'watchCallback must not fire for a path that never existed');
+          done();
+        }, 500);
+      });
     });
     describe('makeWatchHandler()', function () {
       let originalCompileCSS;
