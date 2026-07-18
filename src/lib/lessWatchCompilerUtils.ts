@@ -164,8 +164,9 @@ const lessWatchCompilerUtilsModule = {
 
   /**
    * Build the standard change handler shared by the CLI and the programmatic
-   * API: recompiles the importing parent when a changed file is someone's
-   * @import, otherwise compiles the main file (when set) or the changed file.
+   * API: recompiles every importing ancestor (direct or transitive) when a
+   * changed file is someone's @import, otherwise compiles the main file
+   * (when set) or the changed file.
    */
   makeWatchHandler(
     mainFilePath: string | undefined,
@@ -182,24 +183,48 @@ const lessWatchCompilerUtilsModule = {
       } else if ((curr as fs.Stats).nlink === 0) {
         // f was removed
         if (notify.onRemove) notify.onRemove(f as string);
+      } else if (mainFilePath) {
+        // A single main file always wins, regardless of import relationships.
+        const compileResult = lessWatchCompilerUtilsModule.compileCSS(mainFilePath);
+        if (compileResult && notify.onCompile) notify.onCompile(f as string, compileResult);
       } else {
-        // f is a new file or changed
-        let importedFile = false;
+        // Build a reverse import index once (imported path -> importers)
+        // instead of rescanning the whole fileimports map on every BFS step
+        // -- with many files and a wide/deep import graph, doing that scan
+        // per node makes each change event scale quadratically.
+        const importersOf = new Map<string, string[]>();
         for (const i in fileimports) {
           for (const k in fileimports[i]) {
-            const hasExtension = path.extname(fileimports[i][k]).length > 1;
-            const importFile = hasExtension ? fileimports[i][k] : fileimports[i][k] + '.less';
+            const importSpec = fileimports[i][k];
+            const hasExtension = path.extname(importSpec).length > 1;
+            const importFile = hasExtension ? importSpec : importSpec + '.less';
             const normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile);
-
-            if (f === normalizedPath && !mainFilePath) {
-              const compileResult = lessWatchCompilerUtilsModule.compileCSS(i);
-              if (compileResult && notify.onImportCompile) notify.onImportCompile(i, f as string, compileResult);
-              importedFile = true;
-            }
+            const existing = importersOf.get(normalizedPath);
+            if (existing) existing.push(i);
+            else importersOf.set(normalizedPath, [i]);
           }
         }
-        if (!importedFile) {
-          const compileResult = lessWatchCompilerUtilsModule.compileCSS(mainFilePath || (f as string));
+
+        // Find every file that imports the changed file, directly and
+        // transitively (e.g. homepage.less -> theme.less -> colors.less:
+        // editing colors.less must recompile homepage.less too, not just
+        // theme.less -- issue #59), recompiling each ancestor exactly once
+        // (a visited set also terminates safely on circular imports).
+        const visited = new Set<string>();
+        const queue = importersOf.get(f as string) || [];
+        while (queue.length > 0) {
+          const importer = queue.shift() as string;
+          if (visited.has(importer)) continue;
+          visited.add(importer);
+          const compileResult = lessWatchCompilerUtilsModule.compileCSS(importer);
+          if (compileResult && notify.onImportCompile) notify.onImportCompile(importer, f as string, compileResult);
+          const grandImporters = importersOf.get(importer);
+          if (grandImporters) queue.push(...grandImporters);
+        }
+
+        if (visited.size === 0) {
+          // Not anyone's import (transitively) -- compile the changed file itself.
+          const compileResult = lessWatchCompilerUtilsModule.compileCSS(f as string);
           if (compileResult && notify.onCompile) notify.onCompile(f as string, compileResult);
         }
       }
@@ -428,8 +453,16 @@ const lessWatchCompilerUtilsModule = {
       }
       files[f] = c as fs.Stats;
       if (!files[f].isDirectory()) {
-        if (options.ignoreDotFiles && path.basename(f)[0] === '.') return;
-        if (options.filter && options.filter(f)) return;
+        // Unlike the initial walk() scan (where filter/ignoreDotFiles decide
+        // whether a file is even discovered as a watch candidate at all),
+        // this per-file change callback must NOT apply those same checks
+        // before firing watchCallback: a hidden/filtered file that's only
+        // being watched because it's someone's @import target (e.g. the
+        // conventional _partial.less naming) still needs its change
+        // reported so makeWatchHandler() can find and recompile whatever
+        // imports it (issue #59) -- compileCSS() already independently
+        // skips producing standalone output for hidden files, which is the
+        // correct place for that guard, not here.
         fs.access(f, fs.constants.F_OK, (accessErr) => {
           if (accessErr) {
             console.log('Does not exist : ' + f);
@@ -526,10 +559,31 @@ const lessWatchCompilerUtilsModule = {
       // parent's recompile even though the subtree is supposed to be kept
       // out entirely (issue #72).
       if (options.exclude && options.exclude.test(importPath)) continue;
-      if (filelistArr.indexOf(importPath) === -1) {
-        filelistArr[filelistArr.length] = importPath;
-        lessWatchCompilerUtilsModule.setupWatcher(importPath, files, options, watchCallback);
-      }
+      // Only follow @import targets with an allowed extension (.less by
+      // default). Less doesn't inline a plain `@import "x.css"` by default
+      // (it stays a literal `@import url(...)` reference in the compiled
+      // output), so treating such a target as its own watchable entry is
+      // both pointless -- recompiling on its change can't affect the
+      // importer's output -- and actively wrong, since it would let
+      // makeWatchHandler() compile it standalone and produce a spurious
+      // .css output for a file that was never meant to be compiled on its
+      // own. This must check extension only, NOT hidden-file status: a
+      // hidden _partial.less is exactly the kind of target issue #59 needs
+      // to keep following.
+      const importAllowedExtensions = lessWatchCompilerUtilsModule.config.allowedExtensions || defaultAllowedExtensions;
+      if (importAllowedExtensions.indexOf(path.extname(importPath)) === -1) continue;
+      // Recurse via fileWatcher(), not a bare setupWatcher() call: the
+      // latter registers the watch but never populates fileimportlistObj
+      // for the target, relying on a later top-level fileWatcher() call
+      // (from watchTree()'s walk-result loop) to do that instead. Depending
+      // on directory-walk discovery order, that later call can be pre-empted
+      // by fileWatcher()'s own dedup guard before it ever runs, permanently
+      // leaving the target's import list empty -- which silently breaks
+      // transitive-import recompile detection for anything importing IT
+      // (issue #59: homepage.less -> theme.less -> colors.less needs
+      // theme.less's own imports recorded for homepage.less to ever be
+      // reached when colors.less changes).
+      lessWatchCompilerUtilsModule.fileWatcher(importPath, files, options, filelistArr, fileimportlistObj, watchCallback);
       lessWatchCompilerUtilsModule.watchExternalImportDir(importPath, files, options, filelistArr, fileimportlistObj, watchCallback);
     }
   },
