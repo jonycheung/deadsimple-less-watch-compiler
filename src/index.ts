@@ -94,7 +94,8 @@ export async function compileFile(inputFilePath: string, outputFolder: string, o
       minified: options.minified,
       sourceMap: options.sourceMap,
       lessArgs: options.lessArgs,
-      plugins: options.plugins
+      plugins: options.plugins,
+      banner: options.banner
     };
     const mapPath = lessOptions.sourceMapFilePath(renderOptions, outputFilePath);
     if (cache.isUpToDate(cachePath, fingerprintInput, input, outputFilePath, mapPath ? [mapPath] : [])) return outputFilePath;

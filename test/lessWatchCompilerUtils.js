@@ -1016,6 +1016,17 @@ describe('lessWatchCompilerUtils Module API', function () {
         assert.ok(css.startsWith('/*\n * Line one.\n * Line two.\n */\n'));
       });
 
+      it('neutralizes a literal */ in custom banner text so it cannot break out of the comment', async function () {
+        // A raw "*/" inside custom banner text would otherwise prematurely
+        // close the comment, turning whatever followed it into live CSS.
+        lessWatchCompilerUtils.config = { banner: 'evil */ .injected { color: blue; } /*' };
+        await lessWatchCompilerUtils.renderLess(lessFile, outPath, {});
+        const css = fs.readFileSync(outPath, 'utf8');
+        const closingDelimiters = (css.match(/\*\//g) || []).length;
+        assert.equal(closingDelimiters, 1, "only the banner's own closing delimiter must exist; a raw */ from the custom text would add extra ones");
+        assert.ok(css.indexOf('.a {') > css.indexOf('*/'), '.a { must come after the single comment-closing delimiter, not be exposed by an early one');
+      });
+
       it('keeps the sourcemap resolving to the correct original line once shifted by a separate .map file', async function () {
         lessWatchCompilerUtils.config = { banner: true };
         const options = { sourceMap: { sourceMapFullFilename: outPath + '.map', sourceMapOutputFilename: 'main.css' } };

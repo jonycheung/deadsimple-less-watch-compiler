@@ -78,7 +78,12 @@ const defaultBannerText =
 // a "/*\n * ...\n */" block for a multi-line one (including multi-line
 // custom text supplied via the config file).
 function buildBannerComment(banner: boolean | string): string {
-  const lines = (typeof banner === 'string' ? banner : defaultBannerText).split('\n');
+  const text = typeof banner === 'string' ? banner : defaultBannerText;
+  // A custom banner containing a literal "*/" would otherwise prematurely
+  // close the CSS comment, turning the rest of the banner (or whatever
+  // followed it) into live CSS. Breaking up the sequence keeps the comment
+  // well-formed no matter what text is supplied.
+  const lines = text.replace(/\*\//g, '* /').split('\n');
   if (lines.length === 1) return '/* ' + lines[0] + ' */\n';
   return '/*\n' + lines.map((line) => ' * ' + line).join('\n') + '\n */\n';
 }
@@ -279,7 +284,8 @@ const lessWatchCompilerUtilsModule = {
           minified: config.minified,
           sourceMap: config.sourceMap,
           lessArgs: config.lessArgs,
-          plugins: config.plugins
+          plugins: config.plugins,
+          banner: config.banner
         };
         const mapPath = lessOptions.sourceMapFilePath(options, outPath);
         if (cache.isUpToDate(cachePath, fingerprintInput, file, outPath, mapPath ? [mapPath] : [])) {

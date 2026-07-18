@@ -168,6 +168,17 @@ describe('--cache (opt-in incremental compilation for --run-once)', function () 
     assert.notEqual(fs.readFileSync(outFile, 'utf8'), staleMarker, 'an option change must force recompilation even with --cache');
   });
 
+  it('invalidates the cache when --banner is turned on, so the banner actually appears (issue #82 review follow-up)', () => {
+    cli('--run-once', '--cache', '--cache-path', cachePath, lessDir, outDir);
+    assert.ok(!fs.readFileSync(outFile, 'utf8').startsWith('/*'), 'sanity check: no banner on the first compile');
+
+    cli('--run-once', '--cache', '--cache-path', cachePath, '--banner', lessDir, outDir);
+    assert.ok(
+      fs.readFileSync(outFile, 'utf8').startsWith('/* This file was generated'),
+      'turning --banner on must invalidate a cache entry recorded without one, not silently reuse the bannerless output'
+    );
+  });
+
   it('recompiles (regenerating the .map file) when --source-map is used and a partial cache restore is missing the .map sidecar', () => {
     // Regression test: a CI cache restore that brought back the .css but not
     // its .css.map sidecar must not be treated as a hit -- the tool always
