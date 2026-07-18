@@ -18,6 +18,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "postversion": "git push && git push --tags",
     "clean": "rm -R ./test/css || true && mkdir ./test/css",
+    "prepare": "yarn run build",
     "prepublishOnly": "yarn run build",
     "commit": "git-cz -n",
     "build": "tsc -p tsconfig.json",
