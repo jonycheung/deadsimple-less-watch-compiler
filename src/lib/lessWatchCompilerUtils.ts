@@ -57,6 +57,14 @@ type WalkCompleteCallback = (err: NodeJS.ErrnoException | null, files: FilesMap 
 
 const cwd = process.cwd();
 const defaultAllowedExtensions = ['.less'];
+// node_modules and .git are near-universally unwanted in the watch tree (large,
+// churn heavily, never contain anything this tool should compile) and typing
+// them out by hand on every invocation is exactly the friction --exclude (#72)
+// was meant to remove, so they're excluded unconditionally rather than only
+// when a user thinks to ask for it. Anchored to path-segment boundaries so a
+// directory like "my-node_modules-backup" or a file like ".gitignore" isn't
+// caught by accident.
+const defaultExcludePattern = /(?:^|[\\/])(?:node_modules|\.git)(?:[\\/]|$)/;
 
 const filelist: string[] = [];
 const fileimportlist: Record<string, string[]> = {};
@@ -326,6 +334,19 @@ const lessWatchCompilerUtilsModule = {
       if (lessWatchCompilerUtilsModule.config.includeHidden) return false;
       return fileSearch.isHiddenFile(filename);
     }
+  },
+
+  /**
+   * Combine the always-on node_modules/.git exclusion with an optional
+   * user-supplied pattern (added, not replacing the default -- a user
+   * excluding something unrelated, e.g. --exclude dist, shouldn't silently
+   * stop excluding node_modules). Throws if userPattern is not a valid
+   * regex; callers decide how to surface that (CLI exits, API throws).
+   */
+  resolveExcludePattern(userPattern?: string): RegExp {
+    if (!userPattern) return defaultExcludePattern;
+    const userRegex = new RegExp(userPattern);
+    return new RegExp(`(?:${defaultExcludePattern.source})|(?:${userRegex.source})`);
   },
 
   getDateTime(): string {

@@ -41,7 +41,10 @@ program
     'Skip recompiling a file (under --run-once) when its content and full @import closure are unchanged since the last cached run. Off by default; for CI, restore the cache file between runs.'
   )
   .option('--cache-path <file>', "Cache file path when --cache is set. Defaults to '<cwd>/.less-watch-compiler-cache.json'.")
-  .option('--exclude <pattern>', "Regex pattern for paths to never watch or compile, e.g. '--exclude node_modules'.")
+  .option(
+    '--exclude <pattern>',
+    "Additional regex pattern for paths to never watch or compile, e.g. '--exclude dist'. node_modules and .git are always excluded."
+  )
   // Less Options
   .option('--enable-js', 'Less.js Option: To enable inline JavaScript in less files.')
   .option('--source-map', 'Less.js Option: To generate source map for css files.')
@@ -150,14 +153,12 @@ function init(): void {
     }
   }
 
-  let exclude: RegExp | undefined;
-  if (lessWatchCompilerUtils.config.exclude) {
-    try {
-      exclude = new RegExp(lessWatchCompilerUtils.config.exclude);
-    } catch (err) {
-      console.log('Invalid --exclude pattern ' + JSON.stringify(lessWatchCompilerUtils.config.exclude) + ': ' + (err as Error).message);
-      process.exit(1);
-    }
+  let exclude: RegExp;
+  try {
+    exclude = lessWatchCompilerUtils.resolveExcludePattern(lessWatchCompilerUtils.config.exclude);
+  } catch (err) {
+    console.log('Invalid --exclude pattern ' + JSON.stringify(lessWatchCompilerUtils.config.exclude) + ': ' + (err as Error).message);
+    process.exit(1);
   }
 
   if (lessWatchCompilerUtils.config.runOnce === true) console.log('Running less-watch-compiler once.');

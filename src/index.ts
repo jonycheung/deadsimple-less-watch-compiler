@@ -42,9 +42,11 @@ export interface WatchOptions extends CompileOptions {
   /** File extensions to consider (default ['.less']) */
   allowedExtensions?: string[];
   /**
-   * Regex pattern for paths to never watch or compile, e.g. 'node_modules'.
-   * Applies to both files and directories, keeping the walk out of matching
-   * subtrees entirely (unlike allowedExtensions, which only narrows files).
+   * Additional regex pattern for paths to never watch or compile, e.g.
+   * 'dist'. Applies to both files and directories, keeping the walk out of
+   * matching subtrees entirely (unlike allowedExtensions, which only narrows
+   * files). node_modules and .git are always excluded; this pattern adds to
+   * that rather than replacing it.
    */
   exclude?: string;
 }
@@ -113,13 +115,11 @@ export function watch(watchFolder: string, outputFolder: string, options: WatchO
     throw new Error('Main file ' + mainFilePath + ' does not exist.');
   }
 
-  let exclude: RegExp | undefined;
-  if (options.exclude) {
-    try {
-      exclude = new RegExp(options.exclude);
-    } catch (err) {
-      throw new Error('Invalid exclude pattern ' + JSON.stringify(options.exclude) + ': ' + (err as Error).message, { cause: err });
-    }
+  let exclude: RegExp;
+  try {
+    exclude = lessWatchCompilerUtils.resolveExcludePattern(options.exclude);
+  } catch (err) {
+    throw new Error('Invalid exclude pattern ' + JSON.stringify(options.exclude) + ': ' + (err as Error).message, { cause: err });
   }
 
   lessWatchCompilerUtils.watchTree(

@@ -772,6 +772,31 @@ describe('lessWatchCompilerUtils Module API', function () {
         lessWatchCompilerUtils.config = {};
       });
     });
+    describe('resolveExcludePattern()', function () {
+      it('resolveExcludePattern() function should be there', function () {
+        assert.equal('function', typeof lessWatchCompilerUtils.resolveExcludePattern);
+      });
+      it('excludes node_modules and .git by default, without any user pattern', function () {
+        const pattern = lessWatchCompilerUtils.resolveExcludePattern();
+        assert.ok(pattern.test('/project/node_modules/pkg/style.less'));
+        assert.ok(pattern.test('/project/.git/HEAD'));
+        assert.ok(!pattern.test('/project/less/style.less'));
+      });
+      it('does not false-positive on names that merely contain node_modules or .git as a substring', function () {
+        const pattern = lessWatchCompilerUtils.resolveExcludePattern();
+        assert.ok(!pattern.test('/project/my-node_modules-backup/style.less'));
+        assert.ok(!pattern.test('/project/.gitignore'));
+      });
+      it('adds a user pattern on top of the defaults rather than replacing them', function () {
+        const pattern = lessWatchCompilerUtils.resolveExcludePattern('dist');
+        assert.ok(pattern.test('/project/node_modules/pkg/style.less'), 'default exclusion must still apply');
+        assert.ok(pattern.test('/project/dist/style.less'), 'user pattern must also apply');
+        assert.ok(!pattern.test('/project/less/style.less'));
+      });
+      it('throws a clean error referencing just the user pattern when it is not a valid regex', function () {
+        assert.throws(() => lessWatchCompilerUtils.resolveExcludePattern('['), /Unterminated character class/);
+      });
+    });
     describe('getDateTime()', function () {
       it('getDateTime() function should be there and has value', function () {
         assert.equal(true, lessWatchCompilerUtils.getDateTime().length > 0);
