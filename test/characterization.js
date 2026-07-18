@@ -75,6 +75,17 @@ describe('Characterization: golden-file output parity', function () {
     });
   });
 
+  describe('--less-args source-map-inline', function () {
+    it('embeds the map as a data URI and writes no separate .map file, without --source-map', () => {
+      resetOutDir();
+      cli('--run-once', '--less-args', 'source-map-inline', 'test/examples/with-source-map/less', 'test/css');
+      const css = fs.readFileSync(path.join(outDir, 'with-source-map.css'), 'utf8');
+      assert.ok(css.includes('sourceMappingURL=data:application/json;base64,'), 'the map must be embedded as a data URI');
+      assert.ok(!fs.existsSync(path.join(outDir, 'with-source-map.css.map')), 'no separate .map file should be written in inline mode');
+      resetOutDir();
+    });
+  });
+
   describe('--plugins parameter', function () {
     it('loads a less plugin by its short name and applies it (byte-identical to golden)', () => {
       resetOutDir();

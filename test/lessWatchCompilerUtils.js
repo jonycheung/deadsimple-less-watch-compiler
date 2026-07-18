@@ -231,6 +231,32 @@ describe('lessWatchCompilerUtils Module API', function () {
         assert.equal(true, lessWatchCompilerUtils.getDateTime().length > 0);
       });
     });
+    describe('formatLessError()', function () {
+      it('numbers extract lines by their original position, not their filtered index', function () {
+        // Error on line 1: no line-before-context, so extract[0] is undefined
+        const message = lessWatchCompilerUtils.formatLessError({
+          message: 'Unrecognised input',
+          line: 1,
+          column: 0,
+          filename: 'test.less',
+          extract: [undefined, '.broken {', '  color: @x;']
+        });
+        assert.ok(message.includes('\n1 .broken {'), 'the error line itself must be numbered 1, not 0: ' + message);
+        assert.ok(message.includes('\n2   color: @x;'), 'the following context line must be numbered 2: ' + message);
+        assert.ok(!message.includes('\n0 '), 'no line should be mislabeled as line 0: ' + message);
+      });
+      it('still numbers correctly when the trailing context line is undefined', function () {
+        const message = lessWatchCompilerUtils.formatLessError({
+          message: 'Unrecognised input',
+          line: 5,
+          column: 0,
+          filename: 'test.less',
+          extract: ['  prior line;', '.broken {', undefined]
+        });
+        assert.ok(message.includes('\n4   prior line;'));
+        assert.ok(message.includes('\n5 .broken {'));
+      });
+    });
     describe('setupWatcher()', function () {
       it('setupWatcher() function should be there', function () {
         assert.equal('function', typeof lessWatchCompilerUtils.setupWatcher);

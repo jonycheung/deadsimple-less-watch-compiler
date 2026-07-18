@@ -61,11 +61,65 @@ describe('lessOptions Module', function () {
       assert.equal(options.sourceMap.sourceMapFileInline, true);
       assert.equal(options.sourceMapRootpath, undefined);
     });
+    it('enables source maps from source-map-inline alone, without the top-level sourceMap flag', function () {
+      const options = lessOptions.buildRenderOptions({
+        inputFilePath: 'in.less',
+        outputFilePath: 'out.css',
+        lessArgs: 'source-map-inline'
+      });
+      assert.ok(options.sourceMap, 'sourceMap object must be built even though sourceMap: true was never set');
+      assert.equal(options.sourceMap.sourceMapFileInline, true);
+    });
+    it('enables source maps from the source-map-map-inline alias too', function () {
+      const options = lessOptions.buildRenderOptions({
+        inputFilePath: 'in.less',
+        outputFilePath: 'out.css',
+        lessArgs: 'source-map-map-inline'
+      });
+      assert.ok(options.sourceMap);
+      assert.equal(options.sourceMap.sourceMapFileInline, true);
+    });
+    ['no', 'n', 'f', 'false', 'FALSE', 'No'].forEach((alias) => {
+      it(`treats strict-units=${alias} as false, matching lessc's checkBooleanArg aliases`, function () {
+        const options = lessOptions.buildRenderOptions({
+          inputFilePath: 'in.less',
+          outputFilePath: 'out.css',
+          lessArgs: 'strict-units=' + alias
+        });
+        assert.equal(options.strictUnits, false);
+      });
+    });
+    ['on', 't', 'true', 'y', 'yes', 'YES'].forEach((alias) => {
+      it(`treats strict-units=${alias} as true, matching lessc's checkBooleanArg aliases`, function () {
+        const options = lessOptions.buildRenderOptions({
+          inputFilePath: 'in.less',
+          outputFilePath: 'out.css',
+          lessArgs: 'strict-units=' + alias
+        });
+        assert.equal(options.strictUnits, true);
+      });
+    });
   });
 
   describe('loadPlugins()', function () {
     it('rejects with a descriptive error for a plugin that cannot be resolved', async function () {
       await assert.rejects(() => lessOptions.loadPlugins('this-plugin-does-not-exist', less, {}), /Unable to load plugin this-plugin-does-not-exist/);
+    });
+    it('preserves the underlying error message instead of masking it', async function () {
+      const fakeLess = {
+        PluginManager: function () {
+          return {
+            Loader: {
+              loadPlugin: () => Promise.reject(new Error('EACCES: permission denied'))
+            }
+          };
+        },
+        FileManager: function () {
+          return {};
+        },
+        environment: {}
+      };
+      await assert.rejects(() => lessOptions.loadPlugins('some-plugin', fakeLess, {}), /Unable to load plugin some-plugin.*EACCES: permission denied/s);
     });
   });
 });

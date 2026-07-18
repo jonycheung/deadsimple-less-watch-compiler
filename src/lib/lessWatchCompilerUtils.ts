@@ -177,7 +177,11 @@ const lessWatchCompilerUtilsModule = {
     const result = await less.render(input, renderOptions);
     await fs.promises.mkdir(path.dirname(path.resolve(outPath)), { recursive: true });
     await fs.promises.writeFile(outPath, result.css, 'utf8');
-    if (result.map) {
+    // When sourceMapFileInline is set, the map is embedded as a data URI in
+    // result.css already; a separate .map file would be redundant (and
+    // lessc itself never writes one in that mode).
+    const sourceMapOptions = options.sourceMap as { sourceMapFileInline?: boolean } | undefined;
+    if (result.map && !sourceMapOptions?.sourceMapFileInline) {
       await fs.promises.writeFile(outPath + '.map', result.map, 'utf8');
     }
   },
@@ -195,8 +199,8 @@ const lessWatchCompilerUtilsModule = {
       message +=
         '\n' +
         error.extract
-          .filter((line: string) => line !== undefined)
-          .map((line: string, index: number) => firstLine + index + ' ' + line)
+          .map((line: string, index: number) => (line !== undefined ? firstLine + index + ' ' + line : undefined))
+          .filter((line): line is string => line !== undefined)
           .join('\n');
     }
     return message;

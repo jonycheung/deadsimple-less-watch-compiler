@@ -60,9 +60,11 @@ export function splitTopLevelCommas(value: string): string[] {
   return parts;
 }
 
+// Mirrors lessc's checkBooleanArg: off/f/false/n/no (case-insensitive) are
+// false; everything else (including on/t/true/y/yes and bare flags) is true.
 function booleanValue(value: string | undefined): boolean {
   if (value === undefined) return true;
-  return value !== 'off' && value !== 'false' && value !== '0';
+  return !/^(off|f|false|n|no)$/i.test(value);
 }
 
 // lessc's parseVariableOption: "name=value" into a variables object
@@ -150,6 +152,13 @@ function applyLessArg(options: LessRenderOptions, entry: string): void {
     case 'url-args':
       options.urlArgs = value || '';
       break;
+    case 'source-map-inline':
+    case 'source-map-map-inline':
+      // Unlike the other source-map-* args, lessc treats these as
+      // independently sufficient to enable source maps (bin/lessc: also sets
+      // options.sourceMap = true), not just a sub-option of --source-map.
+      options.sourceMapInline = true;
+      break;
     case 'line-numbers':
       options.dumpLineNumbers = value;
       break;
@@ -185,7 +194,9 @@ export function buildRenderOptions(input: RenderOptionsInput): LessRenderOptions
     }
   }
 
-  if (input.sourceMap) {
+  // --less-args source-map-inline (or source-map-map-inline) enables source
+  // maps on its own, matching lessc, even without the top-level sourceMap flag.
+  if (input.sourceMap || options.sourceMapInline === true) {
     const output = input.outputFilePath;
     const inputFile = input.inputFilePath;
     const sourceMapOptions: Record<string, unknown> = {
@@ -253,8 +264,9 @@ export async function loadPlugins(pluginList: string, less: LessApi, renderOptio
     let data: { contents: string; filename: string };
     try {
       data = await pluginManager.Loader.loadPlugin(name, process.cwd(), { ...renderOptions }, less.environment, fileManager);
-    } catch {
-      throw new Error('Unable to load plugin ' + name + ' please make sure that it is installed under or at the same level as less');
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      throw new Error('Unable to load plugin ' + name + ' please make sure that it is installed under or at the same level as less: ' + reason, { cause: err });
     }
     plugins.push({ fileContent: data.contents, filename: data.filename, options: pluginOptions });
   }
