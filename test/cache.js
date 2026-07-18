@@ -99,6 +99,14 @@ describe('cache Module', function () {
     assert.equal(cache.isUpToDate(cachePath, fp, lessFile, outFile, [mapFile]), false, 'a missing expected file must force a miss');
   });
 
+  it('creates the cache-path parent directory if it does not exist yet, instead of silently dropping the write', function () {
+    const nestedCachePath = path.join(tmpDir, 'does', 'not', 'exist', 'cache.json');
+    const cache = freshCache();
+    cache.record(nestedCachePath, fp, lessFile, outFile);
+    cache.flush();
+    assert.ok(fs.existsSync(nestedCachePath), 'flush() must create any missing parent directories');
+  });
+
   it('invalidates the whole cache when the option fingerprint changes', function () {
     const cache = freshCache();
     cache.record(cachePath, fp, lessFile, outFile);

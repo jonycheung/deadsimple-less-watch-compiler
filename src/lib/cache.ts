@@ -72,6 +72,7 @@ function registerExitFlush(): void {
 function flush(): void {
   if (!dirty || !loadedPath || !store) return;
   try {
+    fs.mkdirSync(path.dirname(loadedPath), { recursive: true });
     fs.writeFileSync(loadedPath, JSON.stringify(store), 'utf8');
     dirty = false;
   } catch {
