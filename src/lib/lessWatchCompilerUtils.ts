@@ -445,6 +445,7 @@ const lessWatchCompilerUtilsModule = {
             const file = path.join(f, b);
             if (!files[file]) {
               fs.stat(file, (err, stat) => {
+                if (err || !stat) return; // raced with a delete between readdir and stat
                 if (options.ignoreDotFiles && path.basename(b)[0] === '.') return;
                 // Unlike the extension filter below, exclude applies to
                 // directories too -- a newly-created excluded directory
@@ -452,16 +453,46 @@ const lessWatchCompilerUtilsModule = {
                 // never start being watched, the same way walk() already
                 // keeps the initial scan out of it entirely.
                 if (options.exclude && options.exclude.test(file)) return;
-                if (options.filter && options.filter(b)) return;
+                // The extension filter must only apply to files -- a new
+                // directory (e.g. one created after startup) never matches
+                // an allowed extension, so applying the filter to it too
+                // would skip watching it (and everything created inside it
+                // afterward) entirely. walk() already gets this right for
+                // the initial recursive scan; mirror it here for new
+                // directories discovered later by this readdir rescan.
+                if (!stat.isDirectory() && options.filter && options.filter(b)) return;
                 fs.access(file, fs.constants.F_OK, (accessErr) => {
                   if (accessErr) {
                     console.log('Does not exist : ' + f);
-                  } else {
+                    return;
+                  }
+                  files[file] = stat as fs.Stats;
+                  if (!stat.isDirectory()) {
                     fileimportlist[file] = fileSearch.findLessImportsInFile(file);
                     watchCallback(file, stat as fs.Stats, null, fileimportlist);
-                    files[file] = stat as fs.Stats;
                     lessWatchCompilerUtilsModule.fileWatcher(file, files, options, filelist, fileimportlist, watchCallback);
+                    return;
                   }
+                  // A new directory: recursively discover anything already
+                  // inside it (a directory created together with files
+                  // already in it, e.g. via a project scaffold or an editor
+                  // batch operation, must not silently miss them -- issue
+                  // #73), the same way walk() does for directories found
+                  // during the initial scan, then start watching every
+                  // discovered file and subdirectory the same way the
+                  // initial scan does.
+                  lessWatchCompilerUtilsModule.walk(file, options, (walkErr, discovered) => {
+                    if (walkErr || !discovered) return;
+                    for (const p in discovered) {
+                      const s = discovered[p];
+                      files[p] = s;
+                      if (!s.isDirectory()) {
+                        fileimportlist[p] = fileSearch.findLessImportsInFile(p);
+                        watchCallback(p, s, null, fileimportlist);
+                      }
+                      lessWatchCompilerUtilsModule.fileWatcher(p, files, options, filelist, fileimportlist, watchCallback);
+                    }
+                  });
                 });
               });
             }

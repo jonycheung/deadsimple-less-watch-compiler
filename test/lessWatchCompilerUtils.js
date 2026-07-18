@@ -217,6 +217,67 @@ describe('lessWatchCompilerUtils Module API', function () {
         );
       });
 
+      it('detects and compiles a .less file inside a newly created directory (issue #73)', function (done) {
+        // filterFiles() rejects anything without an allowed extension, and a
+        // bare directory name never has one -- applying that filter to new
+        // directories (instead of only new files, like walk() already does
+        // for the initial scan) silently skipped watching them, and
+        // anything created inside them, forever.
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-newdir-'));
+        const outDir = path.join(tmpDir, 'css');
+        fs.mkdirSync(outDir);
+        fs.writeFileSync(path.join(tmpDir, 'existing.less'), '.x { color: red; }');
+
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir, outputFolder: outDir };
+
+        function cleanup() {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          { interval: 30, filter: lessWatchCompilerUtils.filterFiles },
+          function (f, curr) {
+            if (typeof f === 'object' && curr === null) return;
+            if (curr && curr.nlink !== 0) lessWatchCompilerUtils.compileCSS(f);
+          },
+          function (f) {
+            lessWatchCompilerUtils.compileCSS(f);
+          }
+        );
+
+        waitForFileContent(
+          path.join(outDir, 'existing.css'),
+          (c) => c.includes('red'),
+          3000,
+          (err) => {
+            if (err) {
+              cleanup();
+              return done(err);
+            }
+            setTimeout(() => {
+              // Create the directory and the file inside it back-to-back,
+              // matching the original report ("create new directory, create
+              // xxx.less inside") and exercising the tighter race where the
+              // file already exists by the time the new directory itself is
+              // discovered.
+              fs.mkdirSync(path.join(tmpDir, 'newdir'));
+              fs.writeFileSync(path.join(tmpDir, 'newdir', 'nested.less'), '.y { color: green; }');
+              waitForFileContent(
+                path.join(outDir, 'newdir', 'nested.css'),
+                (c) => c.includes('green'),
+                5000,
+                (err2) => {
+                  cleanup();
+                  if (err2) return done(err2);
+                  done();
+                }
+              );
+            }, 100);
+          }
+        );
+      });
+
       it('never watches or compiles a file added that matches the exclude pattern (issue #72)', function (done) {
         // Regression note: this must exercise a FILE directly inside the
         // already-watched root, not a file inside a newly-created excluded
