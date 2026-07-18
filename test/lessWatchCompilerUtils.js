@@ -567,6 +567,41 @@ describe('lessWatchCompilerUtils Module API', function () {
         lessWatchCompilerUtils.fileWatcher(testRelative, {}, {}, [], [], function () {});
         done();
       });
+
+      it('registers only one fs.watchFile listener for a file imported by two different files', function () {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-shared-import-'));
+        const shared = path.join(tmpDir, 'shared.less');
+        const a = path.join(tmpDir, 'a.less');
+        const b = path.join(tmpDir, 'b.less');
+        fs.writeFileSync(shared, '.shared {}');
+        fs.writeFileSync(a, "@import 'shared.less';\n.a {}");
+        fs.writeFileSync(b, "@import 'shared.less';\n.b {}");
+
+        const files = { [a]: fs.statSync(a), [b]: fs.statSync(b) };
+        const filelistArr = [];
+        const originalWatchFolder = lessWatchCompilerUtils.config.watchFolder;
+        lessWatchCompilerUtils.config.watchFolder = tmpDir;
+
+        let watchFileCalls = 0;
+        const originalWatchFile = fs.watchFile;
+        fs.watchFile = function (f, ...rest) {
+          if (f === shared) watchFileCalls++;
+          return originalWatchFile.call(fs, f, ...rest);
+        };
+
+        try {
+          lessWatchCompilerUtils.fileWatcher(a, files, { interval: 9999 }, filelistArr, {}, function () {});
+          lessWatchCompilerUtils.fileWatcher(b, files, { interval: 9999 }, filelistArr, {}, function () {});
+          assert.equal(watchFileCalls, 1, 'a file imported by two different importers must only be watched once');
+        } finally {
+          fs.watchFile = originalWatchFile;
+          lessWatchCompilerUtils.config.watchFolder = originalWatchFolder;
+          fs.unwatchFile(shared);
+          fs.unwatchFile(a);
+          fs.unwatchFile(b);
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      });
     });
     describe('watchExternalImportDir() (issue #209: external @import survives delete+recreate)', function () {
       let originalWatchFolder;
@@ -638,6 +673,33 @@ describe('lessWatchCompilerUtils Module API', function () {
           lessWatchCompilerUtils.watchExternalImportDir(path.join(cwd, 'test/does-not-exist/partial.less'), files, {}, filelistArr, {}, function () {});
         });
         assert.deepStrictEqual(files, {});
+      });
+
+      it('seeds every pre-existing sibling in the external directory into the files map', function () {
+        // Regression test: without seeding, setupWatcher's directory branch
+        // (`if (!files[file])`) would treat every pre-existing sibling as
+        // newly added on the next unrelated directory change, firing a
+        // spurious watchCallback/compile for files that were never touched
+        // and aren't anyone's @import.
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-external-seed-'));
+        const externalDir = path.join(tmpDir, 'external');
+        fs.mkdirSync(externalDir);
+        const importTarget = path.join(externalDir, 'partial.less');
+        const sibling = path.join(externalDir, 'unrelated.less');
+        fs.writeFileSync(importTarget, '.partial {}');
+        fs.writeFileSync(sibling, '.unrelated {}');
+        lessWatchCompilerUtils.config.watchFolder = path.join(tmpDir, 'less');
+
+        const files = {};
+        const filelistArr = [];
+        lessWatchCompilerUtils.watchExternalImportDir(importTarget, files, { interval: 30 }, filelistArr, {}, function () {});
+
+        try {
+          assert.ok(files[sibling], 'a pre-existing sibling of the import target must be seeded, not treated as new later');
+        } finally {
+          fs.unwatchFile(externalDir);
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
       });
     });
   });

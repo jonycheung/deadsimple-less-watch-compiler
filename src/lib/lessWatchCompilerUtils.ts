@@ -389,7 +389,8 @@ const lessWatchCompilerUtilsModule = {
       const hasExtension = path.extname(importSpec).length > 1;
       const importFile = hasExtension ? importSpec : importSpec + '.less';
       const importPath = path.normalize(path.dirname(f) + path.sep + importFile);
-      if (filelistArr.indexOf(importSpec) === -1) {
+      if (filelistArr.indexOf(importPath) === -1) {
+        filelistArr[filelistArr.length] = importPath;
         lessWatchCompilerUtilsModule.setupWatcher(importPath, files, options, watchCallback);
       }
       lessWatchCompilerUtilsModule.watchExternalImportDir(importPath, files, options, filelistArr, fileimportlistObj, watchCallback);
@@ -425,13 +426,30 @@ const lessWatchCompilerUtilsModule = {
     const importDir = path.dirname(importPath);
     if (filelistArr.indexOf(importDir) !== -1) return;
     let stat: fs.Stats;
+    let existingEntries: string[];
     try {
       stat = fs.statSync(importDir);
+      existingEntries = fs.readdirSync(importDir);
     } catch {
       // The directory doesn't exist yet; nothing to watch until it does.
       return;
     }
     files[importDir] = stat;
+    // Seed every file already in the directory into `files`, mirroring what
+    // walk() does up front for directories inside watchFolder. Without this,
+    // setupWatcher's directory branch (`if (!files[file])`) would treat each
+    // pre-existing sibling as newly added the first time anything else in
+    // the directory changes, firing a spurious watchCallback/compile for
+    // files that were never touched and aren't anyone's @import.
+    for (const entry of existingEntries) {
+      const entryPath = path.join(importDir, entry);
+      if (files[entryPath]) continue;
+      try {
+        files[entryPath] = fs.statSync(entryPath);
+      } catch {
+        // Raced with a delete between readdir and stat; nothing to seed.
+      }
+    }
     lessWatchCompilerUtilsModule.fileWatcher(importDir, files, options, filelistArr, fileimportlistObj, watchCallback);
   }
 };
