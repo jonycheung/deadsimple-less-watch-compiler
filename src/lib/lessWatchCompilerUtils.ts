@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import fileSearch = require('./filesearch');
 import lessOptions = require('./lessOptions');
+import cache = require('./cache');
 
 // The less package ships no type definitions
 const less = require('less');
@@ -27,6 +28,7 @@ interface InitCallback {
 interface CompileResult {
   outputFilePath: string;
   options: lessOptions.LessRenderOptions;
+  cached?: boolean;
 }
 
 interface LessWatchCompilerConfig {
@@ -41,6 +43,8 @@ interface LessWatchCompilerConfig {
   lessArgs?: string;
   minified?: boolean;
   allowedExtensions?: string[];
+  cache?: boolean;
+  cachePath?: string;
 }
 
 type WalkCompleteCallback = (err: NodeJS.ErrnoException | null, files: FilesMap | null) => void;
@@ -191,21 +195,45 @@ const lessWatchCompilerUtilsModule = {
     if (fileSearch.isHiddenFile(file) && !lessWatchCompilerUtilsModule.config.includeHidden) return;
 
     const outPath: string = JSON.parse(outputFilePath);
+    const config = lessWatchCompilerUtilsModule.config;
     const options = lessOptions.buildRenderOptions({
       inputFilePath: file,
       outputFilePath: outPath,
-      enableJs: lessWatchCompilerUtilsModule.config.enableJs,
-      minified: lessWatchCompilerUtilsModule.config.minified,
-      sourceMap: lessWatchCompilerUtilsModule.config.sourceMap,
-      lessArgs: lessWatchCompilerUtilsModule.config.lessArgs
+      enableJs: config.enableJs,
+      minified: config.minified,
+      sourceMap: config.sourceMap,
+      lessArgs: config.lessArgs
     });
 
     if (!test) {
+      // Caching only applies to one-shot compilation (--run-once): that's the
+      // scenario the cache targets (CI, restored across runs) and the only
+      // one where "was this file actually recompiled" isn't reported back to
+      // the caller, so a cache hit can't produce a misleading log line.
+      const cacheEnabled = config.cache === true && config.runOnce === true;
+      let cachePath: string | undefined;
+      let fingerprintInput: Record<string, unknown> | undefined;
+      if (cacheEnabled) {
+        cachePath = cache.resolvePath(config.cachePath);
+        fingerprintInput = {
+          enableJs: config.enableJs,
+          minified: config.minified,
+          sourceMap: config.sourceMap,
+          lessArgs: config.lessArgs,
+          plugins: config.plugins
+        };
+        if (cache.isUpToDate(cachePath, fingerprintInput, file, outPath)) {
+          return { outputFilePath, options, cached: true };
+        }
+      }
       lessWatchCompilerUtilsModule
         .renderLess(file, outPath, options)
+        .then(() => {
+          if (cacheEnabled && cachePath && fingerprintInput) cache.record(cachePath, fingerprintInput, file, outPath);
+        })
         .catch((error: Error & { line?: number; column?: number; filename?: string; extract?: string[] }) => {
           console.log(lessWatchCompilerUtilsModule.formatLessError(error));
-          if (lessWatchCompilerUtilsModule.config.runOnce) process.exit(1);
+          if (config.runOnce) process.exit(1);
         });
     }
 

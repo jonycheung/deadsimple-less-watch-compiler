@@ -116,6 +116,64 @@ describe('Characterization: golden-file output parity', function () {
   });
 });
 
+describe('--cache (opt-in incremental compilation for --run-once)', function () {
+  this.timeout(20000);
+  const lessDir = path.join(cwd, 'test', 'examples', 'with-cache', 'less');
+  const partialFile = path.join(lessDir, 'partial.less');
+  const outFile = path.join(outDir, 'main.css');
+  const staleMarker = '/* stale marker: must not survive a real recompile */';
+  let cacheDir, cachePath;
+
+  beforeEach(function () {
+    resetOutDir();
+    cacheDir = fs.mkdtempSync(path.join(cwd, 'test', 'tmp-cache-cli-'));
+    cachePath = path.join(cacheDir, 'cache.json');
+  });
+
+  afterEach(function () {
+    fs.rmSync(cacheDir, { recursive: true, force: true });
+    resetOutDir();
+  });
+
+  it('writes a cache file and skips recompiling an unchanged file on the next --run-once --cache run', () => {
+    cli('--run-once', '--cache', '--cache-path', cachePath, lessDir, outDir);
+    assert.ok(fs.existsSync(cachePath), 'cache file must be written');
+    assert.ok(fs.readFileSync(outFile, 'utf8').includes('red'), 'sanity check on the first compile');
+
+    // Corrupt the output so a real recompile would be observable.
+    fs.writeFileSync(outFile, staleMarker);
+    cli('--run-once', '--cache', '--cache-path', cachePath, lessDir, outDir);
+    assert.equal(fs.readFileSync(outFile, 'utf8'), staleMarker, 'a cache hit must not rewrite the output file');
+  });
+
+  it('recompiles when a transitively-imported file changes, even with --cache', () => {
+    const original = fs.readFileSync(partialFile, 'utf8');
+    try {
+      cli('--run-once', '--cache', '--cache-path', cachePath, lessDir, outDir);
+      fs.writeFileSync(outFile, staleMarker);
+      fs.writeFileSync(partialFile, '.partial { color: green; }');
+      cli('--run-once', '--cache', '--cache-path', cachePath, lessDir, outDir);
+      const recompiled = fs.readFileSync(outFile, 'utf8');
+      assert.notEqual(recompiled, staleMarker);
+      assert.ok(recompiled.includes('green'));
+    } finally {
+      fs.writeFileSync(partialFile, original);
+    }
+  });
+
+  it('invalidates the whole cache (forces recompilation) when compile options change', () => {
+    cli('--run-once', '--cache', '--cache-path', cachePath, lessDir, outDir);
+    fs.writeFileSync(outFile, staleMarker);
+    cli('--run-once', '--cache', '--cache-path', cachePath, '--less-args', 'compress', lessDir, outDir);
+    assert.notEqual(fs.readFileSync(outFile, 'utf8'), staleMarker, 'an option change must force recompilation even with --cache');
+  });
+
+  it('does not create a cache file when --cache is not set', () => {
+    cli('--run-once', lessDir, outDir);
+    assert.ok(!fs.existsSync(cachePath));
+  });
+});
+
 describe('Characterization: exit codes', function () {
   this.timeout(20000);
 

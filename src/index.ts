@@ -10,6 +10,7 @@ import path from 'path';
 import lessWatchCompilerUtils = require('./lib/lessWatchCompilerUtils');
 import filesearch = require('./lib/filesearch');
 import lessOptions = require('./lib/lessOptions');
+import cache = require('./lib/cache');
 
 export interface CompileOptions {
   /** Produce minified output with a .min.css extension */
@@ -22,6 +23,15 @@ export interface CompileOptions {
   lessArgs?: string;
   /** Comma-separated less plugin names, e.g. 'clean-css' */
   plugins?: string;
+  /**
+   * Skip recompiling when the content of inputFilePath and its full
+   * transitive @import closure is unchanged since the last call recorded in
+   * the cache file. Off by default; intended for CI, where compileFile() is
+   * invoked repeatedly across runs against a restored cache file.
+   */
+  cache?: boolean;
+  /** Cache file path when cache is enabled. Defaults to '<cwd>/.less-watch-compiler-cache.json'. */
+  cachePath?: string;
 }
 
 export interface WatchOptions extends CompileOptions {
@@ -51,6 +61,21 @@ export async function compileFile(inputFilePath: string, outputFolder: string, o
     ...options
   };
   const outputFilePath: string = JSON.parse(lessWatchCompilerUtils.resolveOutputPath(input));
+
+  let cachePath: string | undefined;
+  let fingerprintInput: Record<string, unknown> | undefined;
+  if (options.cache) {
+    cachePath = cache.resolvePath(options.cachePath);
+    fingerprintInput = {
+      enableJs: options.enableJs,
+      minified: options.minified,
+      sourceMap: options.sourceMap,
+      lessArgs: options.lessArgs,
+      plugins: options.plugins
+    };
+    if (cache.isUpToDate(cachePath, fingerprintInput, input, outputFilePath)) return outputFilePath;
+  }
+
   const renderOptions = lessOptions.buildRenderOptions({
     inputFilePath: input,
     outputFilePath,
@@ -60,6 +85,7 @@ export async function compileFile(inputFilePath: string, outputFolder: string, o
     lessArgs: options.lessArgs
   });
   await lessWatchCompilerUtils.renderLess(input, outputFilePath, renderOptions);
+  if (cachePath && fingerprintInput) cache.record(cachePath, fingerprintInput, input, outputFilePath);
   return outputFilePath;
 }
 

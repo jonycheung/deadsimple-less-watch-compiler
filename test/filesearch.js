@@ -1,4 +1,5 @@
 var assert = require('assert'),
+  path = require('path'),
   filesearch = require('../dist/lib/filesearch.js');
 
 describe('filesearch Module', function () {
@@ -49,6 +50,46 @@ describe('filesearch Module', function () {
       });
       it('should return `false` on non-hidden files', function () {
         assert.equal(filesearch.isHiddenFile('non-hidden.less'), false);
+      });
+    });
+    describe('resolveImportPath()', function () {
+      it('appends .less to an extensionless import target', function () {
+        assert.equal(filesearch.resolveImportPath('/a/b/main.less', 'color'), path.normalize('/a/b/color.less'));
+      });
+      it('resolves relative to the importing file, leaving an existing extension untouched', function () {
+        assert.equal(filesearch.resolveImportPath('/a/b/main.less', 'lvl2/lvl2.less'), path.normalize('/a/b/lvl2/lvl2.less'));
+      });
+    });
+    describe('collectTransitiveImports()', function () {
+      it('includes the file itself plus every direct import, deduped', function () {
+        var result = filesearch
+          .collectTransitiveImports('./test/less/test.less')
+          .map(function (f) {
+            return path.relative(process.cwd(), f).split(path.sep).join('/');
+          })
+          .sort();
+        var expected = [
+          'test/less/test.less',
+          'test/less/lvl1.less',
+          'test/less/lvl2/lvl2.less',
+          'test/less/lvl2/lvl3/lvl3.less',
+          'test/less/hidden/_hidden.less',
+          'test/less/hidden/.hidden2.less'
+        ].sort();
+        assert.deepStrictEqual(result, expected);
+      });
+      it('does not loop forever on a circular @import', function () {
+        var result = filesearch
+          .collectTransitiveImports('./test/examples/circular-import/less/a.less')
+          .map(function (f) {
+            return path.relative(process.cwd(), f).split(path.sep).join('/');
+          })
+          .sort();
+        assert.deepStrictEqual(result, ['test/examples/circular-import/less/a.less', 'test/examples/circular-import/less/b.less'].sort());
+      });
+      it('returns just the file itself when it has no imports', function () {
+        var result = filesearch.collectTransitiveImports('./test/less/lvl1.less');
+        assert.deepStrictEqual(result, [path.resolve('./test/less/lvl1.less')]);
       });
     });
   });
