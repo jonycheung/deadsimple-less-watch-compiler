@@ -37,7 +37,7 @@
     "less-watch-compiler": "dist/less-watch-compiler.js"
   },
   "dependencies": {
-    "commander": "^15.0.0",
+    "commander": "^8.0.0",
     "extend": ">= 2.0.0",
     "less": "^4.0.0",
     "safe-regex2": "^5.1.1"
@@ -57,7 +57,7 @@
     "mocha": "^11.7.5",
     "prettier": "^3.9.5",
     "source-map": "^0.7.0",
-    "typescript": "^7.0.0",
+    "typescript": "^5.6.2",
     "typescript-eslint": "^8.64.0"
   },
   "preferGlobal": true,
