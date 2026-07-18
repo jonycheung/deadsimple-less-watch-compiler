@@ -236,6 +236,27 @@ describe('lessWatchCompilerUtils Module API', function () {
           fs.unlinkSync(lessFile);
         }, 200);
       });
+
+      it('does not fire the watch callback for a path that never existed (e.g. a broken @import target)', function (done) {
+        // setupWatcher() is called directly by fileWatcher() for @import
+        // targets, which may not resolve to a real file. fs.watchFile fires
+        // once with curr.nlink === 0 AND prev.nlink === 0 the first time it
+        // polls such a path -- that must not be reported as a removal.
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-neverexisted-'));
+        const neverExisted = path.join(tmpDir, 'never-existed.less');
+        let fired = false;
+
+        lessWatchCompilerUtils.setupWatcher(neverExisted, {}, { interval: 30 }, () => {
+          fired = true;
+        });
+
+        setTimeout(() => {
+          fs.unwatchFile(neverExisted);
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          assert.equal(fired, false, 'watchCallback must not fire for a path that never existed');
+          done();
+        }, 500);
+      });
     });
     describe('compileCSS()', function () {
       // reset config
