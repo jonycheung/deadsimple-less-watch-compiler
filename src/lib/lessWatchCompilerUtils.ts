@@ -277,7 +277,16 @@ const lessWatchCompilerUtilsModule = {
         })
         .catch((error: Error & { line?: number; column?: number; filename?: string; extract?: string[] }) => {
           console.log(lessWatchCompilerUtilsModule.formatLessError(error));
-          if (config.runOnce) process.exit(1);
+          // Under --run-once, many files compile concurrently (none of these
+          // promises are awaited by the caller). process.exit(1) would kill
+          // the process immediately, mid-write, for any other in-flight
+          // renderLess() call -- fs.promises.writeFile() doesn't get to
+          // finish, leaving a truncated .css/.map file on disk for a file
+          // that would otherwise have compiled successfully (issue #213).
+          // Setting exitCode instead lets Node exit on its own once every
+          // pending compile actually finishes, preserving the "run-once
+          // with a compile error exits non-zero" contract without the race.
+          if (config.runOnce) process.exitCode = 1;
         });
     }
 
