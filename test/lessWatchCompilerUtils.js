@@ -568,5 +568,77 @@ describe('lessWatchCompilerUtils Module API', function () {
         done();
       });
     });
+    describe('watchExternalImportDir() (issue #209: external @import survives delete+recreate)', function () {
+      let originalWatchFolder;
+      beforeEach(function () {
+        originalWatchFolder = lessWatchCompilerUtils.config.watchFolder;
+      });
+      afterEach(function () {
+        lessWatchCompilerUtils.config.watchFolder = originalWatchFolder;
+      });
+
+      it('watchExternalImportDir() function should be there', function () {
+        assert.equal('function', typeof lessWatchCompilerUtils.watchExternalImportDir);
+      });
+
+      it('registers a directory watch for an @import target that resolves outside watchFolder', function () {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-external-dir-'));
+        const watchFolder = path.join(tmpDir, 'less');
+        const externalDir = path.join(tmpDir, 'external');
+        fs.mkdirSync(watchFolder);
+        fs.mkdirSync(externalDir);
+        const externalFile = path.join(externalDir, 'partial.less');
+        fs.writeFileSync(externalFile, '.partial {}');
+        lessWatchCompilerUtils.config.watchFolder = watchFolder;
+
+        const files = {};
+        const filelistArr = [];
+        lessWatchCompilerUtils.watchExternalImportDir(externalFile, files, { interval: 30 }, filelistArr, {}, function () {});
+
+        try {
+          assert.ok(files[externalDir], 'the external directory must be recorded in the files map');
+          assert.ok(filelistArr.indexOf(externalDir) !== -1, 'the external directory must be added to the dedup list');
+        } finally {
+          fs.unwatchFile(externalDir);
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      });
+
+      it('is a no-op for an @import target inside watchFolder (already covered by the recursive walk)', function () {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-internal-dir-'));
+        const watchFolder = path.join(tmpDir, 'less');
+        fs.mkdirSync(watchFolder);
+        const internalFile = path.join(watchFolder, 'partial.less');
+        fs.writeFileSync(internalFile, '.partial {}');
+        lessWatchCompilerUtils.config.watchFolder = watchFolder;
+
+        const files = {};
+        const filelistArr = [];
+        lessWatchCompilerUtils.watchExternalImportDir(internalFile, files, { interval: 30 }, filelistArr, {}, function () {});
+
+        assert.deepStrictEqual(files, {});
+        assert.deepStrictEqual(filelistArr, []);
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      });
+
+      it('is a no-op when watchFolder is not configured', function () {
+        lessWatchCompilerUtils.config.watchFolder = undefined;
+        const files = {};
+        const filelistArr = [];
+        lessWatchCompilerUtils.watchExternalImportDir('/some/external/file.less', files, {}, filelistArr, {}, function () {});
+        assert.deepStrictEqual(files, {});
+        assert.deepStrictEqual(filelistArr, []);
+      });
+
+      it('does not throw when the external directory does not exist (nothing to watch until it does)', function () {
+        lessWatchCompilerUtils.config.watchFolder = path.join(cwd, 'test/less');
+        const files = {};
+        const filelistArr = [];
+        assert.doesNotThrow(() => {
+          lessWatchCompilerUtils.watchExternalImportDir(path.join(cwd, 'test/does-not-exist/partial.less'), files, {}, filelistArr, {}, function () {});
+        });
+        assert.deepStrictEqual(files, {});
+      });
+    });
   });
 });
