@@ -343,25 +343,53 @@ const lessWatchCompilerUtilsModule = {
     if (options.interval !== undefined) watchOptions.interval = options.interval;
     fs.watchFile(f, watchOptions, (c: fs.Stats, p: fs.Stats) => {
       if (files[f] && !files[f].isDirectory() && c.nlink !== 0 && files[f].mtime.getTime() === c.mtime.getTime()) return;
-      files[f] = c as fs.Stats;
       if ((c as fs.Stats).nlink === 0) {
-        // The file was removed. fs.access below would always fail on a
-        // removed path, which used to swallow the notification entirely
-        // (it only logged "Does not exist" and never called watchCallback,
-        // so onRemove listeners could never fire). Notify directly instead.
+        // The file (or directory) appears gone. Some editors save by
+        // deleting the original path and recreating it a moment later
+        // (rather than an atomic rename), so a single missing poll doesn't
+        // necessarily mean a real removal (issue #197: treating it as one
+        // used to unwatch the file permanently, silently, right after such
+        // a save). fs.watchFile only invokes this callback once on the
+        // exists->gone transition -- it will not fire again while the path
+        // stays missing -- so a second poll can't be used to confirm this;
+        // recheck for real with our own fs.access after one poll interval
+        // instead of acting immediately.
         //
-        // Guard on (p as fs.Stats).nlink !== 0: fs.watchFile fires once with
-        // curr.nlink === 0 AND prev.nlink === 0 the first time it polls a
-        // path that never existed (e.g. a broken/not-yet-created @import
-        // target watched preemptively) -- that's not a removal and must not
-        // be reported as one.
-        if ((p as fs.Stats).nlink !== 0 && !(options.ignoreDotFiles && path.basename(f)[0] === '.') && !(options.filter && options.filter(f))) {
-          watchCallback(f, c as fs.Stats, p as fs.Stats, fileimportlist);
-        }
-        delete files[f];
-        fs.unwatchFile(f);
+        // If the recheck finds the path back, do nothing here: we never
+        // unwatched, so fs.watchFile's own next poll independently detects
+        // the reappearance (a new mtime) as a normal change below and
+        // triggers a recompile through the existing path.
+        //
+        // Snapshot the last-confirmed-present stat (undefined if the path
+        // was never confirmed) so a stale timer can tell it's stale: if a
+        // recreate is observed before this timer fires, files[f] is
+        // reassigned to a new object below, and this timer's snapshot no
+        // longer matches. Without this, a second, unrelated missing poll
+        // (e.g. rapid consecutive non-atomic saves) landing just as this
+        // timer checks could be mistaken for confirmation of the original
+        // poll's removal and unwatch a file that's still actively in use.
+        const lastKnownStat = files[f];
+        const debounceMs = Math.max(options.interval !== undefined ? options.interval : 0, 300);
+        setTimeout(() => {
+          if (files[f] !== lastKnownStat) return;
+          fs.access(f, fs.constants.F_OK, (accessErr) => {
+            if (!accessErr) return;
+            if (files[f] !== lastKnownStat) return;
+            // A path that never existed also fires this callback once, on
+            // its very first poll (e.g. a broken/not-yet-created @import
+            // target watched preemptively) -- not a removal, and there's
+            // nothing to notify since files[f] was never confirmed present.
+            const existed = !!lastKnownStat;
+            delete files[f];
+            fs.unwatchFile(f);
+            if (existed && !(options.ignoreDotFiles && path.basename(f)[0] === '.') && !(options.filter && options.filter(f))) {
+              watchCallback(f, c as fs.Stats, p as fs.Stats, fileimportlist);
+            }
+          });
+        }, debounceMs);
         return;
       }
+      files[f] = c as fs.Stats;
       if (!files[f].isDirectory()) {
         if (options.ignoreDotFiles && path.basename(f)[0] === '.') return;
         if (options.filter && options.filter(f)) return;
