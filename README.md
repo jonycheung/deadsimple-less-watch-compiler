@@ -14,6 +14,21 @@ A command that watches folders(and subfolders) for file changes and automaticall
 
 Parts of this script is modified from Mikeal Rogers's watch script (https://github.com/mikeal/watch)
 
+## What's new: zero-prerequisite install, in-process compilation, a real API
+
+less-watch-compiler is the most widely used standalone LESS watch/compile CLI on npm (see the downloads badge above), and starting with v1.18 it's also meaningfully better:
+
+- **No more global `lessc` install.** LESS now compiles fully in-process via the bundled `less` package — this previously shelled out to a `lessc` binary you had to install separately. `npm install -g less-watch-compiler` is now the only step.
+- **A real programmatic API.** `require('less-watch-compiler')` now exports [`compileFile()` and `watch()`](#programmatic-api) for embedding in build scripts, custom tooling, or test harnesses — it's no longer CLI-only.
+- **More correct compiles.** Structured compile errors (file/line/column instead of a raw shell error), quote- and paren-aware `--less-args` parsing (e.g. `modify-var='c=rgba(1, 2, 3, 0.5)'`), correct `source-map-inline` handling, and a fixed subfolder-compilation regression.
+- **`--init`** scaffolds a config file for a new project in one command.
+
+All of this is drop-in compatible: every CLI flag, the config file format, and default output are unchanged — verified byte-identical against the previous compiler across the full test suite.
+
+### Why a standalone watcher instead of a bundler plugin?
+
+If your project already runs Vite, webpack, or another bundler, its built-in/plugin LESS support is usually the better fit. less-watch-compiler exists for everything else: legacy apps, Rails/Django/PHP/Jekyll asset pipelines, design systems, and any `npm run`-script setup that wants a fast, import-aware LESS watcher without adopting a full bundler. The nearest standalone alternatives on npm — `watch-less`, `node-less-chokidar`, `less-watcher-compiler` — have all been unmaintained for years; this is the one still shipping fixes and new capability.
+
 ## Prerequisites
 
 None beyond [Node.js](https://nodejs.org/) (>= 18). [LESS](http://www.lesscss.org/) is bundled as a dependency and compilation happens in-process — a separate global `lessc` installation is no longer required.
