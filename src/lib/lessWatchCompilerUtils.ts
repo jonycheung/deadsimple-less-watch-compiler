@@ -271,6 +271,18 @@ const lessWatchCompilerUtilsModule = {
     fs.watchFile(f, watchOptions, (c: fs.Stats, p: fs.Stats) => {
       if (files[f] && !files[f].isDirectory() && c.nlink !== 0 && files[f].mtime.getTime() === c.mtime.getTime()) return;
       files[f] = c as fs.Stats;
+      if ((c as fs.Stats).nlink === 0) {
+        // The file was removed. fs.access below would always fail on a
+        // removed path, which used to swallow the notification entirely
+        // (it only logged "Does not exist" and never called watchCallback,
+        // so onRemove listeners could never fire). Notify directly instead.
+        if (!(options.ignoreDotFiles && path.basename(f)[0] === '.') && !(options.filter && options.filter(f))) {
+          watchCallback(f, c as fs.Stats, p as fs.Stats, fileimportlist);
+        }
+        delete files[f];
+        fs.unwatchFile(f);
+        return;
+      }
       if (!files[f].isDirectory()) {
         if (options.ignoreDotFiles && path.basename(f)[0] === '.') return;
         if (options.filter && options.filter(f)) return;
@@ -305,10 +317,6 @@ const lessWatchCompilerUtilsModule = {
             }
           });
         });
-      }
-      if ((c as fs.Stats).nlink === 0) {
-        delete files[f];
-        fs.unwatchFile(f);
       }
     });
   },
