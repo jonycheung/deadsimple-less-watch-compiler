@@ -141,7 +141,8 @@ less-watch-compiler
   "enableJs": true,
   "cache": false,
   "cachePath": "<optional_cache_file_path>",
-  "exclude": "<optional_regex_pattern>"
+  "exclude": "<optional_regex_pattern>",
+  "banner": false
 }
 ```
 
@@ -161,6 +162,8 @@ less-watch-compiler
     --cache                                                                  Skip recompiling a file (under --run-once) when its content and full @import closure are unchanged since the last cached run.
     --cache-path <file>                                                     Cache file path when --cache is set. Defaults to '<cwd>/.less-watch-compiler-cache.json'.
     --exclude <pattern>                                                     Additional regex pattern for paths to never watch or compile, e.g. '--exclude dist'. node_modules and .git are always excluded.
+    --banner                                                                 Prepend a 'generated file, do not edit' comment to compiled CSS.
+    --banner-text <text>                                                     Custom banner text to use instead of the default message. Implies --banner.
 
 ## Please note:
 
@@ -170,6 +173,7 @@ less-watch-compiler
 - Files that start with underscores `_style.css` or period `.style.css` are ignored. This behavior can be changed by adding `"includeHidden:true` in the config file.
 - `node_modules` and `.git` are always excluded from the watch and compile, no flag needed.
 - `--exclude <pattern>` (or `"exclude"` in the config file) adds an additional regex pattern for files or directories to keep out of the watch and compile entirely — it doesn't replace the `node_modules`/`.git` default, it adds to it. Unlike `allowedExtensions`, which only narrows which files count as compilable, `exclude` also stops the walk from descending into matching directories at all (e.g. `--exclude dist`). An invalid regex pattern exits with an error.
+- `--banner` (or `"banner": true` in the config file) prepends a "generated file, don't edit" comment to every compiled CSS file; off by default. `--banner-text <text>` (or a string value for `"banner"` in the config file) uses custom text instead of the default message — a multi-line string is wrapped as a `/* ... */` block comment. Works correctly together with `--source-map` (both the plain and inline forms): the map is adjusted so it still resolves to the right line in the source `.less` file despite the banner shifting everything below it down.
 - When `--run-once` used, compilation will fail on first error
 
 ## Incremental compilation for CI
@@ -207,7 +211,7 @@ watch(
 );
 ```
 
-`compileFile(inputFilePath, outputFolder, options?)` and `watch(watchFolder, outputFolder, options?, listeners?)` accept the same options as the config file (`minified`, `sourceMap`, `enableJs`, `lessArgs`, `plugins`, `cache`, `cachePath`, and for `watch` also `mainFile`, `includeHidden`, `allowedExtensions`, `exclude`). `compileFile()` honors `cache`/`cachePath` directly (see [Incremental compilation for CI](#incremental-compilation-for-ci) above); `watch()` accepts them for config-shape parity but doesn't use them, since a live watch session always recompiles on a real change. `watch()` always excludes `node_modules` and `.git`; `exclude` adds to that rather than replacing it, and an invalid pattern throws synchronously. TypeScript definitions are bundled. Note that the compiler keeps its configuration in module-level state, so one configuration per process applies at a time.
+`compileFile(inputFilePath, outputFolder, options?)` and `watch(watchFolder, outputFolder, options?, listeners?)` accept the same options as the config file (`minified`, `sourceMap`, `enableJs`, `lessArgs`, `plugins`, `cache`, `cachePath`, `banner`, and for `watch` also `mainFile`, `includeHidden`, `allowedExtensions`, `exclude`). `compileFile()` honors `cache`/`cachePath` directly (see [Incremental compilation for CI](#incremental-compilation-for-ci) above); `watch()` accepts them for config-shape parity but doesn't use them, since a live watch session always recompiles on a real change. `watch()` always excludes `node_modules` and `.git`; `exclude` adds to that rather than replacing it, and an invalid pattern throws synchronously. TypeScript definitions are bundled. Note that the compiler keeps its configuration in module-level state, so one configuration per process applies at a time.
 
 ### Using the source files
 

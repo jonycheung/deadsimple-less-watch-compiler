@@ -28,6 +28,7 @@ export default tseslint.config(
         process: 'readonly',
         console: 'readonly',
         __dirname: 'readonly',
+        Buffer: 'readonly',
         describe: 'readonly',
         it: 'readonly',
         before: 'readonly',
