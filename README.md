@@ -27,7 +27,20 @@ All of this is drop-in compatible: every CLI flag, the config file format, and d
 
 ### Why a standalone watcher instead of a bundler plugin?
 
-If your project already runs Vite, webpack, or another bundler, its built-in/plugin LESS support is usually the better fit. less-watch-compiler exists for everything else: legacy apps, Rails/Django/PHP/Jekyll asset pipelines, design systems, and any `npm run`-script setup that wants a fast, import-aware LESS watcher without adopting a full bundler. The nearest standalone alternatives on npm — `watch-less`, `node-less-chokidar`, `less-watcher-compiler` — have all been unmaintained for years; this is the one still shipping fixes and new capability.
+If your project already runs Vite, webpack, or another bundler, its built-in/plugin LESS support is usually the better fit. **less-watch-compiler is for everything else** — legacy apps, Rails/Django/PHP/Jekyll asset pipelines, design systems, and any `npm run`-script setup that wants a fast, import-aware LESS watcher without adopting a full bundler.
+
+Among standalone (non-bundler) LESS watch/compile tools on npm, it's the clear leader by adoption, and the only one still actively maintained:
+
+| Package                                                                        | Weekly downloads* | GitHub stars | Maintenance              |
+| ------------------------------------------------------------------------------ | ----------------- | ------------ | ------------------------ |
+| **less-watch-compiler** (this package)                                         | ~13,800           | 285          | **Active**               |
+| [`watch-less`](https://www.npmjs.com/package/watch-less)                       | ~91               | 52           | Inactive                 |
+| [`less-compiler`](https://www.npmjs.com/package/less-compiler)                 | ~25               | 3            | Inactive                 |
+| [`node-less-chokidar`](https://www.npmjs.com/package/node-less-chokidar)       | low               | —            | Unmaintained (~6 years)  |
+| [`less-watcher-compiler`](https://www.npmjs.com/package/less-watcher-compiler) | low               | —            | Unmaintained (~3 years)  |
+| [`less_watch`](https://www.npmjs.com/package/less_watch)                       | low               | —            | Unmaintained (~12 years) |
+
+<sub>*Approximate npm weekly download counts as of mid-2026 — see the live downloads badge at the top of this README for the current number.</sub>
 
 ## Prerequisites
 
