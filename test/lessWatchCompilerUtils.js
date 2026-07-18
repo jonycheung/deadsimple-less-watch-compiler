@@ -291,6 +291,80 @@ describe('lessWatchCompilerUtils Module API', function () {
         );
       });
 
+      it('never watches or recompiles because of an @import target that matches the exclude pattern (issue #72)', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-exclude-import-'));
+        const outDir = path.join(tmpDir, 'css');
+        fs.mkdirSync(outDir);
+        fs.mkdirSync(path.join(tmpDir, 'excluded-dir'));
+        fs.writeFileSync(path.join(tmpDir, 'excluded-dir', 'style.less'), '.pkg { color: blue; }');
+        fs.writeFileSync(path.join(tmpDir, 'main.less'), '@import "excluded-dir/style.less";\n.a { color: red; }');
+
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir, outputFolder: outDir };
+
+        function cleanup() {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+
+        // Use the real makeWatchHandler(), not the simplified inline
+        // callback used elsewhere in this file -- only makeWatchHandler()
+        // implements "recompile the importing parent when the changed file
+        // is one of its imports", which is the exact path this regression
+        // goes through (issue #72 follow-up: fileWatcher() used to register
+        // an @import target with setupWatcher() unconditionally, bypassing
+        // exclude).
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          { interval: 30, filter: lessWatchCompilerUtils.filterFiles, exclude: /excluded-dir/ },
+          lessWatchCompilerUtils.makeWatchHandler(undefined, {}),
+          function (f) {
+            lessWatchCompilerUtils.compileCSS(f);
+          }
+        );
+
+        waitForFileContent(
+          path.join(outDir, 'main.css'),
+          (c) => c.includes('blue') && c.includes('red'),
+          3000,
+          (err) => {
+            if (err) {
+              cleanup();
+              return done(err);
+            }
+            setTimeout(() => {
+              fs.writeFileSync(path.join(tmpDir, 'excluded-dir', 'style.less'), '.pkg { color: green; }');
+              // Give the (if unguarded) @import-target watch a dedicated
+              // window to prove itself before a control file's own compile
+              // could otherwise mask a race.
+              setTimeout(() => {
+                // A control file, started only now, proves the watcher is
+                // still alive and reacting normally.
+                fs.writeFileSync(path.join(tmpDir, 'control.less'), '.z { color: yellow; }');
+                waitForFileContent(
+                  path.join(outDir, 'control.css'),
+                  (c) => c.includes('yellow'),
+                  5000,
+                  (err2) => {
+                    try {
+                      if (err2) throw err2;
+                      const mainCss = fs.readFileSync(path.join(outDir, 'main.css'), 'utf8');
+                      assert.ok(
+                        mainCss.includes('blue') && !mainCss.includes('green'),
+                        'editing an @import target matching the exclude pattern must not recompile the importing file'
+                      );
+                      cleanup();
+                      done();
+                    } catch (e) {
+                      cleanup();
+                      done(e);
+                    }
+                  }
+                );
+              }, 500);
+            }, 100);
+          }
+        );
+      });
+
       it('invokes the watch callback with nlink 0 (and does not crash) when a watched file is deleted', function (done) {
         const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-remove-'));
         const outDir = path.join(tmpDir, 'css');

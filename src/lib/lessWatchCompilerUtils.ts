@@ -461,6 +461,12 @@ const lessWatchCompilerUtilsModule = {
       const hasExtension = path.extname(importSpec).length > 1;
       const importFile = hasExtension ? importSpec : importSpec + '.less';
       const importPath = path.normalize(path.dirname(f) + path.sep + importFile);
+      // Mirror the directory-walk exclude guard here: an @import target
+      // resolving into an excluded path (e.g. --exclude node_modules) must
+      // not be watched, or editing it would still trigger the importing
+      // parent's recompile even though the subtree is supposed to be kept
+      // out entirely (issue #72).
+      if (options.exclude && options.exclude.test(importPath)) continue;
       if (filelistArr.indexOf(importPath) === -1) {
         filelistArr[filelistArr.length] = importPath;
         lessWatchCompilerUtilsModule.setupWatcher(importPath, files, options, watchCallback);
