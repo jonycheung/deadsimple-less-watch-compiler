@@ -5,6 +5,7 @@
  * so concurrent compile/watch sessions with different configurations within
  * one process are not supported.
  */
+import fs from 'fs';
 import path from 'path';
 import lessWatchCompilerUtils = require('./lib/lessWatchCompilerUtils');
 import filesearch = require('./lib/filesearch');
@@ -74,6 +75,9 @@ export function watch(watchFolder: string, outputFolder: string, options: WatchO
     ...options
   };
   const mainFilePath = options.mainFile ? path.resolve(resolvedWatchFolder, options.mainFile) : undefined;
+  if (mainFilePath && !fs.existsSync(mainFilePath)) {
+    throw new Error('Main file ' + mainFilePath + ' does not exist.');
+  }
 
   lessWatchCompilerUtils.watchTree(
     resolvedWatchFolder,

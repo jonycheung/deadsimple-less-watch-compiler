@@ -41,4 +41,11 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
       (err) => err.line !== undefined
     );
   });
+
+  it('watch() throws synchronously when mainFile does not exist, instead of watching silently forever', function () {
+    assert.throws(
+      () => api.watch('test/less', 'test/css', { mainFile: 'no-such-main.less', runOnce: true }),
+      /no-such-main\.less does not exist/
+    );
+  });
 });
