@@ -57,7 +57,7 @@
     "mocha": "^11.7.5",
     "prettier": "^3.9.5",
     "source-map": "^0.7.0",
-    "typescript": "^7.0.0",
+    "typescript": "^5.6.2",
     "typescript-eslint": "^8.64.0"
   },
   "preferGlobal": true,
