@@ -188,3 +188,62 @@ describe('Characterization: watch-mode startup (issue #117)', function () {
     }, 2500);
   });
 });
+
+describe('Characterization: live watch mode (real CLI process, no --run-once)', function () {
+  this.timeout(20000);
+
+  function waitForContent(filePath, predicate, timeoutMs, cb) {
+    const start = Date.now();
+    (function poll() {
+      fs.readFile(filePath, 'utf8', (err, content) => {
+        if (!err && predicate(content)) return cb(null, content);
+        if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for ' + filePath + '; last content: ' + (content || err)));
+        setTimeout(poll, 50);
+      });
+    })();
+  }
+
+  it('prints the watching/recompile log lines (shared CLI+API change-handling) and updates the output CSS on a live edit', (done) => {
+    const tmpDir = fs.mkdtempSync(path.join(cwd, 'test', 'tmp-cli-live-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const liveOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(liveOutDir);
+    const lessFile = path.join(lessDir, 'live.less');
+    fs.writeFileSync(lessFile, '.a { color: red; }');
+
+    const child = spawn('node', [cliPath, lessDir, liveOutDir], { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    child.stdout.on('data', (d) => (stdout += d));
+
+    function cleanup() {
+      child.kill('SIGTERM');
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    waitForContent(
+      path.join(liveOutDir, 'live.css'),
+      (c) => c.includes('red'),
+      5000,
+      (err) => {
+        if (err) {
+          cleanup();
+          return done(err);
+        }
+        assert.ok(stdout.includes('Watching directory for file changes.'), 'expected the watch-mode startup log line; got: ' + stdout);
+        fs.writeFileSync(lessFile, '.a { color: blue; }');
+        waitForContent(
+          path.join(liveOutDir, 'live.css'),
+          (c) => c.includes('blue'),
+          8000,
+          (err2) => {
+            cleanup();
+            if (err2) return done(err2);
+            assert.ok(stdout.includes('was changed. Recompiling'), 'expected the live-recompile log line; got: ' + stdout);
+            done();
+          }
+        );
+      }
+    );
+  });
+});

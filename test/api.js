@@ -45,4 +45,59 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
   it('watch() throws synchronously when mainFile does not exist, instead of watching silently forever', function () {
     assert.throws(() => api.watch('test/less', 'test/css', { mainFile: 'no-such-main.less', runOnce: true }), /no-such-main\.less does not exist/);
   });
+
+  it('watch() compiles on start and recompiles the output when a watched file is later edited', function (done) {
+    this.timeout(15000);
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-api-watch-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const watchOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(watchOutDir);
+    const lessFile = path.join(lessDir, 'live.less');
+    fs.writeFileSync(lessFile, '.a { color: red; }');
+
+    function waitForContent(filePath, predicate, timeoutMs, cb) {
+      const start = Date.now();
+      (function poll() {
+        fs.readFile(filePath, 'utf8', (err, content) => {
+          if (!err && predicate(content)) return cb(null, content);
+          if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for ' + filePath));
+          setTimeout(poll, 50);
+        });
+      })();
+    }
+
+    function cleanup() {
+      fs.unwatchFile(lessFile);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    api.watch(lessDir, watchOutDir);
+
+    const outputCss = path.join(watchOutDir, 'live.css');
+    waitForContent(
+      outputCss,
+      (c) => c.includes('red'),
+      5000,
+      (err) => {
+        if (err) {
+          cleanup();
+          return done(err);
+        }
+        fs.writeFileSync(lessFile, '.a { color: blue; }');
+        waitForContent(
+          outputCss,
+          (c) => c.includes('blue'),
+          8000,
+          (err2, finalContent) => {
+            cleanup();
+            if (err2) return done(err2);
+            assert.ok(finalContent.includes('blue'));
+            done();
+          }
+        );
+      }
+    );
+  });
 });

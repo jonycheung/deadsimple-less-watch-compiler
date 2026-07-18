@@ -16,7 +16,7 @@
   ],
   "scripts": {
     "test": "yarn run build && yarn run clean && npx mocha --exit",
-    "coverage": "yarn run build && yarn run clean && npx c8 --reporter=text --reporter=lcov mocha --exit",
+    "coverage": "yarn run build && yarn run clean && npx c8 --reporter=text --reporter=lcov --check-coverage --statements 85 --branches 70 --functions 80 --lines 85 mocha --exit",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
