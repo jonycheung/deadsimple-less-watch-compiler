@@ -414,10 +414,72 @@ const lessWatchCompilerUtilsModule = {
     fileimportlistObj[f] = fileSearch.findLessImportsInFile(f);
     lessWatchCompilerUtilsModule.setupWatcher(f, files, options, watchCallback);
     for (const i in fileimportlistObj[f]) {
-      if (filelistArr.indexOf(fileimportlistObj[f][i]) === -1) {
-        lessWatchCompilerUtilsModule.setupWatcher(path.normalize(path.dirname(f) + path.sep + fileimportlistObj[f][i]), files, options, watchCallback);
+      const importSpec = fileimportlistObj[f][i];
+      const hasExtension = path.extname(importSpec).length > 1;
+      const importFile = hasExtension ? importSpec : importSpec + '.less';
+      const importPath = path.normalize(path.dirname(f) + path.sep + importFile);
+      if (filelistArr.indexOf(importPath) === -1) {
+        filelistArr[filelistArr.length] = importPath;
+        lessWatchCompilerUtilsModule.setupWatcher(importPath, files, options, watchCallback);
+      }
+      lessWatchCompilerUtilsModule.watchExternalImportDir(importPath, files, options, filelistArr, fileimportlistObj, watchCallback);
+    }
+  },
+
+  /**
+   * An @import target inside watchFolder gets directory-level recreate
+   * detection for free: walk() discovers every directory up front, and each
+   * one is handed to fileWatcher()/setupWatcher(), whose directory branch
+   * notices new files via a readdir rescan. An @import target that resolves
+   * outside watchFolder never goes through that walk, so it's watched as a
+   * lone file above -- and setupWatcher's removal branch unwatches a deleted
+   * file permanently, with nothing watching its directory to notice it come
+   * back (issue #209). Mirror the in-root behavior by explicitly watching
+   * the external target's containing directory the same way, scoped to just
+   * that one directory (not a recursive walk of the external tree).
+   */
+  watchExternalImportDir(
+    importPath: string,
+    files: FilesMap,
+    options: WalkOptions,
+    filelistArr: string[],
+    fileimportlistObj: Record<string, string[]>,
+    watchCallback: WatchCallback
+  ): void {
+    const watchFolder = lessWatchCompilerUtilsModule.config.watchFolder;
+    if (!watchFolder) return;
+    const relative = path.relative(watchFolder, importPath);
+    const isExternal = relative.startsWith('..') || path.isAbsolute(relative);
+    if (!isExternal) return;
+
+    const importDir = path.dirname(importPath);
+    if (filelistArr.indexOf(importDir) !== -1) return;
+    let stat: fs.Stats;
+    let existingEntries: string[];
+    try {
+      stat = fs.statSync(importDir);
+      existingEntries = fs.readdirSync(importDir);
+    } catch {
+      // The directory doesn't exist yet; nothing to watch until it does.
+      return;
+    }
+    files[importDir] = stat;
+    // Seed every file already in the directory into `files`, mirroring what
+    // walk() does up front for directories inside watchFolder. Without this,
+    // setupWatcher's directory branch (`if (!files[file])`) would treat each
+    // pre-existing sibling as newly added the first time anything else in
+    // the directory changes, firing a spurious watchCallback/compile for
+    // files that were never touched and aren't anyone's @import.
+    for (const entry of existingEntries) {
+      const entryPath = path.join(importDir, entry);
+      if (files[entryPath]) continue;
+      try {
+        files[entryPath] = fs.statSync(entryPath);
+      } catch {
+        // Raced with a delete between readdir and stat; nothing to seed.
       }
     }
+    lessWatchCompilerUtilsModule.fileWatcher(importDir, files, options, filelistArr, fileimportlistObj, watchCallback);
   }
 };
 

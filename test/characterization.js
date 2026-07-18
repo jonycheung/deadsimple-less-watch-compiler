@@ -260,6 +260,69 @@ describe('Characterization: watch-mode startup (issue #117)', function () {
   });
 });
 
+describe('Characterization: external @import survives delete+recreate (issue #209)', function () {
+  this.timeout(20000);
+
+  function waitForContent(filePath, predicate, timeoutMs, cb) {
+    const start = Date.now();
+    (function poll() {
+      fs.readFile(filePath, 'utf8', (err, content) => {
+        if (!err && predicate(content)) return cb(null, content);
+        if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for ' + filePath + '; last content: ' + (content || err)));
+        setTimeout(poll, 50);
+      });
+    })();
+  }
+
+  it('recompiles the importing file after an @import target outside watchFolder is deleted and recreated', (done) => {
+    const tmpDir = fs.mkdtempSync(path.join(cwd, 'test', 'tmp-external-import-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const externalDir = path.join(tmpDir, 'external');
+    const liveOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(externalDir);
+    fs.mkdirSync(liveOutDir);
+    const externalFile = path.join(externalDir, 'partial.less');
+    const mainFile = path.join(lessDir, 'main.less');
+    fs.writeFileSync(externalFile, '.partial { color: red; }');
+    fs.writeFileSync(mainFile, "@import '../external/partial.less';\n.main { color: blue; }");
+
+    const child = spawn('node', [cliPath, lessDir, liveOutDir], { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+
+    function cleanup() {
+      child.kill('SIGTERM');
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    const outputCss = path.join(liveOutDir, 'main.css');
+    waitForContent(
+      outputCss,
+      (c) => c.includes('red'),
+      5000,
+      (err) => {
+        if (err) {
+          cleanup();
+          return done(err);
+        }
+        fs.rmSync(externalFile);
+        setTimeout(() => {
+          fs.writeFileSync(externalFile, '.partial { color: green; }');
+          waitForContent(
+            outputCss,
+            (c) => c.includes('green'),
+            10000,
+            (err2) => {
+              cleanup();
+              if (err2) return done(err2);
+              done();
+            }
+          );
+        }, 500);
+      }
+    );
+  });
+});
+
 describe('Characterization: live watch mode (real CLI process, no --run-once)', function () {
   this.timeout(20000);
 
