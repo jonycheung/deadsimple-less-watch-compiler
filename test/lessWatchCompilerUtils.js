@@ -52,6 +52,26 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
+      it('walk() should respect the exclude pattern, for both files and directories (issue #72)', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-exclude-'));
+        fs.mkdirSync(path.join(tmpDir, 'node_modules', 'some-pkg'), { recursive: true });
+        fs.writeFileSync(path.join(tmpDir, 'node_modules', 'some-pkg', 'style.less'), '');
+        fs.writeFileSync(path.join(tmpDir, 'mine.less'), '');
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          { exclude: /node_modules/ },
+          (err, files) => {
+            assert.ifError(err);
+            const fileList = Object.keys(files);
+            assert.ok(fileList.some((f) => f.endsWith('mine.less')));
+            assert.ok(!fileList.some((f) => f.includes('node_modules')), 'the excluded directory must not be recursed into at all');
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+            done();
+          },
+          function () {}
+        );
+      });
     });
     describe('watchTree()', function () {
       it('watchTree() function should be there', function () {
@@ -192,6 +212,80 @@ describe('lessWatchCompilerUtils Module API', function () {
                   done();
                 }
               );
+            }, 100);
+          }
+        );
+      });
+
+      it('never watches or compiles a file added that matches the exclude pattern (issue #72)', function (done) {
+        // Regression note: this must exercise a FILE directly inside the
+        // already-watched root, not a file inside a newly-created excluded
+        // directory. A newly-created directory is discovered via the
+        // readdir-rescan path, which (on this branch, independent of the
+        // exclude feature) is also where issue #73's extension-filter bug
+        // lives — a directory-based test would pass regardless of whether
+        // the exclude check below does anything, confounding the result.
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-live-exclude-'));
+        const outDir = path.join(tmpDir, 'css');
+        fs.mkdirSync(outDir);
+        fs.writeFileSync(path.join(tmpDir, 'existing.less'), '.x { color: red; }');
+
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir, outputFolder: outDir };
+
+        function cleanup() {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          { interval: 30, filter: lessWatchCompilerUtils.filterFiles, exclude: /excluded-file/ },
+          function (f, curr) {
+            if (typeof f === 'object' && curr === null) return;
+            if (curr && curr.nlink !== 0) lessWatchCompilerUtils.compileCSS(f);
+          },
+          function (f) {
+            lessWatchCompilerUtils.compileCSS(f);
+          }
+        );
+
+        waitForFileContent(
+          path.join(outDir, 'existing.css'),
+          (c) => c.includes('red'),
+          3000,
+          (err) => {
+            if (err) {
+              cleanup();
+              return done(err);
+            }
+            setTimeout(() => {
+              fs.writeFileSync(path.join(tmpDir, 'excluded-file.less'), '.pkg { color: blue; }');
+              // Give the (if unguarded) readdir-rescan/compile chain for the
+              // excluded file a dedicated window to prove itself before a
+              // control file's own compile could otherwise mask a race.
+              setTimeout(() => {
+                // A control file, started only now, proves the watcher is
+                // still alive and reacting normally.
+                fs.writeFileSync(path.join(tmpDir, 'control.less'), '.z { color: green; }');
+                waitForFileContent(
+                  path.join(outDir, 'control.css'),
+                  (c) => c.includes('green'),
+                  5000,
+                  (err2) => {
+                    try {
+                      if (err2) throw err2;
+                      assert.ok(
+                        !fs.existsSync(path.join(outDir, 'excluded-file.css')),
+                        'a file matching the exclude pattern should never be watched or compiled'
+                      );
+                      cleanup();
+                      done();
+                    } catch (e) {
+                      cleanup();
+                      done(e);
+                    }
+                  }
+                );
+              }, 500);
             }, 100);
           }
         );

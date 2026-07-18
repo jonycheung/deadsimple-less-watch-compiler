@@ -41,6 +41,12 @@ export interface WatchOptions extends CompileOptions {
   includeHidden?: boolean;
   /** File extensions to consider (default ['.less']) */
   allowedExtensions?: string[];
+  /**
+   * Regex pattern for paths to never watch or compile, e.g. 'node_modules'.
+   * Applies to both files and directories, keeping the walk out of matching
+   * subtrees entirely (unlike allowedExtensions, which only narrows files).
+   */
+  exclude?: string;
 }
 
 export interface WatchListeners {
@@ -107,12 +113,22 @@ export function watch(watchFolder: string, outputFolder: string, options: WatchO
     throw new Error('Main file ' + mainFilePath + ' does not exist.');
   }
 
+  let exclude: RegExp | undefined;
+  if (options.exclude) {
+    try {
+      exclude = new RegExp(options.exclude);
+    } catch (err) {
+      throw new Error('Invalid exclude pattern ' + JSON.stringify(options.exclude) + ': ' + (err as Error).message, { cause: err });
+    }
+  }
+
   lessWatchCompilerUtils.watchTree(
     resolvedWatchFolder,
     {
       interval: 200,
       ignoreDotFiles: !options.includeHidden,
-      filter: lessWatchCompilerUtils.filterFiles
+      filter: lessWatchCompilerUtils.filterFiles,
+      exclude
     },
     lessWatchCompilerUtils.makeWatchHandler(mainFilePath, {
       onRemove: listeners.onRemove,

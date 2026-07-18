@@ -11,6 +11,11 @@ interface WalkOptions {
   ignoreDotFiles?: boolean;
   filter?: (filePath: string) => boolean;
   interval?: number;
+  // Unlike filter (which only ever applies to files -- see #73), exclude
+  // applies to both files and directories: it's for keeping the walk out of
+  // whole subtrees entirely (e.g. node_modules, #72), not for narrowing
+  // which files within an otherwise-watched directory count as compilable.
+  exclude?: RegExp;
 }
 
 interface FilesMap {
@@ -45,6 +50,7 @@ interface LessWatchCompilerConfig {
   allowedExtensions?: string[];
   cache?: boolean;
   cachePath?: string;
+  exclude?: string;
 }
 
 type WalkCompleteCallback = (err: NodeJS.ErrnoException | null, files: FilesMap | null) => void;
@@ -91,9 +97,12 @@ const lessWatchCompilerUtilsModule = {
 
               state.pending -= 1;
               if (!enoent && st) {
-                // Dotfile/dotfolder skipping applies to everything; the extension
-                // filter must only apply to files, or directories never recurse
+                // Dotfile/dotfolder skipping and the exclude pattern apply to
+                // everything (a directory match keeps the walk from ever
+                // descending into it); the extension filter must only apply
+                // to files, or directories never recurse
                 if (options.ignoreDotFiles && path.basename(filePath)[0] === '.') return void finalize(null);
+                if (options.exclude && options.exclude.test(filePath)) return void finalize(null);
                 if (!st.isDirectory() && options.filter && options.filter(filePath)) return void finalize(null);
 
                 state.files[filePath] = st as fs.Stats;
@@ -409,6 +418,12 @@ const lessWatchCompilerUtilsModule = {
             if (!files[file]) {
               fs.stat(file, (err, stat) => {
                 if (options.ignoreDotFiles && path.basename(b)[0] === '.') return;
+                // Unlike the extension filter below, exclude applies to
+                // directories too -- a newly-created excluded directory
+                // (e.g. node_modules reappearing after a reinstall) must
+                // never start being watched, the same way walk() already
+                // keeps the initial scan out of it entirely.
+                if (options.exclude && options.exclude.test(file)) return;
                 if (options.filter && options.filter(b)) return;
                 fs.access(file, fs.constants.F_OK, (accessErr) => {
                   if (accessErr) {
