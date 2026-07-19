@@ -12,6 +12,14 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      # actions/setup-node's registry-url writes .npmrc referencing
+      # ${NODE_AUTH_TOKEN}; it must exist (even empty) or npm/yarn fail
+      # with "Failed to replace env in config" on the very first command
+      # that reads .npmrc. Leaving it empty makes npm fall through to
+      # OIDC trusted publishing (id-token: write above) instead of a
+      # static token.
+      NODE_AUTH_TOKEN: ''
     steps:
       - uses: actions/checkout@v7
         with:
