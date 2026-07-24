@@ -327,13 +327,13 @@ describe('--init scaffolding', function () {
 
   it('creates a config template and exits 0; refuses to overwrite an existing one', () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-init-'));
-    execSync(`node ${cliPath} --init`, { cwd: tmpDir, stdio: 'pipe' });
+    execFileSync('node', [cliPath, '--init'], { cwd: tmpDir, stdio: 'pipe' });
     const configFile = path.join(tmpDir, 'less-watch-compiler.config.json');
     assert.ok(fs.existsSync(configFile), 'config template must be created');
     const parsed = JSON.parse(fs.readFileSync(configFile, 'utf8'));
     assert.equal(parsed.watchFolder, 'less');
     assert.throws(
-      () => execSync(`node ${cliPath} --init`, { cwd: tmpDir, stdio: 'pipe' }),
+      () => execFileSync('node', [cliPath, '--init'], { cwd: tmpDir, stdio: 'pipe' }),
       (err) => err.status !== 0,
       'a second --init must not overwrite the existing config'
     );
