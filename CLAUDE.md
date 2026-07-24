@@ -18,7 +18,7 @@ PR or touching the public surface (CLI flags, `src/index.ts`, `package.json`).
   sitting. Split it only when it's genuinely large (rule of thumb: a few
   hundred lines excluding lockfiles/generated files) — e.g. land the internal
   helper with tests first, then wire it into the CLI/API in a second PR.
-- Reference the issue number the PR addresses; describe *why*, not just what.
+- Reference the issue number the PR addresses; describe _why_, not just what.
 
 ## 2. Release increments (semver)
 
