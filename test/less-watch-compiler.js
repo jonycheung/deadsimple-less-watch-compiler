@@ -117,6 +117,20 @@ describe('The CLI should', function () {
       });
     });
 
+    describe('--rebuild-all-on parameter', function () {
+      it('should still run-once normally (unaffected default behavior) when a valid pattern is given', () => {
+        // --run-once never exercises the watch change-handler branch that
+        // reads rebuildAllOn (it compiles every file once via the init
+        // callback), so this only proves the option is accepted end-to-end
+        // and doesn't break the option-off code path.
+        cli('--run-once', 'test/less', 'test/css', '--rebuild-all-on', '^shared/,^tokens/');
+      });
+
+      it('should exit non-zero for an invalid --rebuild-all-on pattern', () => {
+        assert.throws(() => cli('--run-once', 'test/less', 'test/css', '--rebuild-all-on', '('));
+      });
+    });
+
     describe('--less-args parameter', function () {
       const lessDir = cwd + '/test/examples/with-less-args/less',
         expectedCssDir = cwd + '/test/examples/with-less-args/css',

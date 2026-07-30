@@ -55,6 +55,15 @@ export interface WatchOptions extends CompileOptions {
    * that rather than replacing it.
    */
   exclude?: string;
+  /**
+   * Regex pattern strings (same convention as `exclude`) identifying
+   * shared/global partials, e.g. ['^shared/']. A change to a file matching
+   * any of these recompiles every currently tracked .less file instead of
+   * just its importers -- for partials imported by many independent entry
+   * points, where per-parent import tracking can miss some of them. Off
+   * (undefined) by default.
+   */
+  rebuildAllOn?: string[];
 }
 
 export interface WatchListeners {
@@ -129,6 +138,13 @@ export function watch(watchFolder: string, outputFolder: string, options: WatchO
     throw new Error('Invalid exclude pattern ' + JSON.stringify(options.exclude) + ': ' + (err as Error).message, { cause: err });
   }
 
+  let rebuildAllOnPattern: RegExp | undefined;
+  try {
+    rebuildAllOnPattern = lessWatchCompilerUtils.resolveRebuildAllOnPatterns(options.rebuildAllOn);
+  } catch (err) {
+    throw new Error('Invalid rebuildAllOn pattern ' + JSON.stringify(options.rebuildAllOn) + ': ' + (err as Error).message, { cause: err });
+  }
+
   lessWatchCompilerUtils.watchTree(
     resolvedWatchFolder,
     {
@@ -137,11 +153,15 @@ export function watch(watchFolder: string, outputFolder: string, options: WatchO
       filter: lessWatchCompilerUtils.filterFiles,
       exclude
     },
-    lessWatchCompilerUtils.makeWatchHandler(mainFilePath, {
-      onRemove: listeners.onRemove,
-      onCompile: listeners.onCompile ? (f, result) => listeners.onCompile!(f, result.outputFilePath) : undefined,
-      onImportCompile: listeners.onImportCompile ? (i, f, result) => listeners.onImportCompile!(i, f, result.outputFilePath) : undefined
-    }),
+    lessWatchCompilerUtils.makeWatchHandler(
+      mainFilePath,
+      {
+        onRemove: listeners.onRemove,
+        onCompile: listeners.onCompile ? (f, result) => listeners.onCompile!(f, result.outputFilePath) : undefined,
+        onImportCompile: listeners.onImportCompile ? (i, f, result) => listeners.onImportCompile!(i, f, result.outputFilePath) : undefined
+      },
+      rebuildAllOnPattern
+    ),
     function (f: string) {
       if (!mainFilePath || mainFilePath === f) {
         lessWatchCompilerUtils.compileCSS(f);
