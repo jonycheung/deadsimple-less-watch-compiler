@@ -56,6 +56,11 @@ interface LessWatchCompilerConfig {
   // custom banner text. Off by default -- prepending anything to existing
   // users' output is a behavior change, so it stays opt-in (issue #82).
   banner?: boolean | string;
+  // Regex pattern strings (same convention as `exclude`, not globs -- see
+  // resolveRebuildAllOnPatterns) identifying shared/global partials. A
+  // change to a file matching any of these recompiles every currently
+  // tracked .less file, not just its importers (issue #241). Off by default.
+  rebuildAllOn?: string[];
 }
 
 type WalkCompleteCallback = (err: NodeJS.ErrnoException | null, files: FilesMap | null) => void;
@@ -188,6 +193,18 @@ const lessWatchCompilerUtilsModule = {
    * API: recompiles every importing ancestor (direct or transitive) when a
    * changed file is someone's @import, otherwise compiles the main file
    * (when set) or the changed file.
+   *
+   * rebuildAllOnPattern (issue #241) covers shared/global partials that many
+   * independent entry points import: per-parent import-graph tracking can
+   * miss some of those entries (or is simply not the right model -- a
+   * change to a shared tokens file should rebuild *everything*, not just
+   * whatever this run happened to observe importing it). Precedence: a
+   * single mainFilePath still always wins (matching the "single main file
+   * always wins" rule above it -- if the caller only ever wants one file
+   * compiled, that shouldn't change just because the edited file also
+   * matches rebuildAllOn); otherwise a rebuildAllOn match takes priority
+   * over the normal import-graph handling, recompiling every currently
+   * tracked .less file instead of just the changed file's importers.
    */
   makeWatchHandler(
     mainFilePath: string | undefined,
@@ -195,7 +212,8 @@ const lessWatchCompilerUtilsModule = {
       onRemove?: (file: string) => void;
       onCompile?: (file: string, result: CompileResult) => void;
       onImportCompile?: (importingFile: string, changedFile: string, result: CompileResult) => void;
-    }
+    },
+    rebuildAllOnPattern?: RegExp
   ): WatchCallback {
     return function (f, curr, prev, fileimports) {
       if (typeof f === 'object' && prev === null && curr === null) {
@@ -208,6 +226,18 @@ const lessWatchCompilerUtilsModule = {
         // A single main file always wins, regardless of import relationships.
         const compileResult = lessWatchCompilerUtilsModule.compileCSS(mainFilePath);
         if (compileResult && notify.onCompile) notify.onCompile(f as string, compileResult);
+      } else if (rebuildAllOnPattern && rebuildAllOnPattern.test(f as string)) {
+        // The changed file is a shared/global partial: recompile every
+        // currently tracked .less file, not just those known to import it.
+        // fileimports is keyed by every watched path (including non-.less
+        // and hidden files); filterFiles (inverted -- it returns true to
+        // EXCLUDE) narrows that down to the same set compileCSS would
+        // otherwise be asked to compile one-by-one via the import graph.
+        for (const trackedFile in fileimports) {
+          if (lessWatchCompilerUtilsModule.filterFiles(trackedFile)) continue;
+          const compileResult = lessWatchCompilerUtilsModule.compileCSS(trackedFile);
+          if (compileResult && notify.onImportCompile) notify.onImportCompile(trackedFile, f as string, compileResult);
+        }
       } else {
         // Build a reverse import index once (imported path -> importers)
         // instead of rescanning the whole fileimports map on every BFS step
@@ -441,6 +471,37 @@ const lessWatchCompilerUtilsModule = {
       throw new Error('pattern is not safe from catastrophic backtracking (exceeds the allowed repetition/star-height limit)');
     }
     return new RegExp(`(?:${defaultExcludePattern.source})|(?:${userRegex.source})`);
+  },
+
+  /**
+   * Compile the user-supplied --rebuild-all-on / rebuildAllOn patterns into
+   * a single RegExp, or undefined when the option is unset (matching the
+   * "off by default" contract). Deliberately regex-pattern strings, the same
+   * convention as --exclude, rather than globs: this repo has no glob
+   * dependency today and Node's built-in path.matchesGlob() is still
+   * experimental (see its docs) as of the Node versions this package
+   * supports, so reusing the already-validated exclude-style regex
+   * convention avoids both a new dependency and relying on an experimental
+   * API, at the cost of the exact `"shared/**"` glob syntax from issue #241
+   * (a regex equivalent, e.g. `"^shared/"`, covers the same case). Each
+   * pattern is validated the same way resolveExcludePattern validates
+   * --exclude: it must be a syntactically valid regex and pass safe-regex2's
+   * catastrophic-backtracking check, since the change handler tests every
+   * changed file against it. Callers decide how to surface the throw (CLI
+   * exits, API throws).
+   */
+  resolveRebuildAllOnPatterns(userPatterns?: string[]): RegExp | undefined {
+    if (!userPatterns || userPatterns.length === 0) return undefined;
+    const sources = userPatterns.map((pattern) => {
+      const userRegex = new RegExp(pattern);
+      if (!safeRegex(userRegex)) {
+        throw new Error(
+          'pattern ' + JSON.stringify(pattern) + ' is not safe from catastrophic backtracking (exceeds the allowed repetition/star-height limit)'
+        );
+      }
+      return userRegex.source;
+    });
+    return new RegExp(sources.map((source) => `(?:${source})`).join('|'));
   },
 
   getDateTime(): string {

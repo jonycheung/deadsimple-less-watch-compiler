@@ -872,6 +872,85 @@ describe('lessWatchCompilerUtils Module API', function () {
           ].sort()
         );
       });
+
+      it('recompiles every tracked .less file when the changed file matches rebuildAllOnPattern, not just its importers (issue #241)', function () {
+        const calls = [];
+        lessWatchCompilerUtils.compileCSS = (file) => {
+          calls.push('compiled:' + file);
+          return { outputFilePath: '"' + file + '.css"' };
+        };
+        const rebuildAllOnPattern = lessWatchCompilerUtils.resolveRebuildAllOnPatterns(['^' + path.normalize('/shared/').replace(/\\/g, '\\\\')]);
+        const handler = lessWatchCompilerUtils.makeWatchHandler(
+          undefined,
+          {
+            onImportCompile: (importingFile, changedFile) => calls.push('onImportCompile:' + importingFile + '<-' + changedFile)
+          },
+          rebuildAllOnPattern
+        );
+        const changedFile = path.normalize('/shared/tokens.less');
+        // homepage.less does not import tokens.less at all -- a plain
+        // import-graph walk would never reach it, but rebuildAllOn must
+        // still recompile it since it's a currently tracked .less file.
+        const fileimports = {
+          '/homepage.less': [],
+          '/about.less': ['shared/tokens.less'],
+          '/shared/tokens.less': [],
+          '/shared/README.md': [] // not a .less file: filterFiles must exclude it
+        };
+        handler(changedFile, { nlink: 1 }, {}, fileimports);
+        assert.deepStrictEqual(
+          calls.sort(),
+          [
+            'compiled:/homepage.less',
+            'compiled:/about.less',
+            'compiled:' + changedFile,
+            'onImportCompile:/homepage.less<-' + changedFile,
+            'onImportCompile:/about.less<-' + changedFile,
+            'onImportCompile:' + changedFile + '<-' + changedFile
+          ].sort()
+        );
+      });
+
+      it('mainFile still wins over a rebuildAllOn match, matching the "single main file always wins" rule', function () {
+        const calls = [];
+        lessWatchCompilerUtils.compileCSS = (file) => {
+          calls.push('compiled:' + file);
+          return { outputFilePath: '"main.css"' };
+        };
+        const rebuildAllOnPattern = lessWatchCompilerUtils.resolveRebuildAllOnPatterns(['shared']);
+        const handler = lessWatchCompilerUtils.makeWatchHandler(
+          '/a/main.less',
+          {
+            onCompile: (f) => calls.push('onCompile:' + f),
+            onImportCompile: () => calls.push('onImportCompile')
+          },
+          rebuildAllOnPattern
+        );
+        const changedFile = path.normalize('/a/shared/tokens.less');
+        const fileimports = { '/a/main.less': [], '/a/shared/tokens.less': [] };
+        handler(changedFile, { nlink: 1 }, {}, fileimports);
+        assert.deepStrictEqual(calls, ['compiled:/a/main.less', 'onCompile:' + changedFile]);
+      });
+
+      it('falls back to normal import-graph handling when rebuildAllOnPattern is set but the changed file does not match it', function () {
+        const calls = [];
+        lessWatchCompilerUtils.compileCSS = (file) => {
+          calls.push('compiled:' + file);
+          return { outputFilePath: '"' + file + '.css"' };
+        };
+        const rebuildAllOnPattern = lessWatchCompilerUtils.resolveRebuildAllOnPatterns(['^' + path.normalize('/shared/').replace(/\\/g, '\\\\')]);
+        const handler = lessWatchCompilerUtils.makeWatchHandler(
+          undefined,
+          {
+            onImportCompile: (importingFile, changedFile) => calls.push('onImportCompile:' + importingFile + '<-' + changedFile)
+          },
+          rebuildAllOnPattern
+        );
+        const changedFile = path.normalize('/a/partial.less');
+        const fileimports = { '/a/main.less': ['partial.less'], '/unrelated.less': [] };
+        handler(changedFile, { nlink: 1 }, {}, fileimports);
+        assert.deepStrictEqual(calls, ['compiled:/a/main.less', 'onImportCompile:/a/main.less<-' + changedFile]);
+      });
     });
     describe('compileCSS()', function () {
       // reset config
@@ -1153,6 +1232,33 @@ describe('lessWatchCompilerUtils Module API', function () {
       });
       it('accepts an ordinary user pattern that safe-regex2 does not flag', function () {
         assert.doesNotThrow(() => lessWatchCompilerUtils.resolveExcludePattern('dist|build'));
+      });
+    });
+    describe('resolveRebuildAllOnPatterns()', function () {
+      it('resolveRebuildAllOnPatterns() function should be there', function () {
+        assert.equal('function', typeof lessWatchCompilerUtils.resolveRebuildAllOnPatterns);
+      });
+      it('returns undefined (off) when unset or given an empty array, unlike resolveExcludePattern which always returns a default pattern', function () {
+        assert.equal(lessWatchCompilerUtils.resolveRebuildAllOnPatterns(), undefined);
+        assert.equal(lessWatchCompilerUtils.resolveRebuildAllOnPatterns([]), undefined);
+      });
+      it('compiles a single pattern into a matching RegExp', function () {
+        const pattern = lessWatchCompilerUtils.resolveRebuildAllOnPatterns(['^shared/']);
+        assert.ok(pattern.test('shared/tokens.less'));
+        assert.ok(!pattern.test('page/tokens.less'));
+      });
+      it('combines multiple patterns so a match against any one of them is sufficient', function () {
+        const pattern = lessWatchCompilerUtils.resolveRebuildAllOnPatterns(['^shared/', '^mixins/']);
+        assert.ok(pattern.test('shared/tokens.less'));
+        assert.ok(pattern.test('mixins/buttons.less'));
+        assert.ok(!pattern.test('page/tokens.less'));
+      });
+      it('throws a clean error referencing the offending pattern when it is not a valid regex', function () {
+        assert.throws(() => lessWatchCompilerUtils.resolveRebuildAllOnPatterns(['[']), /Unterminated character class/);
+      });
+      it('rejects a pattern with catastrophic backtracking potential instead of accepting it silently', function () {
+        // Tested against every changed file, same reasoning as --exclude.
+        assert.throws(() => lessWatchCompilerUtils.resolveRebuildAllOnPatterns(['(x+x+)+y']), /catastrophic backtracking/);
       });
     });
     describe('getDateTime()', function () {

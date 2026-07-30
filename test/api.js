@@ -74,6 +74,87 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
     assert.throws(() => api.watch('test/less', 'test/css', { mainFile: 'no-such-main.less', runOnce: true }), /no-such-main\.less does not exist/);
   });
 
+  it('watch() throws synchronously for an invalid rebuildAllOn pattern, instead of watching silently forever', function () {
+    assert.throws(
+      () => api.watch('test/less', 'test/css', { rebuildAllOn: ['('], runOnce: true }),
+      /Invalid rebuildAllOn pattern.*Unterminated group/
+    );
+  });
+
+  it('watch() with rebuildAllOn recompiles every tracked file when a matching shared partial changes, even files that do not import it (issue #241)', function (done) {
+    this.timeout(15000);
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-api-rebuildallon-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const watchOutDir = path.join(tmpDir, 'css');
+    const sharedDir = path.join(lessDir, 'shared');
+    fs.mkdirSync(sharedDir, { recursive: true });
+    fs.mkdirSync(watchOutDir, { recursive: true });
+    const sharedFile = path.join(sharedDir, 'tokens.less');
+    const aFile = path.join(lessDir, 'a.less');
+    const bFile = path.join(lessDir, 'b.less');
+    // Neither a.less nor b.less imports tokens.less at all -- a plain
+    // import-graph watch would never reconnect them to it.
+    fs.writeFileSync(sharedFile, '.shared { color: red; }');
+    fs.writeFileSync(aFile, '.a { color: green; }');
+    fs.writeFileSync(bFile, '.b { color: green; }');
+
+    function waitForContent(filePath, predicate, timeoutMs, cb) {
+      const start = Date.now();
+      (function poll() {
+        fs.readFile(filePath, 'utf8', (err, content) => {
+          if (!err && predicate(content)) return cb(null, content);
+          if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for ' + filePath));
+          setTimeout(poll, 50);
+        });
+      })();
+    }
+
+    function cleanup() {
+      fs.unwatchFile(sharedFile);
+      fs.unwatchFile(aFile);
+      fs.unwatchFile(bFile);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    api.watch(lessDir, watchOutDir, { rebuildAllOn: ['shared'] });
+
+    const aOut = path.join(watchOutDir, 'a.css');
+    const bOut = path.join(watchOutDir, 'b.css');
+    const staleMarker = '/* stale marker */';
+
+    waitForContent(aOut, (c) => c.includes('green'), 5000, (err) => {
+      if (err) {
+        cleanup();
+        return done(err);
+      }
+      waitForContent(bOut, (c) => c.includes('green'), 5000, (err2) => {
+        if (err2) {
+          cleanup();
+          return done(err2);
+        }
+        // Overwrite both outputs with a stale marker, then edit only the
+        // shared partial -- if rebuildAllOn is doing its job, both get
+        // overwritten with fresh output again despite neither importing it.
+        fs.writeFileSync(aOut, staleMarker);
+        fs.writeFileSync(bOut, staleMarker);
+        fs.writeFileSync(sharedFile, '.shared { color: blue; }');
+        waitForContent(aOut, (c) => c !== staleMarker && c.includes('green'), 8000, (err3) => {
+          if (err3) {
+            cleanup();
+            return done(err3);
+          }
+          waitForContent(bOut, (c) => c !== staleMarker && c.includes('green'), 8000, (err4, finalContent) => {
+            cleanup();
+            if (err4) return done(err4);
+            assert.ok(finalContent.includes('green'));
+            done();
+          });
+        });
+      });
+    });
+  });
+
   it('watch() compiles on start and recompiles the output when a watched file is later edited', function (done) {
     this.timeout(15000);
     const os = require('os');

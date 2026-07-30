@@ -17,6 +17,7 @@ import extend from 'extend';
 import { Command } from 'commander';
 import events from 'events';
 import lessWatchCompilerUtils = require('./lib/lessWatchCompilerUtils');
+import lessOptions = require('./lib/lessOptions');
 
 const packagejson = require('../package.json');
 
@@ -50,6 +51,10 @@ program
   )
   .option('--banner', "Prepend a 'generated file, do not edit' comment to compiled CSS.")
   .option('--banner-text <text>', 'Custom banner text to use instead of the default message. Implies --banner.')
+  .option(
+    '--rebuild-all-on <pattern-a>,<pattern-b>',
+    "Regex pattern(s), comma-separated, for shared/global partials, e.g. '--rebuild-all-on ^shared/'. A change to a matching file recompiles every tracked .less file instead of just its importers. Off by default."
+  )
   // Less Options
   .option('--minified', "Less.js Option: Produce compressed output with a '.min.css' extension.")
   .option('--enable-js', 'Less.js Option: To enable inline JavaScript in less files.')
@@ -78,6 +83,7 @@ const programOption = program.opts<{
   exclude?: string;
   banner?: boolean;
   bannerText?: string;
+  rebuildAllOn?: string;
 }>();
 
 if (programOption.init) {
@@ -141,6 +147,14 @@ function init(): void {
   if (programOption.cache !== undefined) lessWatchCompilerUtils.config.cache = programOption.cache;
   if (programOption.cachePath) lessWatchCompilerUtils.config.cachePath = programOption.cachePath;
   if (programOption.exclude) lessWatchCompilerUtils.config.exclude = programOption.exclude;
+  if (programOption.rebuildAllOn) {
+    // Comma-separated, same convention as --plugins/--less-args; splitTopLevelCommas
+    // keeps a pattern's own top-level parens intact (e.g. an alternation).
+    lessWatchCompilerUtils.config.rebuildAllOn = lessOptions
+      .splitTopLevelCommas(programOption.rebuildAllOn)
+      .map((pattern) => pattern.trim())
+      .filter((pattern) => pattern !== '');
+  }
   if (programOption.bannerText) lessWatchCompilerUtils.config.banner = programOption.bannerText;
   else if (programOption.banner !== undefined) lessWatchCompilerUtils.config.banner = programOption.banner;
 
@@ -173,6 +187,14 @@ function init(): void {
     process.exit(1);
   }
 
+  let rebuildAllOnPattern: RegExp | undefined;
+  try {
+    rebuildAllOnPattern = lessWatchCompilerUtils.resolveRebuildAllOnPatterns(lessWatchCompilerUtils.config.rebuildAllOn);
+  } catch (err) {
+    console.log('Invalid --rebuild-all-on pattern ' + JSON.stringify(lessWatchCompilerUtils.config.rebuildAllOn) + ': ' + (err as Error).message);
+    process.exit(1);
+  }
+
   if (lessWatchCompilerUtils.config.runOnce === true) console.log('Running less-watch-compiler once.');
   else console.log('Watching directory for file changes.');
 
@@ -185,28 +207,32 @@ function init(): void {
       filter: lessWatchCompilerUtils.filterFiles,
       exclude
     },
-    lessWatchCompilerUtils.makeWatchHandler(mainFilePath, {
-      onRemove(f) {
-        console.log(f + ' was removed.');
+    lessWatchCompilerUtils.makeWatchHandler(
+      mainFilePath,
+      {
+        onRemove(f) {
+          console.log(f + ' was removed.');
+        },
+        onImportCompile(importingFile, changedFile, compileResult) {
+          console.log(
+            'The file: ' +
+              importingFile +
+              ' was changed because ' +
+              JSON.stringify(changedFile) +
+              ' is specified as an import.  Recompiling ' +
+              compileResult.outputFilePath +
+              ' at ' +
+              lessWatchCompilerUtils.getDateTime()
+          );
+        },
+        onCompile(f, compileResult) {
+          console.log(
+            'The file: ' + JSON.stringify(f) + ' was changed. Recompiling ' + compileResult.outputFilePath + ' at ' + lessWatchCompilerUtils.getDateTime()
+          );
+        }
       },
-      onImportCompile(importingFile, changedFile, compileResult) {
-        console.log(
-          'The file: ' +
-            importingFile +
-            ' was changed because ' +
-            JSON.stringify(changedFile) +
-            ' is specified as an import.  Recompiling ' +
-            compileResult.outputFilePath +
-            ' at ' +
-            lessWatchCompilerUtils.getDateTime()
-        );
-      },
-      onCompile(f, compileResult) {
-        console.log(
-          'The file: ' + JSON.stringify(f) + ' was changed. Recompiling ' + compileResult.outputFilePath + ' at ' + lessWatchCompilerUtils.getDateTime()
-        );
-      }
-    }),
+      rebuildAllOnPattern
+    ),
     // init function
     function (f) {
       if (!mainFilePath || mainFilePath === f) {
