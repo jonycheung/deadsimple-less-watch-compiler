@@ -35,8 +35,10 @@ const filesearch: FilesearchApi = {
       }
       throw err;
     }
-    // Support @import with optional (reference), optional url(), flexible whitespace, and optional trailing semicolon
-    const re = /@import\s+(?:\(reference\)\s+)?(?:url\(\s*)?['"]([^'"]+)['"]\s*\)?\s*;?/g;
+    // Support @import with an optional (options) clause -- e.g. (reference),
+    // (less), or multiple comma-separated keywords like (reference, optional)
+    // -- optional url(), flexible whitespace, and optional trailing semicolon.
+    const re = /@import\s+(?:\([^)]*\)\s+)?(?:url\(\s*)?['"]([^'"]+)['"]\s*\)?\s*;?/g;
     let m: RegExpExecArray | null;
     while ((m = re.exec(fileContent))) {
       const filename = m[1];
@@ -52,11 +54,25 @@ const filesearch: FilesearchApi = {
 
   // Mirrors the import-target resolution in lessWatchCompilerUtils' watch
   // handler: an extensionless import is assumed to be a .less file, and the
-  // path is resolved relative to the importing file's directory.
+  // path is resolved relative to the importing file's directory. For an
+  // extensionless import, Less itself will also match a `_`-prefixed
+  // partial (e.g. `@import "buttons";` resolving to `_buttons.less`), so
+  // prefer whichever of `<name>.less` / `_<name>.less` actually exists on
+  // disk; fall back to `<name>.less` when neither exists yet (matching
+  // prior behavior for an import target that hasn't been created).
   resolveImportPath(importingFile: string, importSpec: string): string {
     const hasExtension = path.extname(importSpec).length > 1;
-    const importFile = hasExtension ? importSpec : importSpec + '.less';
-    return path.normalize(path.dirname(importingFile) + path.sep + importFile);
+    const dir = path.dirname(importingFile);
+    if (!hasExtension) {
+      const plainPath = path.normalize(dir + path.sep + importSpec + '.less');
+      if (fs.existsSync(plainPath)) return plainPath;
+      const base = path.basename(importSpec);
+      const partialDir = path.dirname(importSpec);
+      const partialPath = path.normalize(dir + path.sep + (partialDir === '.' ? '' : partialDir + path.sep) + '_' + base + '.less');
+      if (fs.existsSync(partialPath)) return partialPath;
+      return plainPath;
+    }
+    return path.normalize(dir + path.sep + importSpec);
   },
 
   // Walks @import statements recursively to compute the full set of files

@@ -217,9 +217,7 @@ const lessWatchCompilerUtilsModule = {
         for (const i in fileimports) {
           for (const k in fileimports[i]) {
             const importSpec = fileimports[i][k];
-            const hasExtension = path.extname(importSpec).length > 1;
-            const importFile = hasExtension ? importSpec : importSpec + '.less';
-            const normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile);
+            const normalizedPath = fileSearch.resolveImportPath(i, importSpec);
             const existing = importersOf.get(normalizedPath);
             if (existing) existing.push(i);
             else importersOf.set(normalizedPath, [i]);
@@ -612,9 +610,7 @@ const lessWatchCompilerUtilsModule = {
     lessWatchCompilerUtilsModule.setupWatcher(f, files, options, watchCallback);
     for (const i in fileimportlistObj[f]) {
       const importSpec = fileimportlistObj[f][i];
-      const hasExtension = path.extname(importSpec).length > 1;
-      const importFile = hasExtension ? importSpec : importSpec + '.less';
-      const importPath = path.normalize(path.dirname(f) + path.sep + importFile);
+      const importPath = fileSearch.resolveImportPath(f, importSpec);
       // Mirror the directory-walk exclude guard here: an @import target
       // resolving into an excluded path (e.g. --exclude node_modules) must
       // not be watched, or editing it would still trigger the importing

@@ -38,9 +38,23 @@ describe('filesearch Module', function () {
       });
       it('should handle url() and reference @import syntaxes with flexible formatting', function () {
         var file = './test/less/_importVariants.less';
-        var result = ['plain-url.less', 'reference.less', 'ref-url.less', 'spaced.less', 'tight.less', 'no-semicolon.less'],
+        var result = [
+            'plain-url.less',
+            'reference.less',
+            'ref-url.less',
+            'spaced.less',
+            'tight.less',
+            'no-semicolon.less',
+            'multi-option.less',
+            'less-option.less',
+            'extensionless'
+          ],
           filesearchresult = filesearch.findLessImportsInFile(file);
         assert.deepStrictEqual(filesearchresult, result);
+      });
+      it('should match an @import with multiple comma-separated options, e.g. (reference, optional)', function () {
+        var filesearchresult = filesearch.findLessImportsInFile('./test/less/_multi-keyword-option.less');
+        assert.deepStrictEqual(filesearchresult, ['some-file.less']);
       });
     });
     describe('isHiddenFile()', function () {
@@ -58,6 +72,17 @@ describe('filesearch Module', function () {
       });
       it('resolves relative to the importing file, leaving an existing extension untouched', function () {
         assert.equal(filesearch.resolveImportPath('/a/b/main.less', 'lvl2/lvl2.less'), path.normalize('/a/b/lvl2/lvl2.less'));
+      });
+      it('resolves a bare extensionless import to the plain file when it exists on disk', function () {
+        var importingFile = path.resolve('./test/less/main.less');
+        assert.equal(filesearch.resolveImportPath(importingFile, 'lvl1'), path.resolve('./test/less/lvl1.less'));
+      });
+      it('resolves a bare extensionless import to the `_partial.less` file when only that exists on disk (issue #240)', function () {
+        var importingFile = path.resolve('./test/examples/issue-240/less/main.less');
+        assert.equal(
+          filesearch.resolveImportPath(importingFile, 'buttons'),
+          path.resolve('./test/examples/issue-240/less/_buttons.less')
+        );
       });
     });
     describe('collectTransitiveImports()', function () {
