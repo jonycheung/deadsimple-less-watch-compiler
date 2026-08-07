@@ -203,4 +203,30 @@ describe('lessOptions Module', function () {
       await assert.rejects(() => lessOptions.loadPlugins('some-plugin', fakeLess, {}), /Unable to load plugin some-plugin.*EACCES: permission denied/s);
     });
   });
+
+  describe('createPartialImportPlugin()', function () {
+    const fs = require('fs');
+    const path = require('path');
+
+    it('lets the real less.render() resolve a bare-name import to its `_partial.less` file (issue #240)', async function () {
+      const inputFilePath = path.resolve('./test/examples/issue-240/less/main.less');
+      const input = fs.readFileSync(inputFilePath, 'utf8');
+      const result = await less.render(input, { filename: inputFilePath, plugins: [lessOptions.createPartialImportPlugin(less)] });
+      assert.equal(result.css.trim(), '.main {\n  padding: 4px;\n}');
+    });
+
+    it('still errors when neither the plain nor the underscore-prefixed file exists', async function () {
+      const inputFilePath = path.resolve('./test/less/main.less');
+      await assert.rejects(
+        () => less.render('@import "does-not-exist-anywhere";', { filename: inputFilePath, plugins: [lessOptions.createPartialImportPlugin(less)] }),
+        /'?_?does-not-exist-anywhere'? wasn't found/
+      );
+    });
+
+    it('does not interfere with a normal explicit-extension import', async function () {
+      const inputFilePath = path.resolve('./test/less/main.less');
+      const result = await less.render('@import "lvl1.less";', { filename: inputFilePath, plugins: [lessOptions.createPartialImportPlugin(less)] });
+      assert.equal(typeof result.css, 'string');
+    });
+  });
 });

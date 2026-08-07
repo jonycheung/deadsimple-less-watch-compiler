@@ -252,8 +252,9 @@ interface LessApi {
         fileManager: unknown
       ) => Promise<{ contents: string; filename: string }>;
     };
+    addFileManager: (fileManager: unknown) => void;
   };
-  FileManager: new () => unknown;
+  FileManager: { new (): any; prototype: any };
   environment: unknown;
 }
 
@@ -282,4 +283,56 @@ export async function loadPlugins(pluginList: string, less: LessApi, renderOptio
     plugins.push({ fileContent: data.contents, filename: data.filename, options: pluginOptions });
   }
   return plugins;
+}
+
+// For an extensionless, non-partial import spec (e.g. "buttons" or
+// "shared/buttons"), the underscore-prefixed partial name Less itself would
+// need to try (e.g. "_buttons" or "shared/_buttons"). Returns undefined when
+// the spec already has an extension or already names a partial, since Less's
+// own resolution already covers those.
+function underscorePartialVariant(importSpec: string): string | undefined {
+  const slash = Math.max(importSpec.lastIndexOf('/'), importSpec.lastIndexOf(path.sep));
+  const dir = slash === -1 ? '' : importSpec.slice(0, slash + 1);
+  const base = slash === -1 ? importSpec : importSpec.slice(slash + 1);
+  if (base.charAt(0) === '_' || path.extname(base) !== '') return undefined;
+  return dir + '_' + base;
+}
+
+/**
+ * A less.render() plugin that makes Less's own file resolution match this
+ * tool's dependency tracking: when an extensionless import (e.g.
+ * `@import "buttons";`) isn't found as given, retry once with an
+ * underscore-prefixed partial name (`_buttons`) before giving up. Without
+ * this, resolveImportPath() can point the watcher/cache at a `_name.less`
+ * partial that the actual compile never loads, so a bare-name import of a
+ * partial-only file would compile-error even though watch tracking "saw" it.
+ */
+export function createPartialImportPlugin(less: LessApi): unknown {
+  const NodeFileManager = less.FileManager;
+  function PartialFileManager(this: unknown) {}
+  PartialFileManager.prototype = Object.assign(Object.create(NodeFileManager.prototype), {
+    loadFile(filename: string, currentDirectory: string, options: unknown, environment: unknown, callback: unknown): Promise<unknown> {
+      return NodeFileManager.prototype.loadFile.call(this, filename, currentDirectory, options, environment, callback).catch((err: unknown) => {
+        const underscored = underscorePartialVariant(filename);
+        if (!underscored) return Promise.reject(err);
+        return NodeFileManager.prototype.loadFile.call(this, underscored, currentDirectory, options, environment, callback);
+      });
+    },
+    loadFileSync(filename: string, currentDirectory: string, options: unknown, environment: unknown): { error?: unknown } {
+      const result = NodeFileManager.prototype.loadFileSync.call(this, filename, currentDirectory, options, environment);
+      if (result && result.error) {
+        const underscored = underscorePartialVariant(filename);
+        if (underscored) {
+          const retry = NodeFileManager.prototype.loadFileSync.call(this, underscored, currentDirectory, options, environment);
+          if (!retry.error) return retry;
+        }
+      }
+      return result;
+    }
+  });
+  return {
+    install(_instance: unknown, pluginManager: { addFileManager: (fileManager: unknown) => void }): void {
+      pluginManager.addFileManager(new (PartialFileManager as unknown as new () => unknown)());
+    }
+  };
 }

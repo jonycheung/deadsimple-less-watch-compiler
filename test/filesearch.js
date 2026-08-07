@@ -56,6 +56,18 @@ describe('filesearch Module', function () {
         var filesearchresult = filesearch.findLessImportsInFile('./test/less/_multi-keyword-option.less');
         assert.deepStrictEqual(filesearchresult, ['some-file.less']);
       });
+      it('should not treat a `//`-commented @import as a real dependency', function () {
+        var filesearchresult = filesearch.findLessImportsInFile('./test/less/_commented-import.less');
+        assert.deepStrictEqual(filesearchresult, ['real.less']);
+      });
+      it('should not treat a `/* */`-commented @import as a real dependency', function () {
+        var filesearchresult = filesearch.findLessImportsInFile('./test/less/_block-commented-import.less');
+        assert.deepStrictEqual(filesearchresult, ['real.less']);
+      });
+      it('should still match an @import whose path contains `//` inside the quoted string (e.g. a URL)', function () {
+        var filesearchresult = filesearch.findLessImportsInFile('./test/less/_url-import.less');
+        assert.deepStrictEqual(filesearchresult, ['http://example.com/foo.less']);
+      });
     });
     describe('isHiddenFile()', function () {
       it('should return `true` on hidden files', function () {
@@ -79,10 +91,7 @@ describe('filesearch Module', function () {
       });
       it('resolves a bare extensionless import to the `_partial.less` file when only that exists on disk (issue #240)', function () {
         var importingFile = path.resolve('./test/examples/issue-240/less/main.less');
-        assert.equal(
-          filesearch.resolveImportPath(importingFile, 'buttons'),
-          path.resolve('./test/examples/issue-240/less/_buttons.less')
-        );
+        assert.equal(filesearch.resolveImportPath(importingFile, 'buttons'), path.resolve('./test/examples/issue-240/less/_buttons.less'));
       });
     });
     describe('collectTransitiveImports()', function () {

@@ -10,6 +10,46 @@ interface FilesearchApi {
   collectTransitiveImports: (filePath: string, visited?: Set<string>) => string[];
 }
 
+// Blanks out `//` line comments and `/* */` block comments (tracking quoted
+// strings so a `//` or `/*` inside an import path, e.g. a URL, isn't treated
+// as the start of a comment) so a commented-out @import isn't picked up as a
+// real dependency.
+function stripLessComments(content: string): string {
+  let result = '';
+  let quote: string | undefined;
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+    const next = content[i + 1];
+    if (quote) {
+      result += ch;
+      if (ch === '\\' && i + 1 < content.length) {
+        result += content[++i];
+      } else if (ch === quote) {
+        quote = undefined;
+      }
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      quote = ch;
+      result += ch;
+      continue;
+    }
+    if (ch === '/' && next === '/') {
+      while (i < content.length && content[i] !== '\n') i++;
+      result += '\n';
+      continue;
+    }
+    if (ch === '/' && next === '*') {
+      i += 2;
+      while (i < content.length && !(content[i] === '*' && content[i + 1] === '/')) i++;
+      i++;
+      continue;
+    }
+    result += ch;
+  }
+  return result;
+}
+
 const filesearch: FilesearchApi = {
   findLessImportsInFile(filePath: string): string[] {
     let stat: fs.Stats | undefined;
@@ -40,7 +80,7 @@ const filesearch: FilesearchApi = {
     // -- optional url(), flexible whitespace, and optional trailing semicolon.
     const re = /@import\s+(?:\([^)]*\)\s+)?(?:url\(\s*)?['"]([^'"]+)['"]\s*\)?\s*;?/g;
     let m: RegExpExecArray | null;
-    while ((m = re.exec(fileContent))) {
+    while ((m = re.exec(stripLessComments(fileContent)))) {
       const filename = m[1];
       if (filename) files.push(filename);
     }
