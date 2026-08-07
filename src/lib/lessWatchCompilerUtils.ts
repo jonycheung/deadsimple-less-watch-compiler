@@ -91,6 +91,21 @@ function buildBannerComment(banner: boolean | string): string {
 const filelist: string[] = [];
 const fileimportlist: Record<string, string[]> = {};
 
+// Undo the bookkeeping fileWatcher() records for a path, so a file that comes
+// back later is treated as new again. fileWatcher() refuses to register a path
+// already in filelist (that dedup is what keeps a file imported by several
+// others from collecting one watcher per importer), so without this a deleted
+// file's stale entry permanently blocks setupWatcher() from ever watching it
+// again: the recreate itself still compiles, via the parent directory's
+// readdir rescan, but every edit after that is silently ignored for the rest
+// of the session (issue #197 covered the transient-miss half of this; a
+// confirmed delete followed by a recreate is the other half).
+function forgetWatchedFile(f: string): void {
+  const index = filelist.indexOf(f);
+  if (index !== -1) filelist.splice(index, 1);
+  delete fileimportlist[f];
+}
+
 const lessWatchCompilerUtilsModule = {
   config: {} as LessWatchCompilerConfig,
 
@@ -515,6 +530,7 @@ const lessWatchCompilerUtilsModule = {
             const existed = !!lastKnownStat;
             delete files[f];
             fs.unwatchFile(f);
+            forgetWatchedFile(f);
             if (existed && !(options.ignoreDotFiles && path.basename(f)[0] === '.') && !(options.filter && options.filter(f))) {
               watchCallback(f, c as fs.Stats, p as fs.Stats, fileimportlist);
             }

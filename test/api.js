@@ -74,6 +74,58 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
     assert.throws(() => api.watch('test/less', 'test/css', { mainFile: 'no-such-main.less', runOnce: true }), /no-such-main\.less does not exist/);
   });
 
+  it('watch() keeps watching a file that is deleted and then recreated', function (done) {
+    this.timeout(30000);
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-api-recreate-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const recreateOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(recreateOutDir);
+    const lessFile = path.join(lessDir, 'gone.less');
+    const outputCss = path.join(recreateOutDir, 'gone.css');
+    fs.writeFileSync(lessFile, '.a { color: red; }');
+
+    function waitFor(needle, timeoutMs, cb) {
+      const start = Date.now();
+      (function poll() {
+        fs.readFile(outputCss, 'utf8', (err, content) => {
+          if (!err && content.includes(needle)) return cb(null);
+          if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for "' + needle + '" in ' + outputCss));
+          setTimeout(poll, 50);
+        });
+      })();
+    }
+
+    function cleanup() {
+      fs.unwatchFile(lessFile);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    api.watch(lessDir, recreateOutDir);
+
+    waitFor('red', 6000, (err) => {
+      if (err) return (cleanup(), done(err));
+      fs.unlinkSync(lessFile);
+      // Let the removal-confirmation debounce in setupWatcher() actually fire,
+      // so this exercises a confirmed delete rather than a transient miss.
+      setTimeout(() => {
+        fs.writeFileSync(lessFile, '.a { color: green; }');
+        waitFor('green', 8000, (err2) => {
+          if (err2) return (cleanup(), done(err2));
+          // The real regression: the recreate itself compiles via the parent
+          // directory rescan, but the file used to stay permanently unwatched
+          // afterwards, so every later edit was silently dropped.
+          fs.writeFileSync(lessFile, '.a { color: purple; }');
+          waitFor('purple', 8000, (err3) => {
+            cleanup();
+            done(err3);
+          });
+        });
+      }, 1500);
+    });
+  });
+
   it('watch() compiles on start and recompiles the output when a watched file is later edited', function (done) {
     this.timeout(15000);
     const os = require('os');
