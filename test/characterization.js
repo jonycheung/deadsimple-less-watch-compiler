@@ -486,3 +486,101 @@ describe('Characterization: live watch mode (real CLI process, no --run-once)', 
     );
   });
 });
+
+describe('Characterization: option-form extensionless @import triggers recompile on change (issue #240)', function () {
+  this.timeout(20000);
+
+  function waitForContent(filePath, predicate, timeoutMs, cb) {
+    const start = Date.now();
+    (function poll() {
+      fs.readFile(filePath, 'utf8', (err, content) => {
+        if (!err && predicate(content)) return cb(null, content);
+        if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for ' + filePath + '; last content: ' + (content || err)));
+        setTimeout(poll, 50);
+      });
+    })();
+  }
+
+  it('recompiles the importing parent when a plain extensionless import (with an @import options clause) changes', (done) => {
+    const tmpDir = fs.mkdtempSync(path.join(cwd, 'test', 'tmp-partial-import-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const liveOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(liveOutDir);
+    const partialFile = path.join(lessDir, 'partial.less');
+    const mainFile = path.join(lessDir, 'main.less');
+    fs.writeFileSync(partialFile, '.partial { color: red; }');
+    // No extension on the import spec, plus an @import options clause --
+    // exactly the form issue #240 reports as failing to trigger a parent
+    // recompile (the reverse-import index used to only match a plain
+    // `@import "path";` with no options clause).
+    fs.writeFileSync(mainFile, '@import (reference) "partial";\n.main { .partial; }');
+
+    const child = spawn('node', [cliPath, lessDir, liveOutDir], { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+
+    function cleanup() {
+      child.kill('SIGTERM');
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    const outputCss = path.join(liveOutDir, 'main.css');
+    waitForContent(
+      outputCss,
+      (c) => c.includes('red'),
+      5000,
+      (err) => {
+        if (err) {
+          cleanup();
+          return done(err);
+        }
+        fs.writeFileSync(partialFile, '.partial { color: green; }');
+        waitForContent(
+          outputCss,
+          (c) => c.includes('green'),
+          10000,
+          (err2) => {
+            cleanup();
+            if (err2) return done(err2);
+            done();
+          }
+        );
+      }
+    );
+  });
+
+  it('actually compiles (not just recompiles-on-change) a bare-name import that only resolves to an on-disk `_partial.less` file (issue #240)', (done) => {
+    const tmpDir = fs.mkdtempSync(path.join(cwd, 'test', 'tmp-partial-import-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const liveOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(liveOutDir);
+    const partialFile = path.join(lessDir, '_partial.less');
+    const mainFile = path.join(lessDir, 'main.less');
+    // Unlike the test above, no plain `partial.less` exists on disk at all --
+    // only the underscore-prefixed partial does, so this only compiles
+    // successfully if the real Less compiler (not just this tool's own
+    // watch/cache dependency tracking) also resolves the bare-name import to
+    // it.
+    fs.writeFileSync(partialFile, '.partial { color: red; }');
+    fs.writeFileSync(mainFile, '@import (reference) "partial";\n.main { .partial; }');
+
+    const child = spawn('node', [cliPath, lessDir, liveOutDir], { cwd, stdio: ['ignore', 'pipe', 'pipe'] });
+
+    function cleanup() {
+      child.kill('SIGTERM');
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    const outputCss = path.join(liveOutDir, 'main.css');
+    waitForContent(
+      outputCss,
+      (c) => c.includes('red'),
+      5000,
+      (err) => {
+        cleanup();
+        if (err) return done(err);
+        done();
+      }
+    );
+  });
+});

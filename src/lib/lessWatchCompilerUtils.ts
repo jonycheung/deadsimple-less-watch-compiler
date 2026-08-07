@@ -217,9 +217,7 @@ const lessWatchCompilerUtilsModule = {
         for (const i in fileimports) {
           for (const k in fileimports[i]) {
             const importSpec = fileimports[i][k];
-            const hasExtension = path.extname(importSpec).length > 1;
-            const importFile = hasExtension ? importSpec : importSpec + '.less';
-            const normalizedPath = path.normalize(path.dirname(i) + path.sep + importFile);
+            const normalizedPath = fileSearch.resolveImportPath(i, importSpec);
             const existing = importersOf.get(normalizedPath);
             if (existing) existing.push(i);
             else importersOf.set(normalizedPath, [i]);
@@ -317,9 +315,20 @@ const lessWatchCompilerUtilsModule = {
 
   async renderLess(file: string, outPath: string, options: lessOptions.LessRenderOptions): Promise<void> {
     const renderOptions = { ...options };
-    if (lessWatchCompilerUtilsModule.config.plugins) {
-      renderOptions.plugins = await lessOptions.loadPlugins(lessWatchCompilerUtilsModule.config.plugins, less, renderOptions);
-    }
+    const userPlugins: unknown[] = lessWatchCompilerUtilsModule.config.plugins
+      ? await lessOptions.loadPlugins(lessWatchCompilerUtilsModule.config.plugins, less, renderOptions)
+      : [];
+    // Makes an extensionless bare-name import (e.g. `@import "buttons";`)
+    // resolve to an underscore-prefixed partial (`_buttons.less`) the same
+    // way resolveImportPath() does for watch/cache dependency tracking, so
+    // the actual compile doesn't error on an import the watcher considers
+    // satisfied (issue #240).
+    //
+    // It goes first, ahead of any --plugins: less resolves file managers in
+    // reverse registration order and this one claims every path (it inherits
+    // supports() === true), so registering it last would shadow the file
+    // managers of plugins like less-plugin-npm-import or -glob entirely.
+    renderOptions.plugins = [lessOptions.createPartialImportPlugin(less), ...userPlugins];
     const input = await fs.promises.readFile(file, 'utf8');
     const result = await less.render(input, renderOptions);
     let css: string = result.css;
@@ -612,9 +621,7 @@ const lessWatchCompilerUtilsModule = {
     lessWatchCompilerUtilsModule.setupWatcher(f, files, options, watchCallback);
     for (const i in fileimportlistObj[f]) {
       const importSpec = fileimportlistObj[f][i];
-      const hasExtension = path.extname(importSpec).length > 1;
-      const importFile = hasExtension ? importSpec : importSpec + '.less';
-      const importPath = path.normalize(path.dirname(f) + path.sep + importFile);
+      const importPath = fileSearch.resolveImportPath(f, importSpec);
       // Mirror the directory-walk exclude guard here: an @import target
       // resolving into an excluded path (e.g. --exclude node_modules) must
       // not be watched, or editing it would still trigger the importing

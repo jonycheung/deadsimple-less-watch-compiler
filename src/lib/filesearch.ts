@@ -10,6 +10,46 @@ interface FilesearchApi {
   collectTransitiveImports: (filePath: string, visited?: Set<string>) => string[];
 }
 
+// Blanks out `//` line comments and `/* */` block comments (tracking quoted
+// strings so a `//` or `/*` inside an import path, e.g. a URL, isn't treated
+// as the start of a comment) so a commented-out @import isn't picked up as a
+// real dependency.
+function stripLessComments(content: string): string {
+  let result = '';
+  let quote: string | undefined;
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i];
+    const next = content[i + 1];
+    if (quote) {
+      result += ch;
+      if (ch === '\\' && i + 1 < content.length) {
+        result += content[++i];
+      } else if (ch === quote) {
+        quote = undefined;
+      }
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      quote = ch;
+      result += ch;
+      continue;
+    }
+    if (ch === '/' && next === '/') {
+      while (i < content.length && content[i] !== '\n') i++;
+      result += '\n';
+      continue;
+    }
+    if (ch === '/' && next === '*') {
+      i += 2;
+      while (i < content.length && !(content[i] === '*' && content[i + 1] === '/')) i++;
+      i++;
+      continue;
+    }
+    result += ch;
+  }
+  return result;
+}
+
 const filesearch: FilesearchApi = {
   findLessImportsInFile(filePath: string): string[] {
     let stat: fs.Stats | undefined;
@@ -35,10 +75,13 @@ const filesearch: FilesearchApi = {
       }
       throw err;
     }
-    // Support @import with optional (reference), optional url(), flexible whitespace, and optional trailing semicolon
-    const re = /@import\s+(?:\(reference\)\s+)?(?:url\(\s*)?['"]([^'"]+)['"]\s*\)?\s*;?/g;
+    // Support @import with an optional (options) clause -- e.g. (reference),
+    // (less), or multiple comma-separated keywords like (reference, optional)
+    // -- optional url(), flexible whitespace, and optional trailing semicolon.
+    const re = /@import\s+(?:\([^)]*\)\s+)?(?:url\(\s*)?['"]([^'"]+)['"]\s*\)?\s*;?/g;
+    const searchable = stripLessComments(fileContent);
     let m: RegExpExecArray | null;
-    while ((m = re.exec(fileContent))) {
+    while ((m = re.exec(searchable))) {
       const filename = m[1];
       if (filename) files.push(filename);
     }
@@ -52,11 +95,25 @@ const filesearch: FilesearchApi = {
 
   // Mirrors the import-target resolution in lessWatchCompilerUtils' watch
   // handler: an extensionless import is assumed to be a .less file, and the
-  // path is resolved relative to the importing file's directory.
+  // path is resolved relative to the importing file's directory. For an
+  // extensionless import, Less itself will also match a `_`-prefixed
+  // partial (e.g. `@import "buttons";` resolving to `_buttons.less`), so
+  // prefer whichever of `<name>.less` / `_<name>.less` actually exists on
+  // disk; fall back to `<name>.less` when neither exists yet (matching
+  // prior behavior for an import target that hasn't been created).
   resolveImportPath(importingFile: string, importSpec: string): string {
     const hasExtension = path.extname(importSpec).length > 1;
-    const importFile = hasExtension ? importSpec : importSpec + '.less';
-    return path.normalize(path.dirname(importingFile) + path.sep + importFile);
+    const dir = path.dirname(importingFile);
+    if (!hasExtension) {
+      const plainPath = path.normalize(dir + path.sep + importSpec + '.less');
+      if (fs.existsSync(plainPath)) return plainPath;
+      const base = path.basename(importSpec);
+      const partialDir = path.dirname(importSpec);
+      const partialPath = path.normalize(dir + path.sep + (partialDir === '.' ? '' : partialDir + path.sep) + '_' + base + '.less');
+      if (fs.existsSync(partialPath)) return partialPath;
+      return plainPath;
+    }
+    return path.normalize(dir + path.sep + importSpec);
   },
 
   // Walks @import statements recursively to compute the full set of files

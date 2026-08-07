@@ -252,8 +252,9 @@ interface LessApi {
         fileManager: unknown
       ) => Promise<{ contents: string; filename: string }>;
     };
+    addFileManager: (fileManager: unknown) => void;
   };
-  FileManager: new () => unknown;
+  FileManager: { new (): any; prototype: any };
   environment: unknown;
 }
 
@@ -282,4 +283,75 @@ export async function loadPlugins(pluginList: string, less: LessApi, renderOptio
     plugins.push({ fileContent: data.contents, filename: data.filename, options: pluginOptions });
   }
   return plugins;
+}
+
+// For an extensionless, non-partial import spec (e.g. "buttons" or
+// "shared/buttons"), the underscore-prefixed partial name Less itself would
+// need to try (e.g. "_buttons" or "shared/_buttons"). Returns undefined when
+// the spec already has an extension or already names a partial, since Less's
+// own resolution already covers those.
+function underscorePartialVariant(importSpec: string): string | undefined {
+  const slash = Math.max(importSpec.lastIndexOf('/'), importSpec.lastIndexOf(path.sep));
+  const dir = slash === -1 ? '' : importSpec.slice(0, slash + 1);
+  const base = slash === -1 ? importSpec : importSpec.slice(slash + 1);
+  if (base.charAt(0) === '_' || path.extname(base) !== '') return undefined;
+  return dir + '_' + base;
+}
+
+/**
+ * A less.render() plugin that makes Less's own file resolution match this
+ * tool's dependency tracking: when an extensionless import (e.g.
+ * `@import "buttons";`) isn't found as given, retry once with an
+ * underscore-prefixed partial name (`_buttons`) before giving up. Without
+ * this, resolveImportPath() can point the watcher/cache at a `_name.less`
+ * partial that the actual compile never loads, so a bare-name import of a
+ * partial-only file would compile-error even though watch tracking "saw" it.
+ */
+export function createPartialImportPlugin(less: LessApi): unknown {
+  const NodeFileManager = less.FileManager;
+  const parentLoadFile = NodeFileManager.prototype.loadFile;
+
+  function PartialFileManager(this: unknown) {}
+  PartialFileManager.prototype = Object.assign(Object.create(NodeFileManager.prototype), {
+    // Deliberately no loadFileSync override: the stock one sets
+    // options.syncImport and delegates to this.loadFile, which lands back
+    // here. Overriding it too would re-enter this loadFile through the
+    // parent's own sync path and then call .catch() on the plain object
+    // sync mode returns, throwing inside the parser and leaving the render
+    // promise permanently unsettled.
+    loadFile(filename: string, currentDirectory: string, options: { syncImport?: boolean }, environment: unknown, callback: unknown): unknown {
+      const underscored = underscorePartialVariant(filename);
+      if (!underscored) return parentLoadFile.call(this, filename, currentDirectory, options, environment, callback);
+
+      // Sync mode returns a plain result object ({error} on failure) rather
+      // than a promise, so it needs its own retry path. The stock manager
+      // only invokes the callback itself in sync mode, so the first attempt
+      // is made without one and the callback is invoked once, at the end,
+      // with whichever result won.
+      if (options && options.syncImport) {
+        const first = parentLoadFile.call(this, filename, currentDirectory, options, environment, undefined) as { error?: unknown };
+        let resolved = first;
+        if (first && first.error) {
+          const retry = parentLoadFile.call(this, underscored, currentDirectory, options, environment, undefined) as { error?: unknown };
+          if (retry && !retry.error) resolved = retry;
+        }
+        if (callback) return void (callback as (e: unknown, f: unknown) => void)(resolved.error, resolved);
+        return resolved;
+      }
+
+      return (parentLoadFile.call(this, filename, currentDirectory, options, environment, callback) as Promise<unknown>).catch((err: unknown) =>
+        // Report the error for the name the user actually wrote when the
+        // partial isn't there either, rather than the `_`-prefixed name they
+        // never typed (and rather than masking a non-ENOENT failure such as
+        // EACCES on the plain file as a bogus "not found").
+        (parentLoadFile.call(this, underscored, currentDirectory, options, environment, callback) as Promise<unknown>).catch(() => Promise.reject(err))
+      );
+    }
+  });
+
+  return {
+    install(_instance: unknown, pluginManager: { addFileManager: (fileManager: unknown) => void }): void {
+      pluginManager.addFileManager(new (PartialFileManager as unknown as new () => unknown)());
+    }
+  };
 }

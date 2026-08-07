@@ -872,6 +872,25 @@ describe('lessWatchCompilerUtils Module API', function () {
           ].sort()
         );
       });
+
+      it('recompiles the parent for a bare-name import that resolves to `_partial.less` on disk (issue #240)', function () {
+        const calls = [];
+        lessWatchCompilerUtils.compileCSS = (file) => {
+          calls.push('compiled:' + file);
+          return { outputFilePath: '"' + file + '.css"' };
+        };
+        const handler = lessWatchCompilerUtils.makeWatchHandler(undefined, {
+          onImportCompile: (importingFile, changedFile) => calls.push('onImportCompile:' + importingFile + '<-' + changedFile)
+        });
+        const mainFile = path.resolve('./test/examples/issue-240/less/main.less');
+        const changedFile = path.resolve('./test/examples/issue-240/less/_buttons.less');
+        // main.less imports the partial via `@import (reference) "buttons";`
+        // -- no extension, no underscore -- which must still resolve to the
+        // on-disk `_buttons.less` file.
+        const fileimports = { [mainFile]: ['buttons'] };
+        handler(changedFile, { nlink: 1 }, {}, fileimports);
+        assert.deepStrictEqual(calls, ['compiled:' + mainFile, 'onImportCompile:' + mainFile + '<-' + changedFile]);
+      });
     });
     describe('compileCSS()', function () {
       // reset config
@@ -1253,6 +1272,39 @@ describe('lessWatchCompilerUtils Module API', function () {
           fs.unwatchFile(shared);
           fs.unwatchFile(a);
           fs.unwatchFile(b);
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      });
+
+      it('watches the `_partial.less` file for a bare-name `@import (options) "partial";` (issue #240)', function () {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-partial-import-'));
+        const partial = path.join(tmpDir, '_partial.less');
+        const main = path.join(tmpDir, 'main.less');
+        fs.writeFileSync(partial, '.partial {}');
+        // No extension, no underscore, plus a (reference) options clause --
+        // the exact form issue #240 reports as not being tracked.
+        fs.writeFileSync(main, '@import (reference) "partial";\n.main { .partial; }');
+
+        const files = { [main]: fs.statSync(main) };
+        const filelistArr = [];
+        const originalWatchFolder = lessWatchCompilerUtils.config.watchFolder;
+        lessWatchCompilerUtils.config.watchFolder = tmpDir;
+
+        let watchedPartial = false;
+        const originalWatchFile = fs.watchFile;
+        fs.watchFile = function (f, ...rest) {
+          if (f === partial) watchedPartial = true;
+          return originalWatchFile.call(fs, f, ...rest);
+        };
+
+        try {
+          lessWatchCompilerUtils.fileWatcher(main, files, { interval: 9999 }, filelistArr, {}, function () {});
+          assert.equal(watchedPartial, true, 'the underscore-prefixed partial must be watched for the bare-name import');
+        } finally {
+          fs.watchFile = originalWatchFile;
+          lessWatchCompilerUtils.config.watchFolder = originalWatchFolder;
+          fs.unwatchFile(partial);
+          fs.unwatchFile(main);
           fs.rmSync(tmpDir, { recursive: true, force: true });
         }
       });
