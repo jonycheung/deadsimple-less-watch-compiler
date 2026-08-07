@@ -108,16 +108,43 @@ const configPath = programOption.config
     : cwd + path.sep + programOption.config
   : 'less-watch-compiler.config.json';
 
+// Whether --config was actually typed, or is just carrying its default value.
+// A missing default-named config file is the normal "no config file" case and
+// stays silent; a missing file the user explicitly pointed at is a mistake and
+// must not be quietly ignored.
+const configWasRequested = program.getOptionValueSource('config') !== 'default';
+
 const loadConfigAndInit = async (): Promise<void> => {
+  let data: string | undefined;
   try {
-    await fs.promises.access(configPath, fs.constants.F_OK);
-    const data = await fs.promises.readFile(configPath, 'utf8');
-    const customConfig = JSON.parse(data.toString());
+    data = await fs.promises.readFile(configPath, 'utf8');
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    // Anything other than a plain absent default config file is worth saying
+    // out loud: silently falling back to defaults here used to turn a typo'd
+    // --config path, or an unreadable file, into a run with none of the user's
+    // settings applied and nothing on screen to explain why.
+    if (code !== 'ENOENT' || configWasRequested) {
+      console.log('Cannot read config file ' + configPath + ': ' + (code || (err as Error).message));
+      process.exit(1);
+    }
+  }
+
+  if (data !== undefined) {
+    let customConfig: unknown;
+    try {
+      customConfig = JSON.parse(data);
+    } catch (err) {
+      // A config file that exists but doesn't parse was previously swallowed
+      // whole, so a stray comma left the user with defaults and a misleading
+      // "Missing arguments" message instead of a syntax error.
+      console.log('Config file ' + configPath + ' is not valid JSON: ' + (err as Error).message);
+      process.exit(1);
+    }
     console.log('Config file ' + configPath + ' is loaded.');
     extend(true, lessWatchCompilerUtils.config, customConfig);
-  } catch {
-    // No config file is fine; proceed with defaults
   }
+
   init();
 };
 
@@ -154,6 +181,15 @@ function init(): void {
 
   lessWatchCompilerUtils.config.watchFolder = path.resolve(lessWatchCompilerUtils.config.watchFolder);
   lessWatchCompilerUtils.config.outputFolder = path.resolve(lessWatchCompilerUtils.config.outputFolder);
+
+  // Check before any walking starts: an unusable watch folder otherwise
+  // surfaces as a raw uncaught stack trace from inside an fs callback.
+  try {
+    lessWatchCompilerUtils.assertWatchableFolder(lessWatchCompilerUtils.config.watchFolder);
+  } catch (err) {
+    console.log((err as Error).message);
+    process.exit(1);
+  }
 
   if (lessWatchCompilerUtils.config.mainFile) {
     mainFilePath = path.resolve(lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile);

@@ -91,25 +91,68 @@ function buildBannerComment(banner: boolean | string): string {
 const filelist: string[] = [];
 const fileimportlist: Record<string, string[]> = {};
 
+// Undo the bookkeeping fileWatcher() records for a path, so a file that comes
+// back later is treated as new again. fileWatcher() refuses to register a path
+// already in filelist (that dedup is what keeps a file imported by several
+// others from collecting one watcher per importer), so without this a deleted
+// file's stale entry permanently blocks setupWatcher() from ever watching it
+// again: the recreate itself still compiles, via the parent directory's
+// readdir rescan, but every edit after that is silently ignored for the rest
+// of the session.
+function forgetWatchedFile(f: string): void {
+  const index = filelist.indexOf(f);
+  if (index !== -1) filelist.splice(index, 1);
+  delete fileimportlist[f];
+}
+
 const lessWatchCompilerUtilsModule = {
   config: {} as LessWatchCompilerConfig,
 
   walk(dir: string, options: WalkOptions, callback: WalkCompleteCallback, initCallback?: InitCallback): void {
-    const state = { files: {} as FilesMap, pending: 0 };
+    // seenDirs holds the identity (device + inode) of every directory already
+    // descended into. fs.stat follows symlinks, so a link pointing back at one
+    // of its own ancestors (e.g. `less/self -> ..`) otherwise makes the walk
+    // recurse into itself until the OS gives up with ELOOP -- compiling the
+    // same tree over and over into ever-deeper output folders on the way down
+    // and then killing the process with an uncaught error. Comparing dev+ino
+    // rather than the path also collapses two different symlinks that point at
+    // the same real directory, so its files are only compiled once.
+    const state = { files: {} as FilesMap, pending: 0, seenDirs: new Set<string>() };
 
     const finalize = (err: NodeJS.ErrnoException | null) => {
       if (state.pending === 0) callback(err, state.files);
     };
 
-    const processDir = (directory: string) => {
+    // Only the root directory's failure aborts the walk: the caller named that
+    // path specifically, so there's nothing sensible to fall back to. A
+    // failure deeper in the tree -- an unreadable directory, a symlink the OS
+    // won't resolve -- is reported and stepped over instead, so one bad entry
+    // can't take down the whole watch session over an otherwise fine tree.
+    const skipOrAbort = (err: NodeJS.ErrnoException, target: string, isRoot: boolean): void => {
+      if (isRoot) return callback(err, null);
+      console.log('Skipping ' + target + ': ' + (err.code || err.message));
+      finalize(null);
+    };
+
+    const processDir = (directory: string, isRoot: boolean) => {
       state.pending += 1;
       fs.stat(directory, (err, stat) => {
-        if (err) return callback(err as NodeJS.ErrnoException, null);
+        if (err) {
+          state.pending -= 1;
+          return skipOrAbort(err as NodeJS.ErrnoException, directory, isRoot);
+        }
+
+        const identity = String(stat.dev) + ':' + String(stat.ino);
+        if (state.seenDirs.has(identity)) {
+          state.pending -= 1;
+          return void finalize(null);
+        }
+        state.seenDirs.add(identity);
 
         state.files[directory] = stat as fs.Stats;
         fs.readdir(directory, (readErr, files) => {
           state.pending -= 1;
-          if (readErr) return callback(readErr as NodeJS.ErrnoException, null);
+          if (readErr) return skipOrAbort(readErr as NodeJS.ErrnoException, directory, isRoot);
 
           files.forEach((entry) => {
             const filePath = path.join(directory, entry);
@@ -118,8 +161,8 @@ const lessWatchCompilerUtilsModule = {
               let enoent = false;
               if (statErr) {
                 if ((statErr as NodeJS.ErrnoException).code !== 'ENOENT') {
-                  console.log((statErr as NodeJS.ErrnoException).code);
-                  return callback(statErr as NodeJS.ErrnoException, null);
+                  state.pending -= 1;
+                  return skipOrAbort(statErr as NodeJS.ErrnoException, filePath, false);
                 } else {
                   enoent = true;
                 }
@@ -137,7 +180,7 @@ const lessWatchCompilerUtilsModule = {
 
                 state.files[filePath] = st as fs.Stats;
                 if (st.isDirectory()) {
-                  processDir(filePath);
+                  processDir(filePath, false);
                 } else {
                   if (initCallback) initCallback(filePath);
                 }
@@ -153,7 +196,7 @@ const lessWatchCompilerUtilsModule = {
       });
     };
 
-    processDir(dir);
+    processDir(dir, true);
   },
 
   watchTree(root: string, options: WalkOptions | WatchCallback, watchCallback?: WatchCallback, initCallback?: InitCallback): void {
@@ -443,6 +486,29 @@ const lessWatchCompilerUtilsModule = {
     return new RegExp(`(?:${defaultExcludePattern.source})|(?:${userRegex.source})`);
   },
 
+  /**
+   * Check up front that the watch folder is a directory we can actually walk.
+   * walk() reports a bad root through its completion callback, which watchTree()
+   * can only rethrow from inside an fs callback -- that surfaces as a raw
+   * uncaught ENOENT/ENOTDIR stack trace, and (for the programmatic API) as a
+   * crash the caller has no way to catch, since the throw happens long after
+   * watch() returned. Failing synchronously here turns the two most common
+   * setup mistakes -- a mistyped folder, or a file passed where a folder was
+   * meant -- into a plain message the caller can handle. Callers decide how to
+   * surface the throw (CLI exits, API propagates it).
+   */
+  assertWatchableFolder(folder: string): void {
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(folder);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT') throw new Error('Watch folder ' + folder + ' does not exist.', { cause: err });
+      throw new Error('Watch folder ' + folder + ' cannot be read: ' + (code || (err as Error).message), { cause: err });
+    }
+    if (!stat.isDirectory()) throw new Error('Watch folder ' + folder + ' is not a directory.');
+  },
+
   getDateTime(): string {
     const date = new Date();
     let hour: number | string = date.getHours();
@@ -506,6 +572,7 @@ const lessWatchCompilerUtilsModule = {
             const existed = !!lastKnownStat;
             delete files[f];
             fs.unwatchFile(f);
+            forgetWatchedFile(f);
             if (existed && !(options.ignoreDotFiles && path.basename(f)[0] === '.') && !(options.filter && options.filter(f))) {
               watchCallback(f, c as fs.Stats, p as fs.Stats, fileimportlist);
             }

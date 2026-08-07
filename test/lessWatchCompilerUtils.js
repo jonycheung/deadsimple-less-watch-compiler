@@ -72,6 +72,90 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
+      it('does not descend into a symlink loop, and still finds the real files', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-loop-'));
+        fs.writeFileSync(path.join(tmpDir, 'real.less'), '');
+        // A link back to its own parent: fs.stat follows symlinks, so an
+        // unguarded walk recurses tmpDir/loop/tmpDir/loop/... until the OS
+        // refuses with ELOOP and the error takes down the whole walk.
+        fs.symlinkSync(tmpDir, path.join(tmpDir, 'loop'), 'dir');
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            try {
+              assert.ifError(err);
+              const fileList = Object.keys(files);
+              assert.ok(
+                fileList.some((f) => f.endsWith('real.less')),
+                'the real file must still be discovered'
+              );
+              assert.ok(!fileList.some((f) => f.includes(`loop${path.sep}loop`)), 'the walk must not re-enter a directory it has already visited');
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+      it('reports a bad root directory through the callback instead of walking a partial tree', (done) => {
+        lessWatchCompilerUtils.walk(
+          path.join(cwd, 'test', 'no-such-directory-at-all'),
+          {},
+          (err) => {
+            assert.ok(err, 'a missing root must surface as an error');
+            assert.equal(err.code, 'ENOENT');
+            done();
+          },
+          function () {}
+        );
+      });
+      it('steps over an unreadable entry deeper in the tree instead of aborting the whole walk', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-badentry-'));
+        fs.writeFileSync(path.join(tmpDir, 'good.less'), '');
+        // A symlink whose own target is a loop: stat fails with ELOOP, which
+        // is neither ENOENT nor something the walk can do anything about.
+        fs.symlinkSync(path.join(tmpDir, 'b'), path.join(tmpDir, 'a'));
+        fs.symlinkSync(path.join(tmpDir, 'a'), path.join(tmpDir, 'b'));
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            try {
+              assert.ifError(err);
+              assert.ok(
+                Object.keys(files).some((f) => f.endsWith('good.less')),
+                'the rest of the tree must still be walked'
+              );
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+    });
+    describe('assertWatchableFolder()', function () {
+      it('assertWatchableFolder() function should be there', function () {
+        assert.equal('function', typeof lessWatchCompilerUtils.assertWatchableFolder);
+      });
+      it('accepts a real directory', function () {
+        assert.doesNotThrow(() => lessWatchCompilerUtils.assertWatchableFolder(testroot));
+      });
+      it('throws a readable error for a folder that does not exist', function () {
+        assert.throws(() => lessWatchCompilerUtils.assertWatchableFolder(path.join(cwd, 'test', 'no-such-folder')), /does not exist\./);
+      });
+      it('throws a readable error when the path is a file rather than a directory', function () {
+        assert.throws(() => lessWatchCompilerUtils.assertWatchableFolder(path.join(testroot, 'test.less')), /is not a directory\./);
+      });
     });
     describe('watchTree()', function () {
       it('watchTree() function should be there', function () {

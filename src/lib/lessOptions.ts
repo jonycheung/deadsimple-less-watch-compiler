@@ -276,7 +276,16 @@ export async function loadPlugins(pluginList: string, less: LessApi, renderOptio
     try {
       data = await pluginManager.Loader.loadPlugin(name, process.cwd(), { ...renderOptions }, less.environment, fileManager);
     } catch (err) {
-      const reason = err instanceof Error ? err.message : String(err);
+      // Less's plugin loader rejects with a plain { type, message } object
+      // rather than an Error, so String(err) here produced "[object Object]" --
+      // throwing away the one useful part of the failure, the list of paths it
+      // actually tried.
+      const reason =
+        err instanceof Error
+          ? err.message
+          : err && typeof err === 'object' && typeof (err as { message?: unknown }).message === 'string'
+            ? (err as { message: string }).message
+            : String(err);
       throw new Error('Unable to load plugin ' + name + ' please make sure that it is installed under or at the same level as less: ' + reason, { cause: err });
     }
     plugins.push({ fileContent: data.contents, filename: data.filename, options: pluginOptions });

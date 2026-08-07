@@ -74,6 +74,112 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
     assert.throws(() => api.watch('test/less', 'test/css', { mainFile: 'no-such-main.less', runOnce: true }), /no-such-main\.less does not exist/);
   });
 
+  it('watch() throws synchronously for a missing watch folder, instead of crashing the host process later', function () {
+    // The failure originates in an async fs callback deep inside the walk, so
+    // without an up-front check the caller cannot catch it at all.
+    assert.throws(() => api.watch(path.join(cwd, 'test', 'no-such-watch-folder'), 'test/css'), /does not exist\./);
+  });
+
+  it('watch() throws synchronously when the watch folder is a file rather than a directory', function () {
+    assert.throws(() => api.watch(path.join(cwd, 'test', 'less', 'test.less'), 'test/css'), /is not a directory\./);
+  });
+
+  it('watch() hands listeners an output path that can be read back directly', function (done) {
+    this.timeout(15000);
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-api-listener-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const listenerOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(listenerOutDir);
+    const lessFile = path.join(lessDir, 'listen.less');
+    fs.writeFileSync(lessFile, '.a { color: red; }');
+
+    let finished = false;
+    function finish(err) {
+      if (finished) return;
+      finished = true;
+      fs.unwatchFile(lessFile);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+      done(err);
+    }
+
+    api.watch(
+      lessDir,
+      listenerOutDir,
+      {},
+      {
+        onCompile: (changedFile, outputFilePath) => {
+          try {
+            // resolveOutputPath() encodes the path as JSON for the CLI's log
+            // line; a listener handed that raw string gets a value wrapped in
+            // literal double quotes, which no fs call can open.
+            assert.ok(!outputFilePath.startsWith('"'), 'outputFilePath must not arrive JSON-quoted: ' + outputFilePath);
+            assert.ok(fs.existsSync(outputFilePath), 'outputFilePath must point at the file that was just written');
+            finish();
+          } catch (e) {
+            finish(e);
+          }
+        }
+      }
+    );
+
+    setTimeout(() => fs.writeFileSync(lessFile, '.a { color: blue; }'), 700);
+    setTimeout(() => finish(new Error('onCompile was never called')), 12000);
+  });
+
+  it('watch() keeps watching a file that is deleted and then recreated', function (done) {
+    this.timeout(30000);
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-api-recreate-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const recreateOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(recreateOutDir);
+    const lessFile = path.join(lessDir, 'gone.less');
+    const outputCss = path.join(recreateOutDir, 'gone.css');
+    fs.writeFileSync(lessFile, '.a { color: red; }');
+
+    function waitFor(needle, timeoutMs, cb) {
+      const start = Date.now();
+      (function poll() {
+        fs.readFile(outputCss, 'utf8', (err, content) => {
+          if (!err && content.includes(needle)) return cb(null);
+          if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for "' + needle + '" in ' + outputCss));
+          setTimeout(poll, 50);
+        });
+      })();
+    }
+
+    function cleanup() {
+      fs.unwatchFile(lessFile);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    api.watch(lessDir, recreateOutDir);
+
+    waitFor('red', 6000, (err) => {
+      if (err) return (cleanup(), done(err));
+      fs.unlinkSync(lessFile);
+      // Let the removal-confirmation debounce in setupWatcher() actually fire,
+      // so this exercises a confirmed delete rather than a transient miss.
+      setTimeout(() => {
+        fs.writeFileSync(lessFile, '.a { color: green; }');
+        waitFor('green', 8000, (err2) => {
+          if (err2) return (cleanup(), done(err2));
+          // The real regression: the recreate itself compiles via the parent
+          // directory rescan, but the file used to stay permanently unwatched
+          // afterwards, so every later edit was silently dropped.
+          fs.writeFileSync(lessFile, '.a { color: purple; }');
+          waitFor('purple', 8000, (err3) => {
+            cleanup();
+            done(err3);
+          });
+        });
+      }, 1500);
+    });
+  });
+
   it('watch() compiles on start and recompiles the output when a watched file is later edited', function (done) {
     this.timeout(15000);
     const os = require('os');

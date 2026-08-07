@@ -117,6 +117,10 @@ export function watch(watchFolder: string, outputFolder: string, options: WatchO
     outputFolder: path.resolve(outputFolder),
     ...options
   };
+  // Fail here, synchronously, rather than letting the async walk rethrow from
+  // inside an fs callback where the caller can no longer catch it.
+  lessWatchCompilerUtils.assertWatchableFolder(resolvedWatchFolder);
+
   const mainFilePath = options.mainFile ? path.resolve(resolvedWatchFolder, options.mainFile) : undefined;
   if (mainFilePath && !fs.existsSync(mainFilePath)) {
     throw new Error('Main file ' + mainFilePath + ' does not exist.');
@@ -139,8 +143,12 @@ export function watch(watchFolder: string, outputFolder: string, options: WatchO
     },
     lessWatchCompilerUtils.makeWatchHandler(mainFilePath, {
       onRemove: listeners.onRemove,
-      onCompile: listeners.onCompile ? (f, result) => listeners.onCompile!(f, result.outputFilePath) : undefined,
-      onImportCompile: listeners.onImportCompile ? (i, f, result) => listeners.onImportCompile!(i, f, result.outputFilePath) : undefined
+      // resolveOutputPath() hands back a JSON-encoded path, because the CLI
+      // logs it quoted. Listeners get the decoded path instead, matching what
+      // compileFile() resolves with -- a caller passing it straight to
+      // fs.readFile()/path.join() would otherwise hit ENOENT on the quotes.
+      onCompile: listeners.onCompile ? (f, result) => listeners.onCompile!(f, JSON.parse(result.outputFilePath)) : undefined,
+      onImportCompile: listeners.onImportCompile ? (i, f, result) => listeners.onImportCompile!(i, f, JSON.parse(result.outputFilePath)) : undefined
     }),
     function (f: string) {
       if (!mainFilePath || mainFilePath === f) {
