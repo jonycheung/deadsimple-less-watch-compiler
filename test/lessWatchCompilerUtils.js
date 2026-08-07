@@ -128,6 +128,46 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
+      it('still walks the whole tree on a filesystem that reports no inode numbers', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-noino-'));
+        for (const d of ['one', 'two', 'three']) {
+          fs.mkdirSync(path.join(tmpDir, d));
+          fs.writeFileSync(path.join(tmpDir, d, d + '.less'), '');
+        }
+
+        // FAT/exFAT volumes and some Windows network shares report ino 0 for
+        // every entry. Deduping on a 0 identity would match everything and
+        // silently skip the entire tree after the first directory.
+        const originalStat = fs.stat;
+        fs.stat = function (target, cb) {
+          return originalStat(target, (err, stat) => {
+            if (stat) stat.ino = 0;
+            cb(err, stat);
+          });
+        };
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            fs.stat = originalStat;
+            try {
+              assert.ifError(err);
+              const found = Object.keys(files)
+                .filter((f) => f.endsWith('.less'))
+                .map((f) => path.basename(f))
+                .sort();
+              assert.deepEqual(found, ['one.less', 'three.less', 'two.less'], 'every directory must still be walked when identities are unavailable');
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
     });
     describe('watchTree()', function () {
       it('watchTree() function should be there', function () {

@@ -114,12 +114,21 @@ const lessWatchCompilerUtilsModule = {
       fs.stat(directory, (err, stat) => {
         if (err) return callback(err as NodeJS.ErrnoException, null);
 
-        const identity = String(stat.dev) + ':' + String(stat.ino);
-        if (state.seenDirs.has(identity)) {
-          state.pending -= 1;
-          return void finalize(null);
+        // Filesystems that don't report inodes -- FAT/exFAT volumes and some
+        // network shares under Windows -- hand back ino 0 for every entry. A
+        // 0 identity would match everything and skip the entire tree after
+        // the first directory, which is a far worse failure than the loop
+        // this guards against. No usable identity means no dedup: those
+        // volumes keep exactly today's behavior, and nothing is ever wrongly
+        // skipped anywhere.
+        const identity = stat.ino ? String(stat.dev) + ':' + String(stat.ino) : undefined;
+        if (identity !== undefined) {
+          if (state.seenDirs.has(identity)) {
+            state.pending -= 1;
+            return void finalize(null);
+          }
+          state.seenDirs.add(identity);
         }
-        state.seenDirs.add(identity);
 
         state.files[directory] = stat as fs.Stats;
         fs.readdir(directory, (readErr, files) => {
