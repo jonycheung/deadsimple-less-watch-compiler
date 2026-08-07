@@ -315,7 +315,7 @@ const lessWatchCompilerUtilsModule = {
 
   async renderLess(file: string, outPath: string, options: lessOptions.LessRenderOptions): Promise<void> {
     const renderOptions = { ...options };
-    const plugins: unknown[] = lessWatchCompilerUtilsModule.config.plugins
+    const userPlugins: unknown[] = lessWatchCompilerUtilsModule.config.plugins
       ? await lessOptions.loadPlugins(lessWatchCompilerUtilsModule.config.plugins, less, renderOptions)
       : [];
     // Makes an extensionless bare-name import (e.g. `@import "buttons";`)
@@ -323,8 +323,12 @@ const lessWatchCompilerUtilsModule = {
     // way resolveImportPath() does for watch/cache dependency tracking, so
     // the actual compile doesn't error on an import the watcher considers
     // satisfied (issue #240).
-    plugins.push(lessOptions.createPartialImportPlugin(less));
-    renderOptions.plugins = plugins;
+    //
+    // It goes first, ahead of any --plugins: less resolves file managers in
+    // reverse registration order and this one claims every path (it inherits
+    // supports() === true), so registering it last would shadow the file
+    // managers of plugins like less-plugin-npm-import or -glob entirely.
+    renderOptions.plugins = [lessOptions.createPartialImportPlugin(less), ...userPlugins];
     const input = await fs.promises.readFile(file, 'utf8');
     const result = await less.render(input, renderOptions);
     let css: string = result.css;

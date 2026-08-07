@@ -215,11 +215,18 @@ describe('lessOptions Module', function () {
       assert.equal(result.css.trim(), '.main {\n  padding: 4px;\n}');
     });
 
-    it('still errors when neither the plain nor the underscore-prefixed file exists', async function () {
+    it('still errors when neither the plain nor the underscore-prefixed file exists, naming the file the user actually wrote', async function () {
       const inputFilePath = path.resolve('./test/less/main.less');
       await assert.rejects(
         () => less.render('@import "does-not-exist-anywhere";', { filename: inputFilePath, plugins: [lessOptions.createPartialImportPlugin(less)] }),
-        /'?_?does-not-exist-anywhere'? wasn't found/
+        (err) => {
+          // The reported name must be the import as written -- surfacing the
+          // retry's `_`-prefixed name would point users at a file they never
+          // referenced.
+          assert.match(err.message, /'does-not-exist-anywhere' wasn't found/);
+          assert.ok(!/'_does-not-exist-anywhere' wasn't found/.test(err.message), 'must not report the underscore-prefixed retry name');
+          return true;
+        }
       );
     });
 
@@ -227,6 +234,56 @@ describe('lessOptions Module', function () {
       const inputFilePath = path.resolve('./test/less/main.less');
       const result = await less.render('@import "lvl1.less";', { filename: inputFilePath, plugins: [lessOptions.createPartialImportPlugin(less)] });
       assert.equal(typeof result.css, 'string');
+    });
+
+    // The stock loadFileSync sets options.syncImport and delegates to
+    // loadFile, so an override that assumed a promise came back would throw
+    // inside the parser and leave the render promise unsettled forever.
+    it('resolves a `_partial.less` import under syncImport instead of hanging', async function () {
+      const inputFilePath = path.resolve('./test/examples/issue-240/less/main.less');
+      const input = fs.readFileSync(inputFilePath, 'utf8');
+      const result = await less.render(input, { filename: inputFilePath, syncImport: true, plugins: [lessOptions.createPartialImportPlugin(less)] });
+      assert.equal(result.css.trim(), '.main {\n  padding: 4px;\n}');
+    });
+
+    it('rejects (rather than hanging) under syncImport when the import cannot be resolved at all', async function () {
+      const inputFilePath = path.resolve('./test/less/main.less');
+      await assert.rejects(() =>
+        less.render('@import "nope-not-here";', { filename: inputFilePath, syncImport: true, plugins: [lessOptions.createPartialImportPlugin(less)] })
+      );
+    });
+
+    // less resolves file managers in reverse registration order and this
+    // plugin's manager claims every path, so registering it after a user
+    // --plugins manager would shadow that plugin entirely.
+    it("leaves a user plugin's file manager reachable rather than shadowing it", async function () {
+      let consulted = false;
+      function VirtualFileManager() {}
+      VirtualFileManager.prototype = Object.assign(new less.FileManager(), {
+        supports(filename) {
+          consulted = true;
+          return String(filename).startsWith('virtual:');
+        },
+        supportsSync(filename) {
+          return String(filename).startsWith('virtual:');
+        },
+        loadFile(filename) {
+          return Promise.resolve({ contents: '.v { color: red; }', filename: String(filename) });
+        }
+      });
+      const userPlugin = {
+        install(_less, pluginManager) {
+          pluginManager.addFileManager(new VirtualFileManager());
+        }
+      };
+
+      // Same ordering renderLess() uses: the partial plugin first, then --plugins.
+      const result = await less.render('@import "virtual:thing";', {
+        filename: path.resolve('./test/less/main.less'),
+        plugins: [lessOptions.createPartialImportPlugin(less), userPlugin]
+      });
+      assert.equal(consulted, true, "the user plugin's file manager must still be consulted");
+      assert.equal(result.css.trim(), '.v {\n  color: red;\n}');
     });
   });
 });

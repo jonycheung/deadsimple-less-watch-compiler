@@ -79,8 +79,9 @@ const filesearch: FilesearchApi = {
     // (less), or multiple comma-separated keywords like (reference, optional)
     // -- optional url(), flexible whitespace, and optional trailing semicolon.
     const re = /@import\s+(?:\([^)]*\)\s+)?(?:url\(\s*)?['"]([^'"]+)['"]\s*\)?\s*;?/g;
+    const searchable = stripLessComments(fileContent);
     let m: RegExpExecArray | null;
-    while ((m = re.exec(stripLessComments(fileContent)))) {
+    while ((m = re.exec(searchable))) {
       const filename = m[1];
       if (filename) files.push(filename);
     }
