@@ -95,7 +95,15 @@ const lessWatchCompilerUtilsModule = {
   config: {} as LessWatchCompilerConfig,
 
   walk(dir: string, options: WalkOptions, callback: WalkCompleteCallback, initCallback?: InitCallback): void {
-    const state = { files: {} as FilesMap, pending: 0 };
+    // seenDirs holds the identity (device + inode) of every directory already
+    // descended into. fs.stat follows symlinks, so a link pointing back at one
+    // of its own ancestors (e.g. `less/self -> ..`) otherwise makes the walk
+    // recurse into itself until the OS gives up with ELOOP -- compiling the
+    // same tree over and over into ever-deeper output folders on the way down
+    // and then killing the process with an uncaught error. Comparing dev+ino
+    // rather than the path also collapses two different symlinks that point at
+    // the same real directory, so its files are only compiled once.
+    const state = { files: {} as FilesMap, pending: 0, seenDirs: new Set<string>() };
 
     const finalize = (err: NodeJS.ErrnoException | null) => {
       if (state.pending === 0) callback(err, state.files);
@@ -105,6 +113,13 @@ const lessWatchCompilerUtilsModule = {
       state.pending += 1;
       fs.stat(directory, (err, stat) => {
         if (err) return callback(err as NodeJS.ErrnoException, null);
+
+        const identity = String(stat.dev) + ':' + String(stat.ino);
+        if (state.seenDirs.has(identity)) {
+          state.pending -= 1;
+          return void finalize(null);
+        }
+        state.seenDirs.add(identity);
 
         state.files[directory] = stat as fs.Stats;
         fs.readdir(directory, (readErr, files) => {

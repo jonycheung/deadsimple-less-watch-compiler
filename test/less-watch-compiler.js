@@ -131,6 +131,27 @@ describe('The CLI should', function () {
       });
     });
   });
+
+  describe('survive a hostile watch tree:', function () {
+    it('a symlink loop does not crash the run or flood the output folder', () => {
+      const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-cli-loop-'));
+      try {
+        fs.mkdirSync(path.join(tmpDir, 'less'));
+        fs.writeFileSync(path.join(tmpDir, 'less', 'a.less'), '.a { color: red; }');
+        // less/loop -> the folder containing less/, so the walk can reach
+        // less/loop/less/loop/... without limit.
+        fs.symlinkSync(tmpDir, path.join(tmpDir, 'less', 'loop'), 'dir');
+
+        cli('--run-once', path.join(tmpDir, 'less'), path.join(tmpDir, 'css'));
+
+        assert.ok(fs.existsSync(path.join(tmpDir, 'css', 'a.css')), 'the real file must still compile');
+        const dirs = fs.readdirSync(path.join(tmpDir, 'css'), { withFileTypes: true }).filter((e) => e.isDirectory());
+        assert.equal(dirs.length, 0, 'following the loop must not create nested output directories');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+  });
 });
 
 function cli(...args) {

@@ -72,6 +72,62 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
+      it('does not descend into a symlink loop, and still finds the real files', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-loop-'));
+        fs.writeFileSync(path.join(tmpDir, 'real.less'), '');
+        // A link back into its own tree: fs.stat follows symlinks, so an
+        // unguarded walk recurses tmpDir/loop/loop/... until the OS refuses
+        // with ELOOP, and that error takes down the whole walk.
+        fs.symlinkSync(tmpDir, path.join(tmpDir, 'loop'), 'dir');
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            try {
+              assert.ifError(err);
+              const fileList = Object.keys(files);
+              assert.ok(
+                fileList.some((f) => f.endsWith('real.less')),
+                'the real file must still be discovered'
+              );
+              assert.ok(!fileList.some((f) => f.includes(`loop${path.sep}loop`)), 'the walk must not re-enter a directory it has already visited');
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+      it('visits a directory once even when two different symlinks point at it', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-dup-'));
+        const realDir = path.join(tmpDir, 'real');
+        fs.mkdirSync(realDir);
+        fs.writeFileSync(path.join(realDir, 'once.less'), '');
+        fs.symlinkSync(realDir, path.join(tmpDir, 'link-a'), 'dir');
+        fs.symlinkSync(realDir, path.join(tmpDir, 'link-b'), 'dir');
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            try {
+              assert.ifError(err);
+              const compilable = Object.keys(files).filter((f) => f.endsWith('once.less'));
+              assert.equal(compilable.length, 1, 'the same real file must not be queued for compilation through every symlink to it');
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
     });
     describe('watchTree()', function () {
       it('watchTree() function should be there', function () {
