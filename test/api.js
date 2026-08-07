@@ -126,6 +126,60 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
     });
   });
 
+  it('watch() keeps recompiling importers of a hidden _partial that is deleted and recreated', function (done) {
+    this.timeout(30000);
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-api-partial-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const partialOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(partialOutDir);
+    const partial = path.join(lessDir, '_shared.less');
+    const importer = path.join(lessDir, 'page.less');
+    const outputCss = path.join(partialOutDir, 'page.css');
+    fs.writeFileSync(partial, '@c: red;');
+    fs.writeFileSync(importer, '@import "_shared"; .page { color: @c; }');
+
+    function waitFor(needle, timeoutMs, cb) {
+      const start = Date.now();
+      (function poll() {
+        fs.readFile(outputCss, 'utf8', (err, content) => {
+          if (!err && content.includes(needle)) return cb(null);
+          if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for "' + needle + '" in ' + outputCss));
+          setTimeout(poll, 50);
+        });
+      })();
+    }
+
+    function cleanup() {
+      fs.unwatchFile(partial);
+      fs.unwatchFile(importer);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    api.watch(lessDir, partialOutDir);
+
+    waitFor('red', 6000, (err) => {
+      if (err) return (cleanup(), done(err));
+      fs.unlinkSync(partial);
+      setTimeout(() => {
+        fs.writeFileSync(partial, '@c: green;');
+        // The directory rescan used to run every new entry through
+        // filterFiles(), which rejects hidden files, so a recreated
+        // underscore-prefixed partial was never rediscovered at all.
+        waitFor('green', 9000, (err2) => {
+          if (err2) return (cleanup(), done(err2));
+          // ...and it has to still be watched afterwards, not just compiled once.
+          fs.writeFileSync(partial, '@c: purple;');
+          waitFor('purple', 9000, (err3) => {
+            cleanup();
+            done(err3);
+          });
+        });
+      }, 1500);
+    });
+  });
+
   it('watch() compiles on start and recompiles the output when a watched file is later edited', function (done) {
     this.timeout(15000);
     const os = require('os');

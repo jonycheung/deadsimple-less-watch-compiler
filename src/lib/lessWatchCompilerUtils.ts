@@ -106,6 +106,17 @@ function forgetWatchedFile(f: string): void {
   delete fileimportlist[f];
 }
 
+// The allowed-extension half of filterFiles(), without its hidden-file half.
+// The two are fused in filterFiles() because the initial walk() wants both:
+// it is deciding which files to compile on sight, and a hidden file is not
+// one of them. Anywhere we're deciding what to *watch*, only the extension
+// check applies -- a hidden `_partial.less` still has to be followed, because
+// something else imports it and needs recompiling when it changes (issue #59).
+function hasAllowedExtension(filePath: string): boolean {
+  const allowedExtensions = lessWatchCompilerUtilsModule.config.allowedExtensions || defaultAllowedExtensions;
+  return allowedExtensions.indexOf(path.extname(filePath)) !== -1;
+}
+
 const lessWatchCompilerUtilsModule = {
   config: {} as LessWatchCompilerConfig,
 
@@ -573,14 +584,21 @@ const lessWatchCompilerUtilsModule = {
                 // never start being watched, the same way walk() already
                 // keeps the initial scan out of it entirely.
                 if (options.exclude && options.exclude.test(file)) return;
-                // The extension filter must only apply to files -- a new
+                // The extension check must only apply to files -- a new
                 // directory (e.g. one created after startup) never matches
-                // an allowed extension, so applying the filter to it too
-                // would skip watching it (and everything created inside it
-                // afterward) entirely. walk() already gets this right for
-                // the initial recursive scan; mirror it here for new
+                // an allowed extension, so applying it to directories too
+                // would skip watching them (and everything created inside
+                // them afterward) entirely. walk() already gets this right
+                // for the initial recursive scan; mirror it here for new
                 // directories discovered later by this readdir rescan.
-                if (!stat.isDirectory() && options.filter && options.filter(b)) return;
+                //
+                // Extension only, NOT options.filter: filterFiles() also
+                // rejects hidden files, and using it here meant a recreated
+                // `_partial.less` was never rediscovered, so nothing importing
+                // it recompiled again for the rest of the session. Watching a
+                // hidden file is correct -- compileCSS() is what declines to
+                // give it standalone output, and it still does.
+                if (!stat.isDirectory() && !hasAllowedExtension(b)) return;
                 fs.access(file, fs.constants.F_OK, (accessErr) => {
                   if (accessErr) {
                     console.log('Does not exist : ' + f);
@@ -655,8 +673,7 @@ const lessWatchCompilerUtilsModule = {
       // own. This must check extension only, NOT hidden-file status: a
       // hidden _partial.less is exactly the kind of target issue #59 needs
       // to keep following.
-      const importAllowedExtensions = lessWatchCompilerUtilsModule.config.allowedExtensions || defaultAllowedExtensions;
-      if (importAllowedExtensions.indexOf(path.extname(importPath)) === -1) continue;
+      if (!hasAllowedExtension(importPath)) continue;
       // Recurse via fileWatcher(), not a bare setupWatcher() call: the
       // latter registers the watch but never populates fileimportlistObj
       // for the target, relying on a later top-level fileWatcher() call
