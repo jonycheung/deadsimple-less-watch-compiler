@@ -101,15 +101,33 @@ const lessWatchCompilerUtilsModule = {
       if (state.pending === 0) callback(err, state.files);
     };
 
-    const processDir = (directory: string) => {
+    // Only the root directory's failure aborts the walk: the caller named that
+    // path specifically, so there's nothing sensible to fall back to. A
+    // failure deeper in the tree -- an unreadable directory, a symlink the OS
+    // won't resolve -- is reported and stepped over instead, so one bad entry
+    // can't take down the whole watch session over an otherwise fine tree.
+    //
+    // Aborting also used to leave `pending` un-decremented while the rest of
+    // the walk carried on, so a later finalize() could invoke `callback` a
+    // second time, after it had already been called with the error.
+    const skipOrAbort = (err: NodeJS.ErrnoException, target: string, isRoot: boolean): void => {
+      if (isRoot) return callback(err, null);
+      console.log('Skipping ' + target + ': ' + (err.code || err.message));
+      finalize(null);
+    };
+
+    const processDir = (directory: string, isRoot: boolean) => {
       state.pending += 1;
       fs.stat(directory, (err, stat) => {
-        if (err) return callback(err as NodeJS.ErrnoException, null);
+        if (err) {
+          state.pending -= 1;
+          return skipOrAbort(err as NodeJS.ErrnoException, directory, isRoot);
+        }
 
         state.files[directory] = stat as fs.Stats;
         fs.readdir(directory, (readErr, files) => {
           state.pending -= 1;
-          if (readErr) return callback(readErr as NodeJS.ErrnoException, null);
+          if (readErr) return skipOrAbort(readErr as NodeJS.ErrnoException, directory, isRoot);
 
           files.forEach((entry) => {
             const filePath = path.join(directory, entry);
@@ -118,8 +136,8 @@ const lessWatchCompilerUtilsModule = {
               let enoent = false;
               if (statErr) {
                 if ((statErr as NodeJS.ErrnoException).code !== 'ENOENT') {
-                  console.log((statErr as NodeJS.ErrnoException).code);
-                  return callback(statErr as NodeJS.ErrnoException, null);
+                  state.pending -= 1;
+                  return skipOrAbort(statErr as NodeJS.ErrnoException, filePath, false);
                 } else {
                   enoent = true;
                 }
@@ -137,7 +155,7 @@ const lessWatchCompilerUtilsModule = {
 
                 state.files[filePath] = st as fs.Stats;
                 if (st.isDirectory()) {
-                  processDir(filePath);
+                  processDir(filePath, false);
                 } else {
                   if (initCallback) initCallback(filePath);
                 }
@@ -153,7 +171,7 @@ const lessWatchCompilerUtilsModule = {
       });
     };
 
-    processDir(dir);
+    processDir(dir, true);
   },
 
   watchTree(root: string, options: WalkOptions | WatchCallback, watchCallback?: WatchCallback, initCallback?: InitCallback): void {

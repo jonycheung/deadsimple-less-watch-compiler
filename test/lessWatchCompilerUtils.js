@@ -72,6 +72,77 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
+      it('reports a bad root directory through the callback instead of walking a partial tree', (done) => {
+        lessWatchCompilerUtils.walk(
+          path.join(cwd, 'test', 'no-such-directory-at-all'),
+          {},
+          (err) => {
+            assert.ok(err, 'a missing root must surface as an error');
+            assert.equal(err.code, 'ENOENT');
+            done();
+          },
+          function () {}
+        );
+      });
+      it('steps over an unreadable entry deeper in the tree instead of aborting the whole walk', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-badentry-'));
+        fs.writeFileSync(path.join(tmpDir, 'good.less'), '');
+        // A pair of symlinks pointing at each other: stat fails with ELOOP,
+        // which is neither ENOENT nor anything the walk can act on.
+        fs.symlinkSync(path.join(tmpDir, 'b'), path.join(tmpDir, 'a'));
+        fs.symlinkSync(path.join(tmpDir, 'a'), path.join(tmpDir, 'b'));
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            try {
+              assert.ifError(err);
+              assert.ok(
+                Object.keys(files).some((f) => f.endsWith('good.less')),
+                'the rest of the tree must still be walked'
+              );
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+      it('calls its completion callback exactly once when an entry fails to stat', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-once-'));
+        // Several unresolvable entries alongside real ones: aborting on the
+        // first without settling its pending count let a later finalize()
+        // invoke the callback again, after it had already fired with an error.
+        for (const name of ['x', 'y', 'z']) {
+          fs.symlinkSync(path.join(tmpDir, name + '2'), path.join(tmpDir, name));
+          fs.symlinkSync(path.join(tmpDir, name), path.join(tmpDir, name + '2'));
+        }
+        fs.writeFileSync(path.join(tmpDir, 'good.less'), '');
+
+        let calls = 0;
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          () => {
+            calls += 1;
+          },
+          function () {}
+        );
+
+        setTimeout(() => {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          try {
+            assert.equal(calls, 1, 'walk() must settle exactly once, not once per failing entry');
+            done();
+          } catch (e) {
+            done(e);
+          }
+        }, 500);
+      });
     });
     describe('watchTree()', function () {
       it('watchTree() function should be there', function () {
