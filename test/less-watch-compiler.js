@@ -132,6 +132,51 @@ describe('The CLI should', function () {
     });
   });
 
+  describe('not silently exclude everything when an ancestor directory matches:', function () {
+    let tmpDir;
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-cli-exclude-'));
+    });
+    afterEach(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
+
+    function project(...ancestors) {
+      const lessDir = path.join(tmpDir, ...ancestors, 'less');
+      fs.mkdirSync(lessDir, { recursive: true });
+      fs.writeFileSync(path.join(lessDir, 'a.less'), '.a { color: red; }');
+      return { lessDir, cssDir: path.join(tmpDir, ...ancestors, 'css') };
+    }
+
+    it('compiles a project living under a directory matching --exclude', () => {
+      const { lessDir, cssDir } = project('dist-proj', 'site');
+      cli('--run-once', '--exclude', 'dist', lessDir, cssDir);
+      assert.ok(fs.existsSync(path.join(cssDir, 'a.css')), 'an ancestor named dist-proj must not exclude the whole project');
+    });
+
+    it('compiles a project installed under node_modules, with no flag involved', () => {
+      const { lessDir, cssDir } = project('node_modules', 'my-theme');
+      cli('--run-once', lessDir, cssDir);
+      assert.ok(fs.existsSync(path.join(cssDir, 'a.css')), 'the always-on default must not exclude a package watching its own files');
+    });
+
+    it('still excludes a matching directory inside the watch folder', () => {
+      const { lessDir, cssDir } = project('site');
+      fs.mkdirSync(path.join(lessDir, 'vendor'));
+      fs.writeFileSync(path.join(lessDir, 'vendor', 'v.less'), '.v { color: blue; }');
+      cli('--run-once', '--exclude', 'vendor', lessDir, cssDir);
+      assert.ok(fs.existsSync(path.join(cssDir, 'a.css')));
+      assert.ok(!fs.existsSync(path.join(cssDir, 'vendor', 'v.css')), 'vendor inside the watch folder must still be excluded');
+    });
+
+    it('still excludes a real node_modules inside the watch folder', () => {
+      const { lessDir, cssDir } = project('site');
+      fs.mkdirSync(path.join(lessDir, 'node_modules', 'pkg'), { recursive: true });
+      fs.writeFileSync(path.join(lessDir, 'node_modules', 'pkg', 'p.less'), '.p { color: blue; }');
+      cli('--run-once', lessDir, cssDir);
+      assert.ok(fs.existsSync(path.join(cssDir, 'a.css')));
+      assert.ok(!fs.existsSync(path.join(cssDir, 'node_modules', 'pkg', 'p.css')), 'node_modules inside the watch folder must still be excluded');
+    });
+  });
+
   describe('fail with a message, not a stack trace, when the watch folder is unusable:', function () {
     let tmpDir;
     beforeEach(() => {

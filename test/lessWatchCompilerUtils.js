@@ -87,6 +87,162 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
+      it('matches the exclude pattern against the path relative to watchFolder, not an ancestor directory', (done) => {
+        // A project that merely *lives* under a directory matching the pattern
+        // must still compile. Testing the absolute path meant `--exclude dist`
+        // on a project at /home/me/dist-proj/site excluded the whole tree.
+        const outer = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-ancestor-'));
+        const distDir = path.join(outer, 'dist-proj');
+        const lessDir = path.join(distDir, 'less');
+        fs.mkdirSync(lessDir, { recursive: true });
+        fs.writeFileSync(path.join(lessDir, 'a.less'), '');
+
+        const previousConfig = lessWatchCompilerUtils.config;
+        lessWatchCompilerUtils.config = { watchFolder: lessDir };
+        lessWatchCompilerUtils.walk(
+          lessDir,
+          { exclude: /dist/ },
+          (err, files) => {
+            lessWatchCompilerUtils.config = previousConfig;
+            try {
+              assert.ifError(err);
+              assert.ok(
+                Object.keys(files).some((f) => f.endsWith('a.less')),
+                'an ancestor directory matching the pattern must not exclude the whole tree'
+              );
+              fs.rmSync(outer, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(outer, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+      it('still excludes a matching directory that is genuinely inside watchFolder', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-inside-'));
+        fs.mkdirSync(path.join(tmpDir, 'dist'), { recursive: true });
+        fs.writeFileSync(path.join(tmpDir, 'dist', 'built.less'), '');
+        fs.writeFileSync(path.join(tmpDir, 'mine.less'), '');
+
+        const previousConfig = lessWatchCompilerUtils.config;
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir };
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          { exclude: /dist/ },
+          (err, files) => {
+            lessWatchCompilerUtils.config = previousConfig;
+            try {
+              assert.ifError(err);
+              const fileList = Object.keys(files);
+              assert.ok(fileList.some((f) => f.endsWith('mine.less')));
+              assert.ok(!fileList.some((f) => f.endsWith('built.less')), 'a matching directory inside the watch folder must still be excluded');
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+      it('does not let the ../ prefix of an external @import make an anchored pattern match', (done) => {
+        // An @import resolving outside watchFolder becomes '../shared/x.less'
+        // once expressed relative to it. Those segments are an artifact of the
+        // calculation, so a pattern like ^\. must not start excluding every
+        // external import because of them.
+        const outer = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-external-'));
+        const lessDir = path.join(outer, 'less');
+        const sharedDir = path.join(outer, 'shared');
+        fs.mkdirSync(lessDir);
+        fs.mkdirSync(sharedDir);
+        fs.writeFileSync(path.join(sharedDir, 'vars.less'), '@c: red;');
+        fs.writeFileSync(path.join(lessDir, 'main.less'), '@import "../shared/vars.less";\n.a { color: @c; }');
+
+        const previousConfig = lessWatchCompilerUtils.config;
+        lessWatchCompilerUtils.config = { watchFolder: lessDir, outputFolder: path.join(outer, 'css') };
+        const filelistArr = [];
+        lessWatchCompilerUtils.fileWatcher(path.join(lessDir, 'main.less'), {}, { interval: 30, exclude: /^\./ }, filelistArr, {}, function () {});
+        lessWatchCompilerUtils.config = previousConfig;
+
+        const watched = filelistArr.some((f) => f.endsWith('vars.less'));
+        for (const f of filelistArr) fs.unwatchFile(f);
+        fs.rmSync(outer, { recursive: true, force: true });
+        try {
+          assert.ok(watched, 'an external @import must still be watched under an anchored pattern that only matches the ../ prefix');
+          done();
+        } catch (e) {
+          done(e);
+        }
+      });
+      it('still excludes an external @import that reaches into node_modules', (done) => {
+        // The other half: stripping the prefix must not make external subtrees
+        // un-excludable, which is what issue #72 wanted kept out.
+        const outer = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-external-nm-'));
+        const lessDir = path.join(outer, 'less');
+        const nmDir = path.join(outer, 'node_modules', 'pkg');
+        fs.mkdirSync(lessDir);
+        fs.mkdirSync(nmDir, { recursive: true });
+        fs.writeFileSync(path.join(nmDir, 'vars.less'), '@c: red;');
+        fs.writeFileSync(path.join(lessDir, 'main.less'), '@import "../node_modules/pkg/vars.less";\n.a { color: @c; }');
+
+        const previousConfig = lessWatchCompilerUtils.config;
+        lessWatchCompilerUtils.config = { watchFolder: lessDir, outputFolder: path.join(outer, 'css') };
+        const filelistArr = [];
+        lessWatchCompilerUtils.fileWatcher(
+          path.join(lessDir, 'main.less'),
+          {},
+          { interval: 30, exclude: lessWatchCompilerUtils.resolveExcludePattern() },
+          filelistArr,
+          {},
+          function () {}
+        );
+        lessWatchCompilerUtils.config = previousConfig;
+
+        const watched = filelistArr.some((f) => f.endsWith('vars.less'));
+        for (const f of filelistArr) fs.unwatchFile(f);
+        fs.rmSync(outer, { recursive: true, force: true });
+        try {
+          assert.ok(!watched, 'an @import reaching into node_modules must still be excluded');
+          done();
+        } catch (e) {
+          done(e);
+        }
+      });
+      it('does not exclude a project that is itself installed under node_modules', (done) => {
+        // The always-on default pattern, no flag involved: a package watching
+        // its own less folder from inside a node_modules directory compiled
+        // nothing at all, silently, and reported success.
+        const outer = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-nm-'));
+        const lessDir = path.join(outer, 'node_modules', 'my-theme', 'less');
+        fs.mkdirSync(lessDir, { recursive: true });
+        fs.writeFileSync(path.join(lessDir, 'a.less'), '');
+
+        const previousConfig = lessWatchCompilerUtils.config;
+        lessWatchCompilerUtils.config = { watchFolder: lessDir };
+        lessWatchCompilerUtils.walk(
+          lessDir,
+          { exclude: lessWatchCompilerUtils.resolveExcludePattern() },
+          (err, files) => {
+            lessWatchCompilerUtils.config = previousConfig;
+            try {
+              assert.ifError(err);
+              assert.ok(
+                Object.keys(files).some((f) => f.endsWith('a.less')),
+                'a package installed under node_modules must still compile its own files'
+              );
+              fs.rmSync(outer, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(outer, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
       it('does not descend into a symlink loop, and still finds the real files', function (done) {
         const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-loop-'));
         fs.writeFileSync(path.join(tmpDir, 'real.less'), '');
