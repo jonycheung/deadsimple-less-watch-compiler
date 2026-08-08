@@ -127,10 +127,38 @@ const lessWatchCompilerUtilsModule = {
       if (state.pending === 0) callback(err, state.files);
     };
 
-    const processDir = (directory: string) => {
+    // `ancestors` carries the identity (device + inode) of every directory on
+    // the path from the walk root down to this one. fs.stat follows symlinks,
+    // so a link pointing back at one of its own ancestors -- `less/self -> ..`
+    // is enough -- otherwise hands the walk an infinitely deep tree, and it
+    // descends until the OS refuses with ELOOP, compiling the same files into
+    // ever-deeper output folders the whole way down.
+    //
+    // Only an ancestor repeat is a cycle, and only cycles are skipped. Two
+    // sibling symlinks pointing at the same real directory are not a cycle:
+    // collapsing those would make which of the equivalent paths survives
+    // depend on which fs.stat callback happened to land first, and with it
+    // which output path the CSS is written to -- so the same tree could
+    // compile to css/link-a/x.css on one run and css/link-b/x.css on the next.
+    // Walking each alias is what this already did, and it stays that way.
+    const processDir = (directory: string, ancestors: Set<string>) => {
       state.pending += 1;
       fs.stat(directory, (err, stat) => {
         if (err) return callback(err as NodeJS.ErrnoException, null);
+
+        // Filesystems that don't report inodes -- FAT/exFAT volumes and some
+        // network shares under Windows -- hand back ino 0 for every entry,
+        // which would read as an immediate cycle and prune the whole tree
+        // below the root. That is a far worse failure than the loop this
+        // guards against, so no usable identity means no cycle detection:
+        // those volumes keep exactly today's behavior, and nothing is ever
+        // wrongly skipped anywhere.
+        const identity = stat.ino ? String(stat.dev) + ':' + String(stat.ino) : undefined;
+        if (identity !== undefined && ancestors.has(identity)) {
+          state.pending -= 1;
+          return void finalize(null);
+        }
+        const childAncestors = identity === undefined ? ancestors : new Set(ancestors).add(identity);
 
         state.files[directory] = stat as fs.Stats;
         fs.readdir(directory, (readErr, files) => {
@@ -163,7 +191,7 @@ const lessWatchCompilerUtilsModule = {
 
                 state.files[filePath] = st as fs.Stats;
                 if (st.isDirectory()) {
-                  processDir(filePath);
+                  processDir(filePath, childAncestors);
                 } else {
                   if (initCallback) initCallback(filePath);
                 }
@@ -179,7 +207,7 @@ const lessWatchCompilerUtilsModule = {
       });
     };
 
-    processDir(dir);
+    processDir(dir, new Set());
   },
 
   watchTree(root: string, options: WalkOptions | WatchCallback, watchCallback?: WatchCallback, initCallback?: InitCallback): void {
