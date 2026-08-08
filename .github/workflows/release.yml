@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 jobs:
@@ -44,8 +44,112 @@ jobs:
         run: yarn build
       - name: Test
         run: yarn test
-      - name: Publish to npm
+      - name: Resolve release notes content
+        id: notes
         run: |
+          version="${GITHUB_REF_NAME#v}"
+          notes_file="/tmp/release-notes.md"
+          if [ -f CHANGELOG.md ]; then
+            awk -v ver="v${version}" '
+              $0 ~ "^## " {
+                if (found) exit
+                if ($2 == ver) found=1
+              }
+              found { print }
+            ' CHANGELOG.md > "$notes_file"
+          fi
+
+          if [ -s "$notes_file" ]; then
+            echo "has_notes=true" >> "$GITHUB_OUTPUT"
+            echo "notes_source=changelog" >> "$GITHUB_OUTPUT"
+          else
+            : > "$notes_file"
+            echo "has_notes=false" >> "$GITHUB_OUTPUT"
+            echo "notes_source=auto-generated" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "notes_file=$notes_file" >> "$GITHUB_OUTPUT"
+      - name: Create or update GitHub release
+        id: github_release
+        uses: actions/github-script@v8
+        env:
+          HAS_NOTES: ${{ steps.notes.outputs.has_notes }}
+          NOTES_FILE: ${{ steps.notes.outputs.notes_file }}
+          TAG_NAME: ${{ github.ref_name }}
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const fs = require('node:fs');
+            const tag = process.env.TAG_NAME;
+            const hasNotes = process.env.HAS_NOTES === 'true';
+            const body = hasNotes ? fs.readFileSync(process.env.NOTES_FILE, 'utf8') : undefined;
+            let release;
+            try {
+              release = await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag
+              });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+            }
+
+            const baseParams = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: tag,
+              draft: false,
+              prerelease: false
+            };
+
+            let releaseBody = body;
+            if (!hasNotes) {
+              const generated = await github.rest.repos.generateReleaseNotes({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: tag
+              });
+              releaseBody = generated.data.body;
+            }
+
+            const params = { ...baseParams, body: releaseBody };
+
+            let result;
+            if (release) {
+              result = await github.rest.repos.updateRelease({
+                release_id: release.data.id,
+                ...params
+              });
+            } else {
+              result = await github.rest.repos.createRelease(params);
+            }
+
+            core.setOutput('html_url', result.data.html_url);
+      - name: Publish to npm
+        id: npm_publish
+        run: |
+          version="${GITHUB_REF_NAME#v}"
           npm i -g npm@latest
           npm --version
-          npm publish --provenance --access public
+
+          if npm view "less-watch-compiler@${version}" version >/dev/null 2>&1; then
+            echo "Package version ${version} is already published on npm; skipping publish."
+            echo "status=already-published" >> "$GITHUB_OUTPUT"
+          else
+            npm publish --provenance --access public
+            echo "status=published" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish release summary
+        run: |
+          {
+            echo "## Release published"
+            echo ""
+            echo "- Version: \`${GITHUB_REF_NAME#v}\`"
+            echo "- Tag: \`${GITHUB_REF_NAME}\`"
+            echo "- npm package: https://www.npmjs.com/package/less-watch-compiler"
+            echo "- npm publish status: ${{ steps.npm_publish.outputs.status }}"
+            echo "- GitHub Release: ${{ steps.github_release.outputs.html_url }}"
+            echo "- Notes source: ${{ steps.notes.outputs.notes_source }}"
+            echo "- Changelog: https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md"
+          } >> "$GITHUB_STEP_SUMMARY"
