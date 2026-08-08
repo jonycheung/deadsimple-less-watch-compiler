@@ -110,8 +110,19 @@ const fileimportlist: Record<string, string[]> = {};
 function isExcluded(exclude: RegExp | undefined, filePath: string): boolean {
   if (!exclude) return false;
   const watchFolder = lessWatchCompilerUtilsModule.config.watchFolder;
-  const target = watchFolder ? path.relative(watchFolder, filePath) : filePath;
-  return exclude.test(target.split(path.sep).join('/'));
+  const relative = watchFolder ? path.relative(watchFolder, filePath) : filePath;
+  // An @import can resolve outside watchFolder, and expressing that relative
+  // to the watch folder prefixes it with '../'. Those segments are an artifact
+  // of the calculation, not something the user's pattern is describing, so an
+  // anchored pattern must not match on them -- `^\.` should not start
+  // excluding every external import just because of the traversal prefix. The
+  // rest of the path stays matchable, so an import reaching into
+  // ../node_modules is still excluded, which is what issue #72 wanted.
+  const target = relative
+    .split(path.sep)
+    .join('/')
+    .replace(/^(?:\.\.\/)+/, '');
+  return exclude.test(target);
 }
 
 // Undo the bookkeeping fileWatcher() records for a path, so a file that comes
