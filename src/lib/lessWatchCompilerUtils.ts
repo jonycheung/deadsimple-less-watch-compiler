@@ -91,6 +91,29 @@ function buildBannerComment(banner: boolean | string): string {
 const filelist: string[] = [];
 const fileimportlist: Record<string, string[]> = {};
 
+/**
+ * Test a path against the exclude pattern, relative to watchFolder.
+ *
+ * The pattern describes the user's project layout: `--exclude dist` means the
+ * dist folder inside the tree being watched. Matching it against the absolute
+ * path meant any *ancestor* directory that happened to match silently excluded
+ * everything -- a project living at /home/me/dist-proj/site compiled nothing
+ * under `--exclude dist`, reporting success and exit 0. The always-on
+ * node_modules/.git default had the same flaw with no flag involved at all:
+ * a package installed under a node_modules directory watched its own less
+ * folder and compiled none of it.
+ *
+ * Separators are normalized to '/' so one pattern behaves the same way on
+ * Windows as on POSIX. With no watchFolder configured the path is tested as
+ * given, which is what walk() has always done when called directly.
+ */
+function isExcluded(exclude: RegExp | undefined, filePath: string): boolean {
+  if (!exclude) return false;
+  const watchFolder = lessWatchCompilerUtilsModule.config.watchFolder;
+  const target = watchFolder ? path.relative(watchFolder, filePath) : filePath;
+  return exclude.test(target.split(path.sep).join('/'));
+}
+
 // Undo the bookkeeping fileWatcher() records for a path, so a file that comes
 // back later is treated as new again. fileWatcher() refuses to register a path
 // already in filelist (that dedup is what keeps a file imported by several
@@ -227,7 +250,7 @@ const lessWatchCompilerUtilsModule = {
                 // descending into it); the extension filter must only apply
                 // to files, or directories never recurse
                 if (options.ignoreDotFiles && path.basename(filePath)[0] === '.') return void finalize(null);
-                if (options.exclude && options.exclude.test(filePath)) return void finalize(null);
+                if (isExcluded(options.exclude, filePath)) return void finalize(null);
                 if (!st.isDirectory() && options.filter && options.filter(filePath)) return void finalize(null);
 
                 state.files[filePath] = st as fs.Stats;
@@ -652,7 +675,7 @@ const lessWatchCompilerUtilsModule = {
                 // (e.g. node_modules reappearing after a reinstall) must
                 // never start being watched, the same way walk() already
                 // keeps the initial scan out of it entirely.
-                if (options.exclude && options.exclude.test(file)) return;
+                if (isExcluded(options.exclude, file)) return;
                 // The extension check must only apply to files -- a new
                 // directory (e.g. one created after startup) never matches
                 // an allowed extension, so applying it to directories too
@@ -730,7 +753,7 @@ const lessWatchCompilerUtilsModule = {
       // not be watched, or editing it would still trigger the importing
       // parent's recompile even though the subtree is supposed to be kept
       // out entirely (issue #72).
-      if (options.exclude && options.exclude.test(importPath)) continue;
+      if (isExcluded(options.exclude, importPath)) continue;
       // Only follow @import targets with an allowed extension (.less by
       // default). Less doesn't inline a plain `@import "x.css"` by default
       // (it stays a literal `@import url(...)` reference in the compiled

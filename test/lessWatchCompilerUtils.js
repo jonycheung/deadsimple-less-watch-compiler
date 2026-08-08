@@ -87,6 +87,99 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
+      it('matches the exclude pattern against the path relative to watchFolder, not an ancestor directory', (done) => {
+        // A project that merely *lives* under a directory matching the pattern
+        // must still compile. Testing the absolute path meant `--exclude dist`
+        // on a project at /home/me/dist-proj/site excluded the whole tree.
+        const outer = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-ancestor-'));
+        const distDir = path.join(outer, 'dist-proj');
+        const lessDir = path.join(distDir, 'less');
+        fs.mkdirSync(lessDir, { recursive: true });
+        fs.writeFileSync(path.join(lessDir, 'a.less'), '');
+
+        const previousConfig = lessWatchCompilerUtils.config;
+        lessWatchCompilerUtils.config = { watchFolder: lessDir };
+        lessWatchCompilerUtils.walk(
+          lessDir,
+          { exclude: /dist/ },
+          (err, files) => {
+            lessWatchCompilerUtils.config = previousConfig;
+            try {
+              assert.ifError(err);
+              assert.ok(
+                Object.keys(files).some((f) => f.endsWith('a.less')),
+                'an ancestor directory matching the pattern must not exclude the whole tree'
+              );
+              fs.rmSync(outer, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(outer, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+      it('still excludes a matching directory that is genuinely inside watchFolder', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-inside-'));
+        fs.mkdirSync(path.join(tmpDir, 'dist'), { recursive: true });
+        fs.writeFileSync(path.join(tmpDir, 'dist', 'built.less'), '');
+        fs.writeFileSync(path.join(tmpDir, 'mine.less'), '');
+
+        const previousConfig = lessWatchCompilerUtils.config;
+        lessWatchCompilerUtils.config = { watchFolder: tmpDir };
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          { exclude: /dist/ },
+          (err, files) => {
+            lessWatchCompilerUtils.config = previousConfig;
+            try {
+              assert.ifError(err);
+              const fileList = Object.keys(files);
+              assert.ok(fileList.some((f) => f.endsWith('mine.less')));
+              assert.ok(!fileList.some((f) => f.endsWith('built.less')), 'a matching directory inside the watch folder must still be excluded');
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+      it('does not exclude a project that is itself installed under node_modules', (done) => {
+        // The always-on default pattern, no flag involved: a package watching
+        // its own less folder from inside a node_modules directory compiled
+        // nothing at all, silently, and reported success.
+        const outer = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-nm-'));
+        const lessDir = path.join(outer, 'node_modules', 'my-theme', 'less');
+        fs.mkdirSync(lessDir, { recursive: true });
+        fs.writeFileSync(path.join(lessDir, 'a.less'), '');
+
+        const previousConfig = lessWatchCompilerUtils.config;
+        lessWatchCompilerUtils.config = { watchFolder: lessDir };
+        lessWatchCompilerUtils.walk(
+          lessDir,
+          { exclude: lessWatchCompilerUtils.resolveExcludePattern() },
+          (err, files) => {
+            lessWatchCompilerUtils.config = previousConfig;
+            try {
+              assert.ifError(err);
+              assert.ok(
+                Object.keys(files).some((f) => f.endsWith('a.less')),
+                'a package installed under node_modules must still compile its own files'
+              );
+              fs.rmSync(outer, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(outer, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
       it('does not descend into a symlink loop, and still finds the real files', function (done) {
         const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-loop-'));
         fs.writeFileSync(path.join(tmpDir, 'real.less'), '');
