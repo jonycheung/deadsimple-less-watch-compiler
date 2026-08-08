@@ -196,6 +196,169 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
+      it('reports a bad root directory through the callback instead of walking a partial tree', (done) => {
+        lessWatchCompilerUtils.walk(
+          path.join(cwd, 'test', 'no-such-directory-at-all'),
+          {},
+          (err) => {
+            assert.ok(err, 'a missing root must surface as an error');
+            assert.equal(err.code, 'ENOENT');
+            done();
+          },
+          function () {}
+        );
+      });
+      it('steps over an unreadable entry deeper in the tree instead of aborting the whole walk', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-badentry-'));
+        fs.writeFileSync(path.join(tmpDir, 'good.less'), '');
+        // A pair of symlinks pointing at each other: stat fails with ELOOP,
+        // which is neither ENOENT nor anything the walk can act on.
+        if (!trySymlink(path.join(tmpDir, 'b'), path.join(tmpDir, 'a')) || !trySymlink(path.join(tmpDir, 'a'), path.join(tmpDir, 'b'))) {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          return this.skip();
+        }
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            try {
+              assert.ifError(err);
+              assert.ok(
+                Object.keys(files).some((f) => f.endsWith('good.less')),
+                'the rest of the tree must still be walked'
+              );
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+      it('calls its completion callback exactly once when an entry fails to stat', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-once-'));
+        // Several unresolvable entries alongside real ones: aborting on the
+        // first without settling its pending count let a later finalize()
+        // invoke the callback again, after it had already fired with an error.
+        for (const name of ['x', 'y', 'z']) {
+          if (!trySymlink(path.join(tmpDir, name + '2'), path.join(tmpDir, name)) || !trySymlink(path.join(tmpDir, name), path.join(tmpDir, name + '2'))) {
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+            return this.skip();
+          }
+        }
+        fs.writeFileSync(path.join(tmpDir, 'good.less'), '');
+
+        let calls = 0;
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          () => {
+            calls += 1;
+          },
+          function () {}
+        );
+
+        setTimeout(() => {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          try {
+            assert.equal(calls, 1, 'walk() must settle exactly once, not once per failing entry');
+            done();
+          } catch (e) {
+            done(e);
+          }
+        }, 500);
+      });
+      it('keeps an unreadable directory in the files map, so it is still watched and can recover', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-eacces-'));
+        const lockedDir = path.join(tmpDir, 'locked');
+        fs.mkdirSync(lockedDir);
+        fs.writeFileSync(path.join(tmpDir, 'top.less'), '');
+
+        const originalReaddir = fs.readdir;
+        fs.readdir = function (target, cb) {
+          if (String(target) === lockedDir) {
+            const err = new Error('EACCES: permission denied');
+            err.code = 'EACCES';
+            return process.nextTick(() => cb(err));
+          }
+          return originalReaddir(target, cb);
+        };
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            fs.readdir = originalReaddir;
+            try {
+              assert.ifError(err);
+              // watchTree() only watches paths present in this map. Dropping
+              // the directory because its contents couldn't be listed would
+              // leave nothing watching it, so the subtree could never be
+              // picked up even after permissions are restored -- keeping it
+              // is what lets the directory rescan recover the whole subtree.
+              assert.ok(files[lockedDir], 'an unreadable directory must stay watchable so its contents can be found later');
+              assert.ok(
+                Object.keys(files).some((f) => f.endsWith('top.less')),
+                'the rest of the tree must still be walked'
+              );
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+      it('propagates a systemic failure like EMFILE instead of reporting a partial walk', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-emfile-'));
+        fs.mkdirSync(path.join(tmpDir, 'sub'));
+        fs.writeFileSync(path.join(tmpDir, 'sub', 'nested.less'), '');
+        fs.writeFileSync(path.join(tmpDir, 'top.less'), '');
+
+        // Descriptor exhaustion is a condition of the process, not of this
+        // path: most of the tree fails the same way, so skipping it and
+        // returning "success" would bring a watcher up over a fraction of the
+        // files with nothing to say so.
+        const originalReaddir = fs.readdir;
+        fs.readdir = function (target, cb) {
+          if (String(target).endsWith('sub')) {
+            const err = new Error('EMFILE: too many open files');
+            err.code = 'EMFILE';
+            return process.nextTick(() => cb(err));
+          }
+          return originalReaddir(target, cb);
+        };
+
+        let calls = 0;
+        let reported = null;
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err) => {
+            calls += 1;
+            reported = err;
+          },
+          function () {}
+        );
+
+        setTimeout(() => {
+          fs.readdir = originalReaddir;
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          try {
+            assert.equal(calls, 1, 'walk() must still settle exactly once');
+            assert.ok(reported, 'descriptor exhaustion must not be reported as a successful walk');
+            assert.equal(reported.code, 'EMFILE');
+            done();
+          } catch (e) {
+            done(e);
+          }
+        }, 400);
+      });
     });
     describe('watchTree()', function () {
       it('watchTree() function should be there', function () {

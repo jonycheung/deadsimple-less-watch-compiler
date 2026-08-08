@@ -123,8 +123,41 @@ const lessWatchCompilerUtilsModule = {
   walk(dir: string, options: WalkOptions, callback: WalkCompleteCallback, initCallback?: InitCallback): void {
     const state = { files: {} as FilesMap, pending: 0 };
 
+    // walk() settles once. Several entries can fail in the same pass -- under
+    // descriptor exhaustion most of them will -- and each of those used to
+    // reach `callback` on its own, so the caller was handed the same walk two
+    // or ten times over. watchTree() would go on to register watchers against
+    // a files map it had already thrown on.
+    let settled = false;
+    const settle = (err: NodeJS.ErrnoException | null, files: FilesMap | null) => {
+      if (settled) return;
+      settled = true;
+      callback(err, files);
+    };
+
     const finalize = (err: NodeJS.ErrnoException | null) => {
-      if (state.pending === 0) callback(err, state.files);
+      if (state.pending === 0) settle(err, state.files);
+    };
+
+    // A failure deeper in the tree is skipped rather than fatal -- but only
+    // when it's a property of that path. These codes mean the entry itself is
+    // genuinely unusable while the rest of the tree is unaffected, so stepping
+    // over it is right and the walk still returns everything else.
+    //
+    // Anything else -- EMFILE/ENFILE from descriptor exhaustion, ENOMEM, an
+    // EIO off a failing disk -- is a condition of the process or the machine,
+    // not of this path. Under descriptor pressure most of the tree fails the
+    // same way, and quietly reporting a successful partial walk would bring
+    // the watcher up over a fraction of the files with nothing to say so.
+    // Those propagate, exactly like a bad root.
+    const pathLocalErrorCodes = new Set(['ENOENT', 'EACCES', 'EPERM', 'ELOOP', 'ENOTDIR', 'ENAMETOOLONG', 'EINVAL']);
+
+    const skipOrAbort = (err: NodeJS.ErrnoException, target: string, isRoot: boolean): void => {
+      // The root is the path the caller named specifically, so there's nothing
+      // sensible to fall back to when it fails, whatever the reason.
+      if (isRoot || !pathLocalErrorCodes.has(err.code as string)) return settle(err, null);
+      console.log('Skipping ' + target + ': ' + (err.code || err.message));
+      finalize(null);
     };
 
     // `ancestors` carries the identity (device + inode) of every directory on
@@ -141,10 +174,18 @@ const lessWatchCompilerUtilsModule = {
     // which output path the CSS is written to -- so the same tree could
     // compile to css/link-a/x.css on one run and css/link-b/x.css on the next.
     // Walking each alias is what this already did, and it stays that way.
-    const processDir = (directory: string, ancestors: Set<string>) => {
+    //
+    // isRoot is passed separately rather than inferred from an empty
+    // `ancestors` set. On a filesystem that reports no inodes the set stays
+    // empty all the way down, so every directory would look like the root and
+    // a skippable failure deep in the tree would abort the whole walk.
+    const processDir = (directory: string, isRoot: boolean, ancestors: Set<string>) => {
       state.pending += 1;
       fs.stat(directory, (err, stat) => {
-        if (err) return callback(err as NodeJS.ErrnoException, null);
+        if (err) {
+          state.pending -= 1;
+          return skipOrAbort(err as NodeJS.ErrnoException, directory, isRoot);
+        }
 
         // Filesystems that don't report inodes -- FAT/exFAT volumes and some
         // network shares under Windows -- hand back ino 0 for every entry,
@@ -163,7 +204,7 @@ const lessWatchCompilerUtilsModule = {
         state.files[directory] = stat as fs.Stats;
         fs.readdir(directory, (readErr, files) => {
           state.pending -= 1;
-          if (readErr) return callback(readErr as NodeJS.ErrnoException, null);
+          if (readErr) return skipOrAbort(readErr as NodeJS.ErrnoException, directory, isRoot);
 
           files.forEach((entry) => {
             const filePath = path.join(directory, entry);
@@ -172,8 +213,8 @@ const lessWatchCompilerUtilsModule = {
               let enoent = false;
               if (statErr) {
                 if ((statErr as NodeJS.ErrnoException).code !== 'ENOENT') {
-                  console.log((statErr as NodeJS.ErrnoException).code);
-                  return callback(statErr as NodeJS.ErrnoException, null);
+                  state.pending -= 1;
+                  return skipOrAbort(statErr as NodeJS.ErrnoException, filePath, false);
                 } else {
                   enoent = true;
                 }
@@ -191,7 +232,7 @@ const lessWatchCompilerUtilsModule = {
 
                 state.files[filePath] = st as fs.Stats;
                 if (st.isDirectory()) {
-                  processDir(filePath, childAncestors);
+                  processDir(filePath, false, childAncestors);
                 } else {
                   if (initCallback) initCallback(filePath);
                 }
@@ -207,7 +248,7 @@ const lessWatchCompilerUtilsModule = {
       });
     };
 
-    processDir(dir, new Set());
+    processDir(dir, true, new Set());
   },
 
   watchTree(root: string, options: WalkOptions | WatchCallback, watchCallback?: WatchCallback, initCallback?: InitCallback): void {
