@@ -74,6 +74,167 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
     assert.throws(() => api.watch('test/less', 'test/css', { mainFile: 'no-such-main.less', runOnce: true }), /no-such-main\.less does not exist/);
   });
 
+  it('watch() keeps watching a file that is deleted and then recreated', function (done) {
+    this.timeout(30000);
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-api-recreate-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const recreateOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(recreateOutDir);
+    const lessFile = path.join(lessDir, 'gone.less');
+    const outputCss = path.join(recreateOutDir, 'gone.css');
+    fs.writeFileSync(lessFile, '.a { color: red; }');
+
+    function waitFor(needle, timeoutMs, cb) {
+      const start = Date.now();
+      (function poll() {
+        fs.readFile(outputCss, 'utf8', (err, content) => {
+          if (!err && content.includes(needle)) return cb(null);
+          if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for "' + needle + '" in ' + outputCss));
+          setTimeout(poll, 50);
+        });
+      })();
+    }
+
+    function cleanup() {
+      fs.unwatchFile(lessFile);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    api.watch(lessDir, recreateOutDir);
+
+    waitFor('red', 6000, (err) => {
+      if (err) return (cleanup(), done(err));
+      fs.unlinkSync(lessFile);
+      // Let the removal-confirmation debounce in setupWatcher() actually fire,
+      // so this exercises a confirmed delete rather than a transient miss.
+      setTimeout(() => {
+        fs.writeFileSync(lessFile, '.a { color: green; }');
+        waitFor('green', 8000, (err2) => {
+          if (err2) return (cleanup(), done(err2));
+          // The real regression: the recreate itself compiles via the parent
+          // directory rescan, but the file used to stay permanently unwatched
+          // afterwards, so every later edit was silently dropped.
+          fs.writeFileSync(lessFile, '.a { color: purple; }');
+          waitFor('purple', 8000, (err3) => {
+            cleanup();
+            done(err3);
+          });
+        });
+      }, 1500);
+    });
+  });
+
+  it('watch() keeps recompiling importers of a hidden _partial that is deleted and recreated', function (done) {
+    this.timeout(30000);
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-api-partial-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const partialOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(partialOutDir);
+    const partial = path.join(lessDir, '_shared.less');
+    const importer = path.join(lessDir, 'page.less');
+    const outputCss = path.join(partialOutDir, 'page.css');
+    fs.writeFileSync(partial, '@c: red;');
+    fs.writeFileSync(importer, '@import "_shared"; .page { color: @c; }');
+
+    function waitFor(needle, timeoutMs, cb) {
+      const start = Date.now();
+      (function poll() {
+        fs.readFile(outputCss, 'utf8', (err, content) => {
+          if (!err && content.includes(needle)) return cb(null);
+          if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for "' + needle + '" in ' + outputCss));
+          setTimeout(poll, 50);
+        });
+      })();
+    }
+
+    function cleanup() {
+      fs.unwatchFile(partial);
+      fs.unwatchFile(importer);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    api.watch(lessDir, partialOutDir);
+
+    waitFor('red', 6000, (err) => {
+      if (err) return (cleanup(), done(err));
+      fs.unlinkSync(partial);
+      setTimeout(() => {
+        fs.writeFileSync(partial, '@c: green;');
+        // The directory rescan used to run every new entry through
+        // filterFiles(), which rejects hidden files, so a recreated
+        // underscore-prefixed partial was never rediscovered at all.
+        waitFor('green', 9000, (err2) => {
+          if (err2) return (cleanup(), done(err2));
+          // ...and it has to still be watched afterwards, not just compiled once.
+          fs.writeFileSync(partial, '@c: purple;');
+          waitFor('purple', 9000, (err3) => {
+            cleanup();
+            done(err3);
+          });
+        });
+      }, 1500);
+    });
+  });
+
+  it('watch() keeps transitive import tracking through a deleted and recreated middle partial', function (done) {
+    this.timeout(30000);
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-api-transitive-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const chainOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(chainOutDir);
+    // main.less -> _theme.less -> colors.less, with the recreated file in the
+    // middle: its own import list is dropped when it goes away, so it has to
+    // be rebuilt on rediscovery or the chain from main.less to colors.less
+    // stays broken and only colors.css updates.
+    const colors = path.join(lessDir, 'colors.less');
+    const theme = path.join(lessDir, '_theme.less');
+    fs.writeFileSync(colors, '@brand: red;');
+    fs.writeFileSync(theme, '@import "colors"; @text: @brand;');
+    fs.writeFileSync(path.join(lessDir, 'main.less'), '@import "_theme"; .main { color: @text; }');
+    const outputCss = path.join(chainOutDir, 'main.css');
+
+    function waitFor(needle, timeoutMs, cb) {
+      const start = Date.now();
+      (function poll() {
+        fs.readFile(outputCss, 'utf8', (err, content) => {
+          if (!err && content.includes(needle)) return cb(null);
+          if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for "' + needle + '" in ' + outputCss));
+          setTimeout(poll, 50);
+        });
+      })();
+    }
+
+    function cleanup() {
+      for (const f of [colors, theme, path.join(lessDir, 'main.less')]) fs.unwatchFile(f);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    api.watch(lessDir, chainOutDir);
+
+    waitFor('red', 6000, (err) => {
+      if (err) return (cleanup(), done(err));
+      fs.unlinkSync(theme);
+      setTimeout(() => {
+        fs.writeFileSync(theme, '@import "colors"; @text: @brand;');
+        setTimeout(() => {
+          // Edit the leaf, two hops from main.less, after the middle file
+          // has been through a full delete/recreate cycle.
+          fs.writeFileSync(colors, '@brand: green;');
+          waitFor('green', 9000, (err2) => {
+            cleanup();
+            done(err2);
+          });
+        }, 2000);
+      }, 1500);
+    });
+  });
+
   it('watch() compiles on start and recompiles the output when a watched file is later edited', function (done) {
     this.timeout(15000);
     const os = require('os');
