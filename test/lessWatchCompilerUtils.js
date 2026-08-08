@@ -87,6 +87,115 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
+      it('does not descend into a symlink loop, and still finds the real files', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-loop-'));
+        fs.writeFileSync(path.join(tmpDir, 'real.less'), '');
+        // A link back into its own tree: fs.stat follows symlinks, so an
+        // unguarded walk recurses tmpDir/loop/loop/... until the OS refuses
+        // with ELOOP, and that error takes down the whole walk.
+        if (!trySymlink(tmpDir, path.join(tmpDir, 'loop'), 'dir')) {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          return this.skip();
+        }
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            try {
+              assert.ifError(err);
+              const fileList = Object.keys(files);
+              assert.ok(
+                fileList.some((f) => f.endsWith('real.less')),
+                'the real file must still be discovered'
+              );
+              assert.ok(!fileList.some((f) => f.includes(`loop${path.sep}loop`)), 'the walk must not re-enter a directory it has already visited');
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+      it('walks every alias of a directory, so which path survives is never a race', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-alias-'));
+        const realDir = path.join(tmpDir, 'real');
+        fs.mkdirSync(realDir);
+        fs.writeFileSync(path.join(realDir, 'once.less'), '');
+        if (!trySymlink(realDir, path.join(tmpDir, 'link-a'), 'dir') || !trySymlink(realDir, path.join(tmpDir, 'link-b'), 'dir')) {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          return this.skip();
+        }
+
+        // Sibling aliases are not a cycle. Collapsing them to one would leave
+        // the surviving path decided by whichever fs.stat callback landed
+        // first -- and resolveOutputPath() derives the output path from it, so
+        // the same tree would compile to css/link-a/once.css on one run and
+        // css/link-b/once.css on the next.
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            try {
+              assert.ifError(err);
+              const via = Object.keys(files)
+                .filter((f) => f.endsWith('once.less'))
+                .map((f) => path.basename(path.dirname(f)))
+                .sort();
+              assert.deepEqual(via, ['link-a', 'link-b', 'real'], 'every alias must be walked, not whichever one won the race');
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
+      it('still walks the whole tree on a filesystem that reports no inode numbers', (done) => {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-noino-'));
+        for (const d of ['one', 'two', 'three']) {
+          fs.mkdirSync(path.join(tmpDir, d));
+          fs.writeFileSync(path.join(tmpDir, d, d + '.less'), '');
+        }
+
+        // FAT/exFAT volumes and some Windows network shares report ino 0 for
+        // every entry. Deduping on a 0 identity would match everything and
+        // silently skip the entire tree after the first directory.
+        const originalStat = fs.stat;
+        fs.stat = function (target, cb) {
+          return originalStat(target, (err, stat) => {
+            if (stat) stat.ino = 0;
+            cb(err, stat);
+          });
+        };
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            fs.stat = originalStat;
+            try {
+              assert.ifError(err);
+              const found = Object.keys(files)
+                .filter((f) => f.endsWith('.less'))
+                .map((f) => path.basename(f))
+                .sort();
+              assert.deepEqual(found, ['one.less', 'three.less', 'two.less'], 'every directory must still be walked when identities are unavailable');
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
       it('reports a bad root directory through the callback instead of walking a partial tree', (done) => {
         lessWatchCompilerUtils.walk(
           path.join(cwd, 'test', 'no-such-directory-at-all'),
