@@ -547,6 +547,41 @@ const lessWatchCompilerUtilsModule = {
     return new RegExp(`(?:${defaultExcludePattern.source})|(?:${userRegex.source})`);
   },
 
+  /**
+   * Check up front that the watch folder is a directory we can actually read.
+   *
+   * walk() reports a bad root through its completion callback, and watchTree()
+   * can only rethrow that from inside an fs callback. On the CLI that surfaces
+   * as a raw uncaught ENOENT/ENOTDIR stack trace instead of a message; through
+   * the programmatic watch() it is worse than cosmetic, because the throw
+   * happens long after watch() returned, so no try/catch around the call can
+   * ever see it and the host process simply dies.
+   *
+   * Failing synchronously here turns the three ordinary setup mistakes -- a
+   * mistyped folder, a file passed where a folder was meant, and a folder the
+   * process can't read -- into a plain error the caller can act on. Callers
+   * decide how to surface it: the CLI prints and exits, the API propagates.
+   */
+  assertWatchableFolder(folder: string): void {
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(folder);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT') throw new Error('Watch folder ' + folder + ' does not exist.', { cause: err });
+      throw new Error('Watch folder ' + folder + ' cannot be read: ' + (code || (err as Error).message), { cause: err });
+    }
+    if (!stat.isDirectory()) throw new Error('Watch folder ' + folder + ' is not a directory.');
+    // stat succeeds on a directory the process may not list -- it only needs
+    // execute permission on the parent -- so the readdir that walk() actually
+    // depends on can still fail with EACCES. Check that separately.
+    try {
+      fs.accessSync(folder, fs.constants.R_OK);
+    } catch (err) {
+      throw new Error('Watch folder ' + folder + ' cannot be read: ' + ((err as NodeJS.ErrnoException).code || (err as Error).message), { cause: err });
+    }
+  },
+
   getDateTime(): string {
     const date = new Date();
     let hour: number | string = date.getHours();

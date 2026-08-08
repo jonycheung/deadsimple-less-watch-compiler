@@ -132,6 +132,29 @@ describe('The CLI should', function () {
     });
   });
 
+  describe('fail with a message, not a stack trace, when the watch folder is unusable:', function () {
+    let tmpDir;
+    beforeEach(() => {
+      tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-cli-watchfolder-'));
+      fs.writeFileSync(path.join(tmpDir, 'notadir.less'), '.a { color: red; }');
+    });
+    afterEach(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
+
+    it('the watch folder does not exist', () => {
+      const result = cliExpectFailure('--run-once', path.join(tmpDir, 'no-such-folder'), path.join(tmpDir, 'css'));
+      assert.equal(result.status, 1);
+      assert.match(result.output, /does not exist\./);
+      assert.doesNotMatch(result.output, /at Object\.|node:internal|throw err/, 'must be a plain message, not an uncaught stack trace');
+    });
+
+    it('the watch folder is a file rather than a directory', () => {
+      const result = cliExpectFailure('--run-once', path.join(tmpDir, 'notadir.less'), path.join(tmpDir, 'css'));
+      assert.equal(result.status, 1);
+      assert.match(result.output, /is not a directory\./);
+      assert.doesNotMatch(result.output, /at Object\.|node:internal|throw err/, 'must be a plain message, not an uncaught stack trace');
+    });
+  });
+
   describe('survive a hostile watch tree:', function () {
     it('a symlink loop does not crash the run or flood the output folder', function () {
       const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-cli-loop-'));
@@ -164,4 +187,16 @@ describe('The CLI should', function () {
 function cli(...args) {
   const command = `node ${path.resolve('dist/less-watch-compiler.js')} ${args.join(' ')}`;
   return execSync(command);
+}
+
+// execSync throws on a non-zero exit, which is exactly what these cases do;
+// capture the status and combined output instead of letting it propagate.
+function cliExpectFailure(...args) {
+  const command = `node ${path.resolve('dist/less-watch-compiler.js')} ${args.join(' ')}`;
+  try {
+    const output = execSync(command, { stdio: ['ignore', 'pipe', 'pipe'] });
+    return { status: 0, output: output.toString() };
+  } catch (err) {
+    return { status: err.status, output: (err.stdout || '').toString() + (err.stderr || '').toString() };
+  }
 }
