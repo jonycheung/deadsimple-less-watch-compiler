@@ -2,6 +2,7 @@ const assert = require('assert'),
   path = require('path'),
   fs = require('fs'),
   api = require('../dist/index.js'),
+  lessWatchCompilerUtils = require('../dist/lib/lessWatchCompilerUtils.js'),
   cwd = process.cwd(),
   outDir = path.join(cwd, 'test', 'css');
 
@@ -244,6 +245,29 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
 
   it('watch() throws synchronously when the watch folder is a file rather than a directory', function () {
     assert.throws(() => api.watch(path.join(cwd, 'test', 'less', 'test.less'), 'test/css'), /is not a directory\./);
+  });
+
+  it('watch() surfaces startup walk errors via listeners.onError without uncaught async throws', function (done) {
+    const originalWalk = lessWatchCompilerUtils.walk;
+    lessWatchCompilerUtils.walk = function (dir, options, callback) {
+      process.nextTick(() => callback(Object.assign(new Error('permission denied'), { code: 'EACCES' }), null));
+    };
+    api.watch(
+      path.join(cwd, 'test', 'less'),
+      'test/css',
+      {},
+      {
+        onError(err) {
+          lessWatchCompilerUtils.walk = originalWalk;
+          try {
+            assert.equal(err.message, 'Watch folder ' + path.join(cwd, 'test', 'less') + ' cannot be read: EACCES');
+            done();
+          } catch (e) {
+            done(e);
+          }
+        }
+      }
+    );
   });
 
   it('watch() compiles on start and recompiles the output when a watched file is later edited', function (done) {

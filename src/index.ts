@@ -61,6 +61,8 @@ export interface WatchListeners {
   onCompile?: (changedFile: string, outputFilePath: string) => void;
   onImportCompile?: (importingFile: string, changedFile: string, outputFilePath: string) => void;
   onRemove?: (file: string) => void;
+  /** Receives startup walk errors that occur after watch() has already returned */
+  onError?: (error: Error) => void;
 }
 
 /**
@@ -139,7 +141,11 @@ export function watch(watchFolder: string, outputFolder: string, options: WatchO
       interval: 200,
       ignoreDotFiles: !options.includeHidden,
       filter: lessWatchCompilerUtils.filterFiles,
-      exclude
+      exclude,
+      onError(error) {
+        if (listeners.onError) listeners.onError(error);
+        else console.error(error.message);
+      }
     },
     lessWatchCompilerUtils.makeWatchHandler(mainFilePath, {
       onRemove: listeners.onRemove,

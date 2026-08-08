@@ -192,7 +192,11 @@ function init(): void {
       // If we've set --include-hidden, don't ignore dotfiles
       ignoreDotFiles: !lessWatchCompilerUtils.config.includeHidden,
       filter: lessWatchCompilerUtils.filterFiles,
-      exclude
+      exclude,
+      onError(error) {
+        console.log(error.message);
+        process.exit(1);
+      }
     },
     lessWatchCompilerUtils.makeWatchHandler(mainFilePath, {
       onRemove(f) {

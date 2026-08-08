@@ -378,8 +378,10 @@ describe('lessWatchCompilerUtils Module API', function () {
         // that walk()'s readdir would hit needs its own check.
         const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-unreadable-'));
         const originalAccess = fs.accessSync;
+        let checkedMode;
         fs.accessSync = function (target, mode) {
           if (String(target) === tmpDir) {
+            checkedMode = mode;
             const err = new Error('EACCES: permission denied');
             err.code = 'EACCES';
             throw err;
@@ -388,6 +390,7 @@ describe('lessWatchCompilerUtils Module API', function () {
         };
         try {
           assert.throws(() => lessWatchCompilerUtils.assertWatchableFolder(tmpDir), /cannot be read: EACCES/);
+          assert.equal(checkedMode, fs.constants.R_OK | fs.constants.X_OK);
         } finally {
           fs.accessSync = originalAccess;
           fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -421,6 +424,31 @@ describe('lessWatchCompilerUtils Module API', function () {
             done();
           }
         });
+      });
+      it('surfaces a startup walk failure through onError instead of throwing from an fs callback', function (done) {
+        const originalWalk = lessWatchCompilerUtils.walk;
+        let watchCallbackCalled = false;
+        lessWatchCompilerUtils.walk = function (dir, options, callback) {
+          process.nextTick(() => callback(Object.assign(new Error('permission denied'), { code: 'EACCES' }), null));
+        };
+        lessWatchCompilerUtils.watchTree(
+          path.join(cwd, 'test', 'less'),
+          {
+            onError(err) {
+              lessWatchCompilerUtils.walk = originalWalk;
+              try {
+                assert.equal(err.message, 'Watch folder ' + path.join(cwd, 'test', 'less') + ' cannot be read: EACCES');
+                assert.equal(watchCallbackCalled, false);
+                done();
+              } catch (e) {
+                done(e);
+              }
+            }
+          },
+          () => {
+            watchCallbackCalled = true;
+          }
+        );
       });
     });
     describe('live watch mode (real fs.watchFile polling)', function () {

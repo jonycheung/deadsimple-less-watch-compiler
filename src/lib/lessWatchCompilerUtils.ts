@@ -17,6 +17,7 @@ interface WalkOptions {
   // whole subtrees entirely (e.g. node_modules, #72), not for narrowing
   // which files within an otherwise-watched directory count as compilable.
   exclude?: RegExp;
+  onError?: (error: Error) => void;
 }
 
 interface FilesMap {
@@ -265,7 +266,18 @@ const lessWatchCompilerUtilsModule = {
       root,
       opts,
       (err: NodeJS.ErrnoException | null, files: FilesMap | null) => {
-        if (err) throw err as any;
+        if (err) {
+          const code = err.code;
+          const watchError =
+            code === 'ENOENT'
+              ? new Error('Watch folder ' + root + ' does not exist.', { cause: err })
+              : code === 'ENOTDIR'
+                ? new Error('Watch folder ' + root + ' is not a directory.', { cause: err })
+                : new Error('Watch folder ' + root + ' cannot be read: ' + (code || err.message), { cause: err });
+          if (opts.onError) opts.onError(watchError);
+          else console.error(watchError.message);
+          return;
+        }
         if (!files) return;
         const filesMap = files as FilesMap;
         lessWatchCompilerUtilsModule.fileWatcher(root, filesMap, opts, filelist, fileimportlist, cb);
@@ -572,11 +584,12 @@ const lessWatchCompilerUtilsModule = {
       throw new Error('Watch folder ' + folder + ' cannot be read: ' + (code || (err as Error).message), { cause: err });
     }
     if (!stat.isDirectory()) throw new Error('Watch folder ' + folder + ' is not a directory.');
-    // stat succeeds on a directory the process may not list -- it only needs
-    // execute permission on the parent -- so the readdir that walk() actually
-    // depends on can still fail with EACCES. Check that separately.
+    // stat succeeds on a directory the process may not list or traverse -- it
+    // only needs execute permission on the parent -- so the readdir/stat work
+    // walk() actually depends on can still fail with EACCES. Check that
+    // separately.
     try {
-      fs.accessSync(folder, fs.constants.R_OK);
+      fs.accessSync(folder, fs.constants.R_OK | fs.constants.X_OK);
     } catch (err) {
       throw new Error('Watch folder ' + folder + ' cannot be read: ' + ((err as NodeJS.ErrnoException).code || (err as Error).message), { cause: err });
     }
