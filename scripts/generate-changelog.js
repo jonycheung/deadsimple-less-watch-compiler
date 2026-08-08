@@ -87,7 +87,10 @@ function categorizeCommit(subject) {
 function getCommits(rangeExpression) {
   const raw = run(`git log --no-merges --pretty=format:%s ${rangeExpression}`);
   if (!raw) return [];
-  return raw.split('\n').map((line) => line.trim()).filter(Boolean);
+  return raw
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 function renderSection({ version, date, commits }) {
