@@ -180,6 +180,61 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
     });
   });
 
+  it('watch() keeps transitive import tracking through a deleted and recreated middle partial', function (done) {
+    this.timeout(30000);
+    const os = require('os');
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lwc-api-transitive-'));
+    const lessDir = path.join(tmpDir, 'less');
+    const chainOutDir = path.join(tmpDir, 'css');
+    fs.mkdirSync(lessDir);
+    fs.mkdirSync(chainOutDir);
+    // main.less -> _theme.less -> colors.less, with the recreated file in the
+    // middle: its own import list is dropped when it goes away, so it has to
+    // be rebuilt on rediscovery or the chain from main.less to colors.less
+    // stays broken and only colors.css updates.
+    const colors = path.join(lessDir, 'colors.less');
+    const theme = path.join(lessDir, '_theme.less');
+    fs.writeFileSync(colors, '@brand: red;');
+    fs.writeFileSync(theme, '@import "colors"; @text: @brand;');
+    fs.writeFileSync(path.join(lessDir, 'main.less'), '@import "_theme"; .main { color: @text; }');
+    const outputCss = path.join(chainOutDir, 'main.css');
+
+    function waitFor(needle, timeoutMs, cb) {
+      const start = Date.now();
+      (function poll() {
+        fs.readFile(outputCss, 'utf8', (err, content) => {
+          if (!err && content.includes(needle)) return cb(null);
+          if (Date.now() - start > timeoutMs) return cb(new Error('timed out waiting for "' + needle + '" in ' + outputCss));
+          setTimeout(poll, 50);
+        });
+      })();
+    }
+
+    function cleanup() {
+      for (const f of [colors, theme, path.join(lessDir, 'main.less')]) fs.unwatchFile(f);
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+
+    api.watch(lessDir, chainOutDir);
+
+    waitFor('red', 6000, (err) => {
+      if (err) return (cleanup(), done(err));
+      fs.unlinkSync(theme);
+      setTimeout(() => {
+        fs.writeFileSync(theme, '@import "colors"; @text: @brand;');
+        setTimeout(() => {
+          // Edit the leaf, two hops from main.less, after the middle file
+          // has been through a full delete/recreate cycle.
+          fs.writeFileSync(colors, '@brand: green;');
+          waitFor('green', 9000, (err2) => {
+            cleanup();
+            done(err2);
+          });
+        }, 2000);
+      }, 1500);
+    });
+  });
+
   it('watch() compiles on start and recompiles the output when a watched file is later edited', function (done) {
     this.timeout(15000);
     const os = require('os');
