@@ -71,7 +71,7 @@ jobs:
           echo "notes_file=$notes_file" >> "$GITHUB_OUTPUT"
       - name: Create or update GitHub release
         id: github_release
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           HAS_NOTES: ${{ steps.notes.outputs.has_notes }}
           NOTES_FILE: ${{ steps.notes.outputs.notes_file }}
