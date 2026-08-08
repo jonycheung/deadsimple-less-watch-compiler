@@ -2,7 +2,7 @@
 [![Release](https://github.com/jonycheung/deadsimple-less-watch-compiler/actions/workflows/release.yml/badge.svg)](https://github.com/jonycheung/deadsimple-less-watch-compiler/actions/workflows/release.yml)
 [![npm version](https://badge.fury.io/js/less-watch-compiler.svg)](https://badge.fury.io/js/less-watch-compiler)
 [![npm downloads](https://img.shields.io/npm/dm/less-watch-compiler.svg)](https://www.npmjs.com/package/less-watch-compiler)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
 [![Backers on Open Collective](https://opencollective.com/less-watch-compiler/backers/badge.svg)](#backers)
 [![Sponsors on Open Collective](https://opencollective.com/less-watch-compiler/sponsors/badge.svg)](#sponsors)
