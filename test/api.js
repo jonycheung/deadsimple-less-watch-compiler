@@ -255,17 +255,22 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
       errorCallback(err);
     };
     try {
-      api.watch('test/less', 'test/css', {}, {
-        onError(error) {
-          try {
-            assert.match(error.message, /Watch failed/);
-            assert.match(error.message, /EIO/);
-            done();
-          } catch (e) {
-            done(e);
+      api.watch(
+        'test/less',
+        'test/css',
+        {},
+        {
+          onError(error) {
+            try {
+              assert.match(error.message, /Watch failed/);
+              assert.match(error.message, /EIO/);
+              done();
+            } catch (e) {
+              done(e);
+            }
           }
         }
-      });
+      );
     } finally {
       lessWatchCompilerUtils.watchTree = originalWatchTree;
     }

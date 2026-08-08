@@ -648,13 +648,7 @@ const lessWatchCompilerUtilsModule = {
     return hour + ':' + min + ':' + sec + ' on ' + day + '/' + month + '/' + year;
   },
 
-  setupWatcher(
-    f: string,
-    files: FilesMap,
-    options: WalkOptions,
-    watchCallback: WatchCallback,
-    errorCallback?: WatchErrorCallback
-  ): void {
+  setupWatcher(f: string, files: FilesMap, options: WalkOptions, watchCallback: WatchCallback, errorCallback?: WatchErrorCallback): void {
     if (lessWatchCompilerUtilsModule.config.runOnce === true) return;
     const watchOptions: fs.WatchFileOptions & { bigint?: false } = {
       bigint: false
