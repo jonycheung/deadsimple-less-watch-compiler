@@ -69,11 +69,6 @@ jobs:
           fi
 
           echo "notes_file=$notes_file" >> "$GITHUB_OUTPUT"
-      - name: Publish to npm
-        run: |
-          npm i -g npm@latest
-          npm --version
-          npm publish --provenance --access public
       - name: Create or update GitHub release
         id: github_release
         uses: actions/github-script@v8
@@ -123,6 +118,20 @@ jobs:
             }
 
             core.setOutput('html_url', result.data.html_url);
+      - name: Publish to npm
+        id: npm_publish
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          npm i -g npm@latest
+          npm --version
+
+          if npm view "less-watch-compiler@${version}" version >/dev/null 2>&1; then
+            echo "Package version ${version} is already published on npm; skipping publish."
+            echo "status=already-published" >> "$GITHUB_OUTPUT"
+          else
+            npm publish --provenance --access public
+            echo "status=published" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish release summary
         run: |
           {
@@ -131,6 +140,7 @@ jobs:
             echo "- Version: \`${GITHUB_REF_NAME#v}\`"
             echo "- Tag: \`${GITHUB_REF_NAME}\`"
             echo "- npm package: https://www.npmjs.com/package/less-watch-compiler"
+            echo "- npm publish status: ${{ steps.npm_publish.outputs.status }}"
             echo "- GitHub Release: ${{ steps.github_release.outputs.html_url }}"
             echo "- Notes source: ${{ steps.notes.outputs.notes_source }}"
             echo "- Changelog: https://github.com/${{ github.repository }}/blob/master/CHANGELOG.md"
