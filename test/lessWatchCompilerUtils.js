@@ -6,6 +6,21 @@ var assert = require('assert'),
   testroot = cwd + '/test/less/',
   testRelative = './test/less';
 
+// fs.symlinkSync needs SeCreateSymbolicLinkPrivilege on Windows, which an
+// ordinary developer shell doesn't have. What's under test is how walk()
+// behaves once such a link exists, not the ability to create one, so report
+// the failure to the caller and let it skip rather than fail the suite on
+// machines where links can't be made at all.
+function trySymlink(target, linkPath, type) {
+  try {
+    fs.symlinkSync(target, linkPath, type);
+    return true;
+  } catch (err) {
+    if (err.code === 'EPERM' || err.code === 'EACCES' || err.code === 'ENOSYS' || err.code === 'ENOTSUP') return false;
+    throw err;
+  }
+}
+
 describe('lessWatchCompilerUtils Module API', function () {
   describe("Should have the following API's", function () {
     describe('walk()', function () {
@@ -72,13 +87,16 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
-      it('does not descend into a symlink loop, and still finds the real files', (done) => {
+      it('does not descend into a symlink loop, and still finds the real files', function (done) {
         const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-loop-'));
         fs.writeFileSync(path.join(tmpDir, 'real.less'), '');
         // A link back into its own tree: fs.stat follows symlinks, so an
         // unguarded walk recurses tmpDir/loop/loop/... until the OS refuses
         // with ELOOP, and that error takes down the whole walk.
-        fs.symlinkSync(tmpDir, path.join(tmpDir, 'loop'), 'dir');
+        if (!trySymlink(tmpDir, path.join(tmpDir, 'loop'), 'dir')) {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          return this.skip();
+        }
 
         lessWatchCompilerUtils.walk(
           tmpDir,
@@ -102,22 +120,32 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
-      it('visits a directory once even when two different symlinks point at it', (done) => {
-        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-dup-'));
+      it('walks every alias of a directory, so which path survives is never a race', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-alias-'));
         const realDir = path.join(tmpDir, 'real');
         fs.mkdirSync(realDir);
         fs.writeFileSync(path.join(realDir, 'once.less'), '');
-        fs.symlinkSync(realDir, path.join(tmpDir, 'link-a'), 'dir');
-        fs.symlinkSync(realDir, path.join(tmpDir, 'link-b'), 'dir');
+        if (!trySymlink(realDir, path.join(tmpDir, 'link-a'), 'dir') || !trySymlink(realDir, path.join(tmpDir, 'link-b'), 'dir')) {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          return this.skip();
+        }
 
+        // Sibling aliases are not a cycle. Collapsing them to one would leave
+        // the surviving path decided by whichever fs.stat callback landed
+        // first -- and resolveOutputPath() derives the output path from it, so
+        // the same tree would compile to css/link-a/once.css on one run and
+        // css/link-b/once.css on the next.
         lessWatchCompilerUtils.walk(
           tmpDir,
           {},
           (err, files) => {
             try {
               assert.ifError(err);
-              const compilable = Object.keys(files).filter((f) => f.endsWith('once.less'));
-              assert.equal(compilable.length, 1, 'the same real file must not be queued for compilation through every symlink to it');
+              const via = Object.keys(files)
+                .filter((f) => f.endsWith('once.less'))
+                .map((f) => path.basename(path.dirname(f)))
+                .sort();
+              assert.deepEqual(via, ['link-a', 'link-b', 'real'], 'every alias must be walked, not whichever one won the race');
               fs.rmSync(tmpDir, { recursive: true, force: true });
               done();
             } catch (e) {

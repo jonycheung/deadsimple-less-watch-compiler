@@ -133,14 +133,21 @@ describe('The CLI should', function () {
   });
 
   describe('survive a hostile watch tree:', function () {
-    it('a symlink loop does not crash the run or flood the output folder', () => {
+    it('a symlink loop does not crash the run or flood the output folder', function () {
       const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-cli-loop-'));
       try {
         fs.mkdirSync(path.join(tmpDir, 'less'));
         fs.writeFileSync(path.join(tmpDir, 'less', 'a.less'), '.a { color: red; }');
         // less/loop -> the folder containing less/, so the walk can reach
-        // less/loop/less/loop/... without limit.
-        fs.symlinkSync(tmpDir, path.join(tmpDir, 'less', 'loop'), 'dir');
+        // less/loop/less/loop/... without limit. Creating a symlink needs a
+        // privilege an ordinary Windows shell lacks; the walk is what's under
+        // test, so skip there rather than fail.
+        try {
+          fs.symlinkSync(tmpDir, path.join(tmpDir, 'less', 'loop'), 'dir');
+        } catch (err) {
+          if (err.code === 'EPERM' || err.code === 'EACCES' || err.code === 'ENOSYS' || err.code === 'ENOTSUP') return this.skip();
+          throw err;
+        }
 
         cli('--run-once', path.join(tmpDir, 'less'), path.join(tmpDir, 'css'));
 
