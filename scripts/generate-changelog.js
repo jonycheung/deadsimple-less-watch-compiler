@@ -8,7 +8,12 @@ const args = process.argv.slice(2);
 function getArg(name, fallback) {
   const index = args.indexOf(name);
   if (index === -1) return fallback;
-  return args[index + 1];
+  const value = args[index + 1];
+  if (!value || value.startsWith('--')) {
+    console.error(`Missing value for ${name}`);
+    process.exit(1);
+  }
+  return value;
 }
 
 const sinceVersion = getArg('--since', '1.16.0');
