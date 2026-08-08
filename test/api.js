@@ -270,7 +270,6 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
       lessWatchCompilerUtils.watchTree = originalWatchTree;
     }
   });
-
   it('watch() compiles on start and recompiles the output when a watched file is later edited', function (done) {
     this.timeout(15000);
     const os = require('os');
