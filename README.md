@@ -14,6 +14,11 @@ A command that watches folders(and subfolders) for file changes and automaticall
 
 Parts of this script is modified from Mikeal Rogers's watch script (https://github.com/mikeal/watch)
 
+## Release Notes
+
+- [GitHub Releases](https://github.com/jonycheung/deadsimple-less-watch-compiler/releases)
+- [CHANGELOG.md](https://github.com/jonycheung/deadsimple-less-watch-compiler/blob/master/CHANGELOG.md)
+
 ## What's new: zero-prerequisite install, in-process compilation, a real API
 
 less-watch-compiler is the most widely used standalone LESS watch/compile CLI on npm (see the downloads badge above), and starting with v1.18 it's also meaningfully better:
