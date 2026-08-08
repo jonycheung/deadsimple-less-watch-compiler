@@ -118,6 +118,8 @@ export function watch(watchFolder: string, outputFolder: string, options: WatchO
     outputFolder: path.resolve(outputFolder),
     ...options
   };
+  // Fail here, synchronously, rather than letting the async walk rethrow from
+  // inside an fs callback where the caller can no longer catch it.
   lessWatchCompilerUtils.assertWatchableFolder(resolvedWatchFolder);
   const mainFilePath = options.mainFile ? path.resolve(resolvedWatchFolder, options.mainFile) : undefined;
   if (mainFilePath && !fs.existsSync(mainFilePath)) {

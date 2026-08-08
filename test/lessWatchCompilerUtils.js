@@ -360,6 +360,40 @@ describe('lessWatchCompilerUtils Module API', function () {
         }, 400);
       });
     });
+    describe('assertWatchableFolder()', function () {
+      it('assertWatchableFolder() function should be there', function () {
+        assert.equal('function', typeof lessWatchCompilerUtils.assertWatchableFolder);
+      });
+      it('accepts a real, readable directory', function () {
+        assert.doesNotThrow(() => lessWatchCompilerUtils.assertWatchableFolder(testroot));
+      });
+      it('throws a readable error for a folder that does not exist', function () {
+        assert.throws(() => lessWatchCompilerUtils.assertWatchableFolder(path.join(cwd, 'test', 'no-such-folder')), /does not exist\./);
+      });
+      it('throws a readable error when the path is a file rather than a directory', function () {
+        assert.throws(() => lessWatchCompilerUtils.assertWatchableFolder(path.join(testroot, 'test.less')), /is not a directory\./);
+      });
+      it('throws rather than returning when the directory cannot be listed', function () {
+        // stat succeeds on a directory the process may not list, so the EACCES
+        // that walk()'s readdir would hit needs its own check.
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-unreadable-'));
+        const originalAccess = fs.accessSync;
+        fs.accessSync = function (target, mode) {
+          if (String(target) === tmpDir) {
+            const err = new Error('EACCES: permission denied');
+            err.code = 'EACCES';
+            throw err;
+          }
+          return originalAccess(target, mode);
+        };
+        try {
+          assert.throws(() => lessWatchCompilerUtils.assertWatchableFolder(tmpDir), /cannot be read: EACCES/);
+        } finally {
+          fs.accessSync = originalAccess;
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      });
+    });
     describe('watchTree()', function () {
       it('watchTree() function should be there', function () {
         assert.strictEqual('function', typeof lessWatchCompilerUtils.watchTree);

@@ -155,6 +155,8 @@ function init(): void {
   lessWatchCompilerUtils.config.watchFolder = path.resolve(lessWatchCompilerUtils.config.watchFolder);
   lessWatchCompilerUtils.config.outputFolder = path.resolve(lessWatchCompilerUtils.config.outputFolder);
 
+  // Check before any walking starts: an unusable watch folder otherwise
+  // surfaces as a raw uncaught stack trace from inside an fs callback.
   try {
     lessWatchCompilerUtils.assertWatchableFolder(lessWatchCompilerUtils.config.watchFolder);
   } catch (err) {
