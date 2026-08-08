@@ -433,6 +433,49 @@ describe('lessWatchCompilerUtils Module API', function () {
           }
         );
       });
+      it('watchTree() routes runtime subtree-walk failures to the provided error callback', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-watchtree-runtime-error-'));
+        const watchedCallbacks = {};
+        const originalWatchFile = fs.watchFile;
+        const originalWalk = lessWatchCompilerUtils.walk;
+
+        fs.watchFile = function (target, _options, callback) {
+          watchedCallbacks[String(target)] = callback;
+        };
+        lessWatchCompilerUtils.walk = function (dir, _options, callback) {
+          if (String(dir) === tmpDir) return callback(null, { [tmpDir]: fs.statSync(tmpDir) });
+          const err = new Error('boom');
+          err.code = 'EIO';
+          return callback(err, null);
+        };
+
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          {},
+          function () {},
+          function () {},
+          function (err) {
+            try {
+              assert.ok(err);
+              assert.equal(err.code, 'EIO');
+              done();
+            } catch (e) {
+              done(e);
+            } finally {
+              lessWatchCompilerUtils.walk = originalWalk;
+              fs.watchFile = originalWatchFile;
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+            }
+          }
+        );
+
+        const nestedDir = path.join(tmpDir, 'new-subdir');
+        fs.mkdirSync(nestedDir);
+        const callback = watchedCallbacks[tmpDir];
+        const prev = fs.statSync(tmpDir);
+        const curr = fs.statSync(tmpDir);
+        callback(curr, prev);
+      });
       it('watchTree() function should complete and call a callback ', function (done) {
         let doneCalled = false;
         lessWatchCompilerUtils.watchTree(
