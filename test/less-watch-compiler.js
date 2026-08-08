@@ -2,7 +2,7 @@ const assert = require('assert'),
   cwd = process.cwd(),
   path = require('path'),
   fs = require('fs'),
-  execSync = require('child_process').execSync,
+  execFileSync = require('child_process').execFileSync,
   outDir = cwd + '/test/css';
 
 describe('The CLI should', function () {
@@ -185,16 +185,14 @@ describe('The CLI should', function () {
 });
 
 function cli(...args) {
-  const command = `node ${path.resolve('dist/less-watch-compiler.js')} ${args.join(' ')}`;
-  return execSync(command);
+  return execFileSync('node', [path.resolve('dist/less-watch-compiler.js'), ...args]);
 }
 
 // execSync throws on a non-zero exit, which is exactly what these cases do;
 // capture the status and combined output instead of letting it propagate.
 function cliExpectFailure(...args) {
-  const command = `node ${path.resolve('dist/less-watch-compiler.js')} ${args.join(' ')}`;
   try {
-    const output = execSync(command, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const output = execFileSync('node', [path.resolve('dist/less-watch-compiler.js'), ...args], { stdio: ['ignore', 'pipe', 'pipe'] });
     return { status: 0, output: output.toString() };
   } catch (err) {
     return { status: err.status, output: (err.stdout || '').toString() + (err.stderr || '').toString() };
