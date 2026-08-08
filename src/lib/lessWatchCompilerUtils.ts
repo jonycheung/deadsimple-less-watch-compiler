@@ -31,6 +31,10 @@ interface InitCallback {
   (f: string): void;
 }
 
+interface WatchErrorCallback {
+  (err: NodeJS.ErrnoException): void;
+}
+
 interface CompileResult {
   outputFilePath: string;
   options: lessOptions.LessRenderOptions;
@@ -251,7 +255,13 @@ const lessWatchCompilerUtilsModule = {
     processDir(dir, true, new Set());
   },
 
-  watchTree(root: string, options: WalkOptions | WatchCallback, watchCallback?: WatchCallback, initCallback?: InitCallback): void {
+  watchTree(
+    root: string,
+    options: WalkOptions | WatchCallback,
+    watchCallback?: WatchCallback,
+    initCallback?: InitCallback,
+    errorCallback?: WatchErrorCallback
+  ): void {
     let opts: WalkOptions;
     let cb: WatchCallback;
     if (typeof options === 'function') {
@@ -265,7 +275,13 @@ const lessWatchCompilerUtilsModule = {
       root,
       opts,
       (err: NodeJS.ErrnoException | null, files: FilesMap | null) => {
-        if (err) throw err as any;
+        if (err) {
+          if (errorCallback) {
+            errorCallback(err);
+            return;
+          }
+          throw err as any;
+        }
         if (!files) return;
         const filesMap = files as FilesMap;
         lessWatchCompilerUtilsModule.fileWatcher(root, filesMap, opts, filelist, fileimportlist, cb);
@@ -545,6 +561,25 @@ const lessWatchCompilerUtilsModule = {
       throw new Error('pattern is not safe from catastrophic backtracking (exceeds the allowed repetition/star-height limit)');
     }
     return new RegExp(`(?:${defaultExcludePattern.source})|(?:${userRegex.source})`);
+  },
+
+  assertWatchableFolder(folder: string): void {
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(folder);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT') throw new Error('Watch folder ' + folder + ' does not exist.', { cause: err });
+      throw new Error('Watch folder ' + folder + ' cannot be read: ' + (code || (err as Error).message), { cause: err });
+    }
+    if (!stat.isDirectory()) throw new Error('Watch folder ' + folder + ' is not a directory.');
+    try {
+      fs.accessSync(folder, fs.constants.R_OK | fs.constants.X_OK);
+    } catch (err) {
+      throw new Error('Watch folder ' + folder + ' cannot be read: ' + ((err as NodeJS.ErrnoException).code || (err as Error).message), {
+        cause: err
+      });
+    }
   },
 
   getDateTime(): string {

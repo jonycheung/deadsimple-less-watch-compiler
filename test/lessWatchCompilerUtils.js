@@ -364,6 +364,41 @@ describe('lessWatchCompilerUtils Module API', function () {
       it('watchTree() function should be there', function () {
         assert.strictEqual('function', typeof lessWatchCompilerUtils.watchTree);
       });
+      it('assertWatchableFolder() validates root readability and traversal', function () {
+        assert.strictEqual('function', typeof lessWatchCompilerUtils.assertWatchableFolder);
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-watchable-'));
+        const originalAccess = fs.accessSync;
+        let observedMode;
+        fs.accessSync = function (target, mode) {
+          if (String(target) === tmpDir) observedMode = mode;
+          return originalAccess(target, mode);
+        };
+        try {
+          assert.doesNotThrow(() => lessWatchCompilerUtils.assertWatchableFolder(tmpDir));
+          assert.strictEqual(observedMode, fs.constants.R_OK | fs.constants.X_OK);
+        } finally {
+          fs.accessSync = originalAccess;
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      });
+      it('watchTree() routes root errors to the provided error callback', function (done) {
+        const missingRoot = path.join(cwd, 'test/no-such-watch-root');
+        lessWatchCompilerUtils.watchTree(
+          missingRoot,
+          {},
+          function () {},
+          function () {},
+          function (err) {
+            try {
+              assert.ok(err);
+              assert.equal(err.code, 'ENOENT');
+              done();
+            } catch (e) {
+              done(e);
+            }
+          }
+        );
+      });
       it('watchTree() function should complete and call a callback ', function (done) {
         let doneCalled = false;
         lessWatchCompilerUtils.watchTree(

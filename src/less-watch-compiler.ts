@@ -155,6 +155,13 @@ function init(): void {
   lessWatchCompilerUtils.config.watchFolder = path.resolve(lessWatchCompilerUtils.config.watchFolder);
   lessWatchCompilerUtils.config.outputFolder = path.resolve(lessWatchCompilerUtils.config.outputFolder);
 
+  try {
+    lessWatchCompilerUtils.assertWatchableFolder(lessWatchCompilerUtils.config.watchFolder);
+  } catch (err) {
+    console.log((err as Error).message);
+    process.exit(1);
+  }
+
   if (lessWatchCompilerUtils.config.mainFile) {
     mainFilePath = path.resolve(lessWatchCompilerUtils.config.watchFolder, lessWatchCompilerUtils.config.mainFile);
     // Check synchronously so a missing main file aborts before any watcher
@@ -213,6 +220,10 @@ function init(): void {
         // compile each file when main file is missing or compile main file only once
         lessWatchCompilerUtils.compileCSS(f);
       }
+    },
+    function (err: NodeJS.ErrnoException) {
+      console.log('Watch failed for ' + lessWatchCompilerUtils.config.watchFolder + ': ' + (err.code || err.message));
+      process.exit(1);
     }
   );
 }
