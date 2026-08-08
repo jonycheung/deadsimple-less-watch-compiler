@@ -2,7 +2,7 @@
 [![Release](https://github.com/jonycheung/deadsimple-less-watch-compiler/actions/workflows/release.yml/badge.svg)](https://github.com/jonycheung/deadsimple-less-watch-compiler/actions/workflows/release.yml)
 [![npm version](https://badge.fury.io/js/less-watch-compiler.svg)](https://badge.fury.io/js/less-watch-compiler)
 [![npm downloads](https://img.shields.io/npm/dm/less-watch-compiler.svg)](https://www.npmjs.com/package/less-watch-compiler)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
 [![Backers on Open Collective](https://opencollective.com/less-watch-compiler/backers/badge.svg)](#backers)
 [![Sponsors on Open Collective](https://opencollective.com/less-watch-compiler/sponsors/badge.svg)](#sponsors)
@@ -13,6 +13,11 @@ Dead Simple LESS CSS Watch Compiler
 A command that watches folders(and subfolders) for file changes and automatically compile the less css files into css. This is a file system watcher and compiler. It also keep track of a dependency tree and recompiles the parent if an imported (child) LESS file is changed.
 
 Parts of this script is modified from Mikeal Rogers's watch script (https://github.com/mikeal/watch)
+
+## Release Notes
+
+- [GitHub Releases](https://github.com/jonycheung/deadsimple-less-watch-compiler/releases)
+- [CHANGELOG.md](https://github.com/jonycheung/deadsimple-less-watch-compiler/blob/master/CHANGELOG.md)
 
 ## What's new: zero-prerequisite install, in-process compilation, a real API
 
@@ -177,6 +182,7 @@ less-watch-compiler
 - Both the `--exclude` pattern and the built-in `node_modules`/`.git` default are matched against each path **relative to the watch folder**, with `/` separators on every platform. A project that merely lives under a matching path (say `~/dist-projects/site`, or a package installed into `node_modules`) compiles normally, and a pattern anchored with `^` anchors at the watch folder. An `@import` that resolves outside the watch folder is still matched — against the path with its leading `../` segments removed, so `--exclude vendor` keeps `../vendor/theme.less` out while an anchored pattern doesn't match merely because of the traversal prefix.
 - `--banner` (or `"banner": true` in the config file) prepends a "generated file, don't edit" comment to every compiled CSS file; off by default. `--banner-text <text>` (or a string value for `"banner"` in the config file) uses custom text instead of the default message — a multi-line string is wrapped as a `/* ... */` block comment. Works correctly together with `--source-map` (both the plain and inline forms): the map is adjusted so it still resolves to the right line in the source `.less` file despite the banner shifting everything below it down.
 - When `--run-once` used, compilation will fail on first error
+- A watch folder that doesn't exist, isn't a directory, or can't be read stops the run with a message and a non-zero exit code, before any watching starts.
 
 ## Incremental compilation for CI
 
@@ -213,7 +219,7 @@ watch(
 );
 ```
 
-`compileFile(inputFilePath, outputFolder, options?)` and `watch(watchFolder, outputFolder, options?, listeners?)` accept the same options as the config file (`minified`, `sourceMap`, `enableJs`, `lessArgs`, `plugins`, `cache`, `cachePath`, `banner`, and for `watch` also `mainFile`, `includeHidden`, `allowedExtensions`, `exclude`). `compileFile()` honors `cache`/`cachePath` directly (see [Incremental compilation for CI](#incremental-compilation-for-ci) above); `watch()` accepts them for config-shape parity but doesn't use them, since a live watch session always recompiles on a real change. `watch()` always excludes `node_modules` and `.git`; `exclude` adds to that rather than replacing it, and an invalid pattern throws synchronously. TypeScript definitions are bundled. Note that the compiler keeps its configuration in module-level state, so one configuration per process applies at a time.
+`compileFile(inputFilePath, outputFolder, options?)` and `watch(watchFolder, outputFolder, options?, listeners?)` accept the same options as the config file (`minified`, `sourceMap`, `enableJs`, `lessArgs`, `plugins`, `cache`, `cachePath`, `banner`, and for `watch` also `mainFile`, `includeHidden`, `allowedExtensions`, `exclude`). `compileFile()` honors `cache`/`cachePath` directly (see [Incremental compilation for CI](#incremental-compilation-for-ci) above); `watch()` accepts them for config-shape parity but doesn't use them, since a live watch session always recompiles on a real change. `watch()` always excludes `node_modules` and `.git`; `exclude` adds to that rather than replacing it, and an invalid pattern throws synchronously. `watch()` validates its arguments synchronously too — a `watchFolder` that doesn't exist, isn't a directory, or can't be read/traversed, and a missing `mainFile`, all throw before any watcher is registered, so the caller can catch them rather than having the process die later from inside the async walk. For asynchronous startup/runtime failures, pass `listeners.onError(error)` to handle root walk errors in a controlled way. TypeScript definitions are bundled. Note that the compiler keeps its configuration in module-level state, so one configuration per process applies at a time.
 
 ### Using the source files
 

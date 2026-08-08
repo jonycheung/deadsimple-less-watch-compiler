@@ -31,6 +31,10 @@ interface InitCallback {
   (f: string): void;
 }
 
+interface WatchErrorCallback {
+  (err: NodeJS.ErrnoException): void;
+}
+
 interface CompileResult {
   outputFilePath: string;
   options: lessOptions.LessRenderOptions;
@@ -285,7 +289,13 @@ const lessWatchCompilerUtilsModule = {
     processDir(dir, true, new Set());
   },
 
-  watchTree(root: string, options: WalkOptions | WatchCallback, watchCallback?: WatchCallback, initCallback?: InitCallback): void {
+  watchTree(
+    root: string,
+    options: WalkOptions | WatchCallback,
+    watchCallback?: WatchCallback,
+    initCallback?: InitCallback,
+    errorCallback?: WatchErrorCallback
+  ): void {
     let opts: WalkOptions;
     let cb: WatchCallback;
     if (typeof options === 'function') {
@@ -299,12 +309,18 @@ const lessWatchCompilerUtilsModule = {
       root,
       opts,
       (err: NodeJS.ErrnoException | null, files: FilesMap | null) => {
-        if (err) throw err as any;
+        if (err) {
+          if (errorCallback) {
+            errorCallback(err);
+            return;
+          }
+          throw err as any;
+        }
         if (!files) return;
         const filesMap = files as FilesMap;
-        lessWatchCompilerUtilsModule.fileWatcher(root, filesMap, opts, filelist, fileimportlist, cb);
+        lessWatchCompilerUtilsModule.fileWatcher(root, filesMap, opts, filelist, fileimportlist, cb, errorCallback);
         for (const i in filesMap) {
-          lessWatchCompilerUtilsModule.fileWatcher(i, filesMap, opts, filelist, fileimportlist, cb);
+          lessWatchCompilerUtilsModule.fileWatcher(i, filesMap, opts, filelist, fileimportlist, cb, errorCallback);
         }
         cb(filesMap, null, null, fileimportlist);
       },
@@ -581,6 +597,41 @@ const lessWatchCompilerUtilsModule = {
     return new RegExp(`(?:${defaultExcludePattern.source})|(?:${userRegex.source})`);
   },
 
+  /**
+   * Check up front that the watch folder is a directory we can actually read.
+   *
+   * walk() reports a bad root through its completion callback, and watchTree()
+   * can only rethrow that from inside an fs callback. On the CLI that surfaces
+   * as a raw uncaught ENOENT/ENOTDIR stack trace instead of a message; through
+   * the programmatic watch() it is worse than cosmetic, because the throw
+   * happens long after watch() returned, so no try/catch around the call can
+   * ever see it and the host process simply dies.
+   *
+   * Failing synchronously here turns the three ordinary setup mistakes -- a
+   * mistyped folder, a file passed where a folder was meant, and a folder the
+   * process can't read -- into a plain error the caller can act on. Callers
+   * decide how to surface it: the CLI prints and exits, the API propagates.
+   */
+  assertWatchableFolder(folder: string): void {
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(folder);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === 'ENOENT') throw new Error('Watch folder ' + folder + ' does not exist.', { cause: err });
+      throw new Error('Watch folder ' + folder + ' cannot be read: ' + (code || (err as Error).message), { cause: err });
+    }
+    if (!stat.isDirectory()) throw new Error('Watch folder ' + folder + ' is not a directory.');
+    // stat succeeds on a directory the process may not list -- it only needs
+    // execute permission on the parent -- so the readdir that walk() actually
+    // depends on can still fail with EACCES. Check read + traverse explicitly.
+    try {
+      fs.accessSync(folder, fs.constants.R_OK | fs.constants.X_OK);
+    } catch (err) {
+      throw new Error('Watch folder ' + folder + ' cannot be read: ' + ((err as NodeJS.ErrnoException).code || (err as Error).message), { cause: err });
+    }
+  },
+
   getDateTime(): string {
     const date = new Date();
     let hour: number | string = date.getHours();
@@ -597,12 +648,22 @@ const lessWatchCompilerUtilsModule = {
     return hour + ':' + min + ':' + sec + ' on ' + day + '/' + month + '/' + year;
   },
 
-  setupWatcher(f: string, files: FilesMap, options: WalkOptions, watchCallback: WatchCallback): void {
+  setupWatcher(
+    f: string,
+    files: FilesMap,
+    options: WalkOptions,
+    watchCallback: WatchCallback,
+    errorCallback?: WatchErrorCallback
+  ): void {
     if (lessWatchCompilerUtilsModule.config.runOnce === true) return;
     const watchOptions: fs.WatchFileOptions & { bigint?: false } = {
       bigint: false
     };
     if (options.interval !== undefined) watchOptions.interval = options.interval;
+    const emitWatchError = (err: NodeJS.ErrnoException, target: string): void => {
+      if (errorCallback) return errorCallback(err);
+      console.log('Watch failed for ' + target + ': ' + (err.code || err.message));
+    };
     fs.watchFile(f, watchOptions, (c: fs.Stats, p: fs.Stats) => {
       if (files[f] && !files[f].isDirectory() && c.nlink !== 0 && files[f].mtime.getTime() === c.mtime.getTime()) return;
       if ((c as fs.Stats).nlink === 0) {
@@ -674,7 +735,7 @@ const lessWatchCompilerUtilsModule = {
         });
       } else {
         fs.readdir(f, (err, nfiles) => {
-          if (err) return;
+          if (err) return emitWatchError(err as NodeJS.ErrnoException, f);
           nfiles.forEach((b) => {
             const file = path.join(f, b);
             if (!files[file]) {
@@ -723,7 +784,8 @@ const lessWatchCompilerUtilsModule = {
                   // discovered file and subdirectory the same way the
                   // initial scan does.
                   lessWatchCompilerUtilsModule.walk(file, options, (walkErr, discovered) => {
-                    if (walkErr || !discovered) return;
+                    if (walkErr) return emitWatchError(walkErr, file);
+                    if (!discovered) return;
                     for (const p in discovered) {
                       const s = discovered[p];
                       files[p] = s;
@@ -731,7 +793,7 @@ const lessWatchCompilerUtilsModule = {
                         fileimportlist[p] = fileSearch.findLessImportsInFile(p);
                         watchCallback(p, s, null, fileimportlist);
                       }
-                      lessWatchCompilerUtilsModule.fileWatcher(p, files, options, filelist, fileimportlist, watchCallback);
+                      lessWatchCompilerUtilsModule.fileWatcher(p, files, options, filelist, fileimportlist, watchCallback, errorCallback);
                     }
                   });
                 });
@@ -749,13 +811,14 @@ const lessWatchCompilerUtilsModule = {
     options: WalkOptions,
     filelistArr: string[],
     fileimportlistObj: Record<string, string[]>,
-    watchCallback: WatchCallback
+    watchCallback: WatchCallback,
+    errorCallback?: WatchErrorCallback
   ): void {
     if (filelistArr.indexOf(f) !== -1) return;
     filelistArr[filelistArr.length] = f;
 
     fileimportlistObj[f] = fileSearch.findLessImportsInFile(f);
-    lessWatchCompilerUtilsModule.setupWatcher(f, files, options, watchCallback);
+    lessWatchCompilerUtilsModule.setupWatcher(f, files, options, watchCallback, errorCallback);
     for (const i in fileimportlistObj[f]) {
       const importSpec = fileimportlistObj[f][i];
       const importPath = fileSearch.resolveImportPath(f, importSpec);
@@ -788,8 +851,8 @@ const lessWatchCompilerUtilsModule = {
       // (issue #59: homepage.less -> theme.less -> colors.less needs
       // theme.less's own imports recorded for homepage.less to ever be
       // reached when colors.less changes).
-      lessWatchCompilerUtilsModule.fileWatcher(importPath, files, options, filelistArr, fileimportlistObj, watchCallback);
-      lessWatchCompilerUtilsModule.watchExternalImportDir(importPath, files, options, filelistArr, fileimportlistObj, watchCallback);
+      lessWatchCompilerUtilsModule.fileWatcher(importPath, files, options, filelistArr, fileimportlistObj, watchCallback, errorCallback);
+      lessWatchCompilerUtilsModule.watchExternalImportDir(importPath, files, options, filelistArr, fileimportlistObj, watchCallback, errorCallback);
     }
   },
 
@@ -811,7 +874,8 @@ const lessWatchCompilerUtilsModule = {
     options: WalkOptions,
     filelistArr: string[],
     fileimportlistObj: Record<string, string[]>,
-    watchCallback: WatchCallback
+    watchCallback: WatchCallback,
+    errorCallback?: WatchErrorCallback
   ): void {
     const watchFolder = lessWatchCompilerUtilsModule.config.watchFolder;
     if (!watchFolder) return;
@@ -846,7 +910,7 @@ const lessWatchCompilerUtilsModule = {
         // Raced with a delete between readdir and stat; nothing to seed.
       }
     }
-    lessWatchCompilerUtilsModule.fileWatcher(importDir, files, options, filelistArr, fileimportlistObj, watchCallback);
+    lessWatchCompilerUtilsModule.fileWatcher(importDir, files, options, filelistArr, fileimportlistObj, watchCallback, errorCallback);
   }
 };
 

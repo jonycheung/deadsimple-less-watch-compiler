@@ -61,12 +61,27 @@ jobs:
           next="${{ steps.bump.outputs.next }}"
           node -e "const fs=require('fs'); const pkg=require('./package.json'); pkg.version='${next}'; fs.writeFileSync('./package.json', JSON.stringify(pkg, null, 2)+'\n');"
 
+      - name: Generate changelog (v1.16.0+)
+        run: |
+          next="${{ steps.bump.outputs.next }}"
+          node ./scripts/generate-changelog.js --since 1.16.0 --next "$next" --output CHANGELOG.md
+      - name: Publish workflow summary
+        run: |
+          next="${{ steps.bump.outputs.next }}"
+          {
+            echo "## Release tag prepared"
+            echo ""
+            echo "- Next version: \`$next\`"
+            echo "- Updated files: \`package.json\`, \`CHANGELOG.md\`"
+            echo "- Changelog scope starts at: \`v1.16.0\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Commit and push tag (with PAT to trigger downstream workflows)
         run: |
           next="${{ steps.bump.outputs.next }}"
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add package.json
+          git add package.json CHANGELOG.md
           git commit -m "chore: release v$next"
           git tag "v$next"
           git push origin HEAD:master
