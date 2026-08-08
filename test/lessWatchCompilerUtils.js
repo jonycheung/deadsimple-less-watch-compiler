@@ -360,9 +360,121 @@ describe('lessWatchCompilerUtils Module API', function () {
         }, 400);
       });
     });
+    describe('assertWatchableFolder()', function () {
+      it('assertWatchableFolder() function should be there', function () {
+        assert.equal('function', typeof lessWatchCompilerUtils.assertWatchableFolder);
+      });
+      it('accepts a real, readable directory', function () {
+        assert.doesNotThrow(() => lessWatchCompilerUtils.assertWatchableFolder(testroot));
+      });
+      it('throws a readable error for a folder that does not exist', function () {
+        assert.throws(() => lessWatchCompilerUtils.assertWatchableFolder(path.join(cwd, 'test', 'no-such-folder')), /does not exist\./);
+      });
+      it('throws a readable error when the path is a file rather than a directory', function () {
+        assert.throws(() => lessWatchCompilerUtils.assertWatchableFolder(path.join(testroot, 'test.less')), /is not a directory\./);
+      });
+      it('throws rather than returning when the directory cannot be listed', function () {
+        // stat succeeds on a directory the process may not list, so the EACCES
+        // that walk()'s readdir would hit needs its own check.
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-unreadable-'));
+        const originalAccess = fs.accessSync;
+        fs.accessSync = function (target, mode) {
+          if (String(target) === tmpDir) {
+            const err = new Error('EACCES: permission denied');
+            err.code = 'EACCES';
+            throw err;
+          }
+          return originalAccess(target, mode);
+        };
+        try {
+          assert.throws(() => lessWatchCompilerUtils.assertWatchableFolder(tmpDir), /cannot be read: EACCES/);
+        } finally {
+          fs.accessSync = originalAccess;
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      });
+    });
     describe('watchTree()', function () {
       it('watchTree() function should be there', function () {
         assert.strictEqual('function', typeof lessWatchCompilerUtils.watchTree);
+      });
+      it('assertWatchableFolder() validates root readability and traversal', function () {
+        assert.strictEqual('function', typeof lessWatchCompilerUtils.assertWatchableFolder);
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-watchable-'));
+        const originalAccess = fs.accessSync;
+        let observedMode;
+        fs.accessSync = function (target, mode) {
+          if (String(target) === tmpDir) observedMode = mode;
+          return originalAccess(target, mode);
+        };
+        try {
+          assert.doesNotThrow(() => lessWatchCompilerUtils.assertWatchableFolder(tmpDir));
+          assert.strictEqual(observedMode, fs.constants.R_OK | fs.constants.X_OK);
+        } finally {
+          fs.accessSync = originalAccess;
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+        }
+      });
+      it('watchTree() routes root errors to the provided error callback', function (done) {
+        const missingRoot = path.join(cwd, 'test/no-such-watch-root');
+        lessWatchCompilerUtils.watchTree(
+          missingRoot,
+          {},
+          function () {},
+          function () {},
+          function (err) {
+            try {
+              assert.ok(err);
+              assert.equal(err.code, 'ENOENT');
+              done();
+            } catch (e) {
+              done(e);
+            }
+          }
+        );
+      });
+      it('watchTree() routes runtime subtree-walk failures to the provided error callback', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-watchtree-runtime-error-'));
+        const watchedCallbacks = {};
+        const originalWatchFile = fs.watchFile;
+        const originalWalk = lessWatchCompilerUtils.walk;
+
+        fs.watchFile = function (target, _options, callback) {
+          watchedCallbacks[String(target)] = callback;
+        };
+        lessWatchCompilerUtils.walk = function (dir, _options, callback) {
+          if (String(dir) === tmpDir) return callback(null, { [tmpDir]: fs.statSync(tmpDir) });
+          const err = new Error('boom');
+          err.code = 'EIO';
+          return callback(err, null);
+        };
+
+        lessWatchCompilerUtils.watchTree(
+          tmpDir,
+          {},
+          function () {},
+          function () {},
+          function (err) {
+            try {
+              assert.ok(err);
+              assert.equal(err.code, 'EIO');
+              done();
+            } catch (e) {
+              done(e);
+            } finally {
+              lessWatchCompilerUtils.walk = originalWalk;
+              fs.watchFile = originalWatchFile;
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+            }
+          }
+        );
+
+        const nestedDir = path.join(tmpDir, 'new-subdir');
+        fs.mkdirSync(nestedDir);
+        const callback = watchedCallbacks[tmpDir];
+        const prev = fs.statSync(tmpDir);
+        const curr = fs.statSync(tmpDir);
+        callback(curr, prev);
       });
       it('watchTree() function should complete and call a callback ', function (done) {
         let doneCalled = false;

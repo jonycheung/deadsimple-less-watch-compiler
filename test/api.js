@@ -235,6 +235,41 @@ describe('Programmatic API (require("less-watch-compiler"))', function () {
     });
   });
 
+  it('watch() throws synchronously for a missing watch folder, instead of crashing the host process later', function () {
+    // The failure originates in an async fs callback deep inside the walk, so
+    // without an up-front check no try/catch around watch() can see it and the
+    // whole process dies with an uncaught error.
+    assert.throws(() => api.watch(path.join(cwd, 'test', 'no-such-watch-folder'), 'test/css'), /does not exist\./);
+  });
+
+  it('watch() throws synchronously when the watch folder is a file rather than a directory', function () {
+    assert.throws(() => api.watch(path.join(cwd, 'test', 'less', 'test.less'), 'test/css'), /is not a directory\./);
+  });
+
+  it('watch() passes asynchronous root-walk failures to listeners.onError', function (done) {
+    const lessWatchCompilerUtils = require('../dist/lib/lessWatchCompilerUtils.js');
+    const originalWatchTree = lessWatchCompilerUtils.watchTree;
+    lessWatchCompilerUtils.watchTree = function (_root, _options, _watchCallback, _initCallback, errorCallback) {
+      const err = new Error('boom');
+      err.code = 'EIO';
+      errorCallback(err);
+    };
+    try {
+      api.watch('test/less', 'test/css', {}, {
+        onError(error) {
+          try {
+            assert.match(error.message, /Watch failed/);
+            assert.match(error.message, /EIO/);
+            done();
+          } catch (e) {
+            done(e);
+          }
+        }
+      });
+    } finally {
+      lessWatchCompilerUtils.watchTree = originalWatchTree;
+    }
+  });
   it('watch() compiles on start and recompiles the output when a watched file is later edited', function (done) {
     this.timeout(15000);
     const os = require('os');

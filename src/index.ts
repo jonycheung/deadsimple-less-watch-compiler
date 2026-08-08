@@ -61,6 +61,7 @@ export interface WatchListeners {
   onCompile?: (changedFile: string, outputFilePath: string) => void;
   onImportCompile?: (importingFile: string, changedFile: string, outputFilePath: string) => void;
   onRemove?: (file: string) => void;
+  onError?: (error: Error) => void;
 }
 
 /**
@@ -117,6 +118,9 @@ export function watch(watchFolder: string, outputFolder: string, options: WatchO
     outputFolder: path.resolve(outputFolder),
     ...options
   };
+  // Fail here, synchronously, rather than letting the async walk rethrow from
+  // inside an fs callback where the caller can no longer catch it.
+  lessWatchCompilerUtils.assertWatchableFolder(resolvedWatchFolder);
   const mainFilePath = options.mainFile ? path.resolve(resolvedWatchFolder, options.mainFile) : undefined;
   if (mainFilePath && !fs.existsSync(mainFilePath)) {
     throw new Error('Main file ' + mainFilePath + ' does not exist.');
@@ -146,6 +150,11 @@ export function watch(watchFolder: string, outputFolder: string, options: WatchO
       if (!mainFilePath || mainFilePath === f) {
         lessWatchCompilerUtils.compileCSS(f);
       }
+    },
+    function (err: NodeJS.ErrnoException) {
+      const wrapped = new Error('Watch failed for ' + resolvedWatchFolder + ': ' + (err.code || err.message), { cause: err });
+      if (listeners.onError) listeners.onError(wrapped);
+      else console.log(wrapped.message);
     }
   );
 }
