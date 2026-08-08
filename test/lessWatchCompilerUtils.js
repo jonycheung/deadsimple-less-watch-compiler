@@ -162,6 +162,49 @@ describe('lessWatchCompilerUtils Module API', function () {
           }
         }, 500);
       });
+      it('keeps an unreadable directory in the files map, so it is still watched and can recover', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-eacces-'));
+        const lockedDir = path.join(tmpDir, 'locked');
+        fs.mkdirSync(lockedDir);
+        fs.writeFileSync(path.join(tmpDir, 'top.less'), '');
+
+        const originalReaddir = fs.readdir;
+        fs.readdir = function (target, cb) {
+          if (String(target) === lockedDir) {
+            const err = new Error('EACCES: permission denied');
+            err.code = 'EACCES';
+            return process.nextTick(() => cb(err));
+          }
+          return originalReaddir(target, cb);
+        };
+
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err, files) => {
+            fs.readdir = originalReaddir;
+            try {
+              assert.ifError(err);
+              // watchTree() only watches paths present in this map. Dropping
+              // the directory because its contents couldn't be listed would
+              // leave nothing watching it, so the subtree could never be
+              // picked up even after permissions are restored -- keeping it
+              // is what lets the directory rescan recover the whole subtree.
+              assert.ok(files[lockedDir], 'an unreadable directory must stay watchable so its contents can be found later');
+              assert.ok(
+                Object.keys(files).some((f) => f.endsWith('top.less')),
+                'the rest of the tree must still be walked'
+              );
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done();
+            } catch (e) {
+              fs.rmSync(tmpDir, { recursive: true, force: true });
+              done(e);
+            }
+          },
+          function () {}
+        );
+      });
       it('propagates a systemic failure like EMFILE instead of reporting a partial walk', function (done) {
         const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-emfile-'));
         fs.mkdirSync(path.join(tmpDir, 'sub'));
