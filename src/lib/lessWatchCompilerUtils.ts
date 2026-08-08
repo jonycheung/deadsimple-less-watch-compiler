@@ -97,21 +97,39 @@ const lessWatchCompilerUtilsModule = {
   walk(dir: string, options: WalkOptions, callback: WalkCompleteCallback, initCallback?: InitCallback): void {
     const state = { files: {} as FilesMap, pending: 0 };
 
-    const finalize = (err: NodeJS.ErrnoException | null) => {
-      if (state.pending === 0) callback(err, state.files);
+    // walk() settles once. Several entries can fail in the same pass -- under
+    // descriptor exhaustion most of them will -- and each of those used to
+    // reach `callback` on its own, so the caller was handed the same walk two
+    // or ten times over. watchTree() would go on to register watchers against
+    // a files map it had already thrown on.
+    let settled = false;
+    const settle = (err: NodeJS.ErrnoException | null, files: FilesMap | null) => {
+      if (settled) return;
+      settled = true;
+      callback(err, files);
     };
 
-    // Only the root directory's failure aborts the walk: the caller named that
-    // path specifically, so there's nothing sensible to fall back to. A
-    // failure deeper in the tree -- an unreadable directory, a symlink the OS
-    // won't resolve -- is reported and stepped over instead, so one bad entry
-    // can't take down the whole watch session over an otherwise fine tree.
+    const finalize = (err: NodeJS.ErrnoException | null) => {
+      if (state.pending === 0) settle(err, state.files);
+    };
+
+    // A failure deeper in the tree is skipped rather than fatal -- but only
+    // when it's a property of that path. These codes mean the entry itself is
+    // genuinely unusable while the rest of the tree is unaffected, so stepping
+    // over it is right and the walk still returns everything else.
     //
-    // Aborting also used to leave `pending` un-decremented while the rest of
-    // the walk carried on, so a later finalize() could invoke `callback` a
-    // second time, after it had already been called with the error.
+    // Anything else -- EMFILE/ENFILE from descriptor exhaustion, ENOMEM, an
+    // EIO off a failing disk -- is a condition of the process or the machine,
+    // not of this path. Under descriptor pressure most of the tree fails the
+    // same way, and quietly reporting a successful partial walk would bring
+    // the watcher up over a fraction of the files with nothing to say so.
+    // Those propagate, exactly like a bad root.
+    const pathLocalErrorCodes = new Set(['ENOENT', 'EACCES', 'EPERM', 'ELOOP', 'ENOTDIR', 'ENAMETOOLONG', 'EINVAL']);
+
     const skipOrAbort = (err: NodeJS.ErrnoException, target: string, isRoot: boolean): void => {
-      if (isRoot) return callback(err, null);
+      // The root is the path the caller named specifically, so there's nothing
+      // sensible to fall back to when it fails, whatever the reason.
+      if (isRoot || !pathLocalErrorCodes.has(err.code as string)) return settle(err, null);
       console.log('Skipping ' + target + ': ' + (err.code || err.message));
       finalize(null);
     };

@@ -6,6 +6,21 @@ var assert = require('assert'),
   testroot = cwd + '/test/less/',
   testRelative = './test/less';
 
+// fs.symlinkSync needs SeCreateSymbolicLinkPrivilege on Windows, which an
+// ordinary developer shell doesn't have. What's under test is how walk()
+// behaves once such a link exists, not the ability to create one, so report
+// the failure to the caller and let it skip rather than fail the suite on
+// machines where links can't be made at all.
+function trySymlink(target, linkPath, type) {
+  try {
+    fs.symlinkSync(target, linkPath, type);
+    return true;
+  } catch (err) {
+    if (err.code === 'EPERM' || err.code === 'EACCES' || err.code === 'ENOSYS' || err.code === 'ENOTSUP') return false;
+    throw err;
+  }
+}
+
 describe('lessWatchCompilerUtils Module API', function () {
   describe("Should have the following API's", function () {
     describe('walk()', function () {
@@ -84,13 +99,15 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
-      it('steps over an unreadable entry deeper in the tree instead of aborting the whole walk', (done) => {
+      it('steps over an unreadable entry deeper in the tree instead of aborting the whole walk', function (done) {
         const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-badentry-'));
         fs.writeFileSync(path.join(tmpDir, 'good.less'), '');
         // A pair of symlinks pointing at each other: stat fails with ELOOP,
         // which is neither ENOENT nor anything the walk can act on.
-        fs.symlinkSync(path.join(tmpDir, 'b'), path.join(tmpDir, 'a'));
-        fs.symlinkSync(path.join(tmpDir, 'a'), path.join(tmpDir, 'b'));
+        if (!trySymlink(path.join(tmpDir, 'b'), path.join(tmpDir, 'a')) || !trySymlink(path.join(tmpDir, 'a'), path.join(tmpDir, 'b'))) {
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          return this.skip();
+        }
 
         lessWatchCompilerUtils.walk(
           tmpDir,
@@ -112,14 +129,16 @@ describe('lessWatchCompilerUtils Module API', function () {
           function () {}
         );
       });
-      it('calls its completion callback exactly once when an entry fails to stat', (done) => {
+      it('calls its completion callback exactly once when an entry fails to stat', function (done) {
         const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-once-'));
         // Several unresolvable entries alongside real ones: aborting on the
         // first without settling its pending count let a later finalize()
         // invoke the callback again, after it had already fired with an error.
         for (const name of ['x', 'y', 'z']) {
-          fs.symlinkSync(path.join(tmpDir, name + '2'), path.join(tmpDir, name));
-          fs.symlinkSync(path.join(tmpDir, name), path.join(tmpDir, name + '2'));
+          if (!trySymlink(path.join(tmpDir, name + '2'), path.join(tmpDir, name)) || !trySymlink(path.join(tmpDir, name), path.join(tmpDir, name + '2'))) {
+            fs.rmSync(tmpDir, { recursive: true, force: true });
+            return this.skip();
+          }
         }
         fs.writeFileSync(path.join(tmpDir, 'good.less'), '');
 
@@ -142,6 +161,51 @@ describe('lessWatchCompilerUtils Module API', function () {
             done(e);
           }
         }, 500);
+      });
+      it('propagates a systemic failure like EMFILE instead of reporting a partial walk', function (done) {
+        const tmpDir = fs.mkdtempSync(path.join(cwd, 'test/tmp-walk-emfile-'));
+        fs.mkdirSync(path.join(tmpDir, 'sub'));
+        fs.writeFileSync(path.join(tmpDir, 'sub', 'nested.less'), '');
+        fs.writeFileSync(path.join(tmpDir, 'top.less'), '');
+
+        // Descriptor exhaustion is a condition of the process, not of this
+        // path: most of the tree fails the same way, so skipping it and
+        // returning "success" would bring a watcher up over a fraction of the
+        // files with nothing to say so.
+        const originalReaddir = fs.readdir;
+        fs.readdir = function (target, cb) {
+          if (String(target).endsWith('sub')) {
+            const err = new Error('EMFILE: too many open files');
+            err.code = 'EMFILE';
+            return process.nextTick(() => cb(err));
+          }
+          return originalReaddir(target, cb);
+        };
+
+        let calls = 0;
+        let reported = null;
+        lessWatchCompilerUtils.walk(
+          tmpDir,
+          {},
+          (err) => {
+            calls += 1;
+            reported = err;
+          },
+          function () {}
+        );
+
+        setTimeout(() => {
+          fs.readdir = originalReaddir;
+          fs.rmSync(tmpDir, { recursive: true, force: true });
+          try {
+            assert.equal(calls, 1, 'walk() must still settle exactly once');
+            assert.ok(reported, 'descriptor exhaustion must not be reported as a successful walk');
+            assert.equal(reported.code, 'EMFILE');
+            done();
+          } catch (e) {
+            done(e);
+          }
+        }, 400);
       });
     });
     describe('watchTree()', function () {
