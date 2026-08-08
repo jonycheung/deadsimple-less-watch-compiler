@@ -39,8 +39,15 @@ function compareVersions(a, b) {
 
 function run(command, options = {}) {
   try {
-    return execSync(command, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...options }).trim();
-  } catch {
+    return execSync(command, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+      maxBuffer: 10 * 1024 * 1024,
+      ...options
+    }).trim();
+  } catch (error) {
+    const stderr = error?.stderr ? error.stderr.toString('utf8').trim() : error?.message;
+    console.error(`[generate-changelog] Command failed: ${command}\n${stderr}`);
     return '';
   }
 }
