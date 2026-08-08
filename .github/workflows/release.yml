@@ -103,9 +103,17 @@ jobs:
               prerelease: false
             };
 
-            const params = hasNotes
-              ? { ...baseParams, body, generate_release_notes: false }
-              : { ...baseParams, generate_release_notes: true };
+            let releaseBody = body;
+            if (!hasNotes) {
+              const generated = await github.rest.repos.generateReleaseNotes({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag_name: tag
+              });
+              releaseBody = generated.data.body;
+            }
+
+            const params = { ...baseParams, body: releaseBody };
 
             let result;
             if (release) {
