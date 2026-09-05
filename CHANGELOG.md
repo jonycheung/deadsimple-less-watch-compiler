@@ -2,13 +2,16 @@
 
 Auto-generated from commit history by the release-tag workflow.
 Contains releases from v1.16.0 onward.
+
 ## v1.19.9 - 2026-08-08
 
 ### Features
+
 - harden watch startup error handling
 - automate release notes and changelog publication
 
 ### Fixes
+
 - resolve CI format check failure in test (24)
 - forward runtime watcher walk errors
 - fail with a message when the watch folder is unusable
@@ -18,12 +21,15 @@ Contains releases from v1.16.0 onward.
 - match exclude against the path relative to watchFolder
 
 ### Documentation
+
 - change MIT badge color from yellow to blue
 
 ### Chores
+
 - format changelog automation artifacts
 
 ### Other
+
 - Potential fix for pull request finding 'CodeQL / Shell command built from environment values'
 - Potential fix for pull request finding 'CodeQL / Shell command built from environment values'
 - Potential fix for pull request finding
@@ -33,6 +39,7 @@ Contains releases from v1.16.0 onward.
 ## v1.19.8 - 2026-08-08
 
 ### Fixes
+
 - propagate systemic failures instead of skipping them as bad entries
 - detect cycles by ancestor, not by every directory already seen
 - don't dedup directories when the filesystem reports no inode
@@ -45,25 +52,30 @@ Contains releases from v1.16.0 onward.
 - match full @import options grammar and resolve _partial imports (#240)
 
 ### Tests
+
 - pin that an unreadable directory stays watchable
 - pin transitive tracking through a recreated middle partial
 
 ### Chores
+
 - release v1.19.8
 - bump fast-uri from 3.1.4 to 3.1.5
 
 ### Other
+
 - Update dependency typescript-eslint to v8.66.0
 - Update dependency mocha to v11.8.0
 
 ## v1.19.7 - 2026-07-29
 
 ### Chores
+
 - release v1.19.7
 - bump fast-uri from 3.1.3 to 3.1.4
 - bump js-yaml from 4.2.0 to 4.3.0
 
 ### Other
+
 - Update dependency less to v4.8.1
 - Update dependency eslint to v10.8.0
 - style: format CLAUDE.md with Prettier
@@ -76,20 +88,24 @@ Contains releases from v1.16.0 onward.
 ## v1.19.6 - 2026-07-19
 
 ### Chores
+
 - release v1.19.6
 
 ### Other
+
 - Fix release workflow: set NODE_AUTH_TOKEN so npm/yarn config resolves (#229)
 
 ## v1.19.5 - 2026-07-19
 
 ### Chores
+
 - release v1.19.5
 - bump fast-uri from 3.1.0 to 3.1.3 (#224)
 - update dependency source-map to ^0.7.0 (#221)
 - update dependency @types/node to v24 (#182)
 
 ### Other
+
 - Update dependency commander to v15 (#227)
 - Update dependency less to v4.7.0
 - Revert less v4.6.7, typescript v7, and commander v15 bumps (#226)
@@ -105,12 +121,15 @@ Contains releases from v1.16.0 onward.
 ## v1.19.4 - 2026-07-18
 
 ### Fixes
+
 - don't exit(1) mid-write when one --run-once compile fails
 
 ### Chores
+
 - release v1.19.4
 
 ### Other
+
 - Add --minified CLI flag (issue #46)
 - Address review: include banner in cache fingerprint, escape */ in custom text
 - Add --banner flag to prepend a "generated file, do not edit" comment (#82)
@@ -119,24 +138,29 @@ Contains releases from v1.16.0 onward.
 ## v1.19.3 - 2026-07-18
 
 ### Chores
+
 - release v1.19.3
 
 ### Other
+
 - Address review: scope @import chase to allowed extensions, avoid O(n^2) BFS
 - Recompile every transitive @import ancestor, not just the direct one (#59)
 
 ## v1.19.2 - 2026-07-18
 
 ### Fixes
+
 - detect new directories created after startup
 - ignore a stale removal-debounce timer superseded by a later delete+recreate
 - debounce a transient missing-file poll before unwatching
 - create the --cache-path parent directory before writing the cache file
 
 ### Chores
+
 - release v1.19.2
 
 ### Other
+
 - Reject --exclude patterns with catastrophic backtracking potential
 - Always exclude node_modules and .git by default
 - Apply exclude to @import targets, not just directory rescans
@@ -145,89 +169,110 @@ Contains releases from v1.16.0 onward.
 ## v1.19.1 - 2026-07-18
 
 ### Features
+
 - add opt-in --cache for incremental --run-once compilation (issue: CI performance)
 
 ### Fixes
+
 - address review findings on the incremental compile cache
 - address review findings on the external @import directory watch
 - watch the containing directory of an @import outside watchFolder
 
 ### Documentation
+
 - caveat the --cache dependency-detection gaps, track fix separately
 
 ### Chores
+
 - release v1.19.1
 - fix markdown formatting (prettier)
 
 ## v1.19.0 - 2026-07-18
 
 ### Features
+
 - programmatic API, --init scaffolding, and Node 20/22 CI matrix
 
 ### Fixes
+
 - do not report a never-existing @import target as 'removed'
 - dead onRemove notification path; close core watch-engine test gaps
 - watch() validates mainFile exists before watching, matching the CLI
 
 ### Documentation
+
 - add standalone-LESS-tool competitive comparison table
 - announce v1.18 changes and market position in README
 
 ### Tests
+
 - cover the new API surface (makeWatchHandler, watch(), shared CLI logging)
 
 ### Chores
+
 - release v1.19.0
 - reconcile coverage thresholds after merging master (post-#208)
 
 ### Other
+
 - style: fix prettier formatting in test/api.js
 
 ## v1.18.1 - 2026-07-18
 
 ### Features
+
 - compile LESS in-process via the less API, dropping the global lessc requirement
 
 ### Fixes
+
 - correct lessArgs edge cases and a formatted-error off-by-one
 - format lessOptions test to satisfy CI format check
 - add prepare script so dist/ rebuilds on install, not just npm publish
 
 ### Chores
+
 - release v1.18.1
 - stop tracking build artifacts (dist/, coverage/)
 
 ### Other
+
 - Updated
 
 ## v1.18.0 - 2026-07-17
 
 ### Chores
+
 - release v1.18.0
 
 ## v1.17.9 - 2026-07-17
 
 ### Chores
+
 - release v1.17.9
 
 ### Other
+
 - Update release.yml
 
 ## v1.17.8 - 2026-07-17
 
 ### Fixes
+
 - finalize walk after scheduling directory recursion
 - deterministic main-file check, drop redundant option copy loop
 - restore subfolder compilation and add characterization test suite
 
 ### Tests
+
 - prevent duplicate done in watchTree callback test
 
 ### CI
+
 - switch npm release workflow to trusted publishing
 - add lint, format, typecheck, and coverage quality gates
 
 ### Chores
+
 - release v1.17.8
 - release v1.17.7
 - release v1.17.6
@@ -235,6 +280,7 @@ Contains releases from v1.16.0 onward.
 - remove dead code and unused dependencies
 
 ### Other
+
 - Update release workflow for npm trusted publishing
 - Potential fix for pull request finding
 - Potential fix for pull request finding
@@ -246,17 +292,20 @@ Contains releases from v1.16.0 onward.
 ## v1.17.5 - 2025-12-10
 
 ### Fixes
+
 - broaden import parsing and modernize fs usage
 - honor ignoreDotFiles in walk
 - stabilize ts build and tests
 
 ### CI
+
 - install dependencies fresh
 - reinstall deps in ci
 - switch to cimg node image
 - use node 18 in circleci
 
 ### Chores
+
 - release v1.17.5
 - release v1.17.0
 - release v1.17.6
@@ -273,6 +322,7 @@ Contains releases from v1.16.0 onward.
 - update dependency mocha to v9.1.1
 
 ### Other
+
 - Update package version
 - Revert to previous minor
 - Revert to previous version
@@ -317,10 +367,12 @@ Contains releases from v1.16.0 onward.
 ## v1.16.3 - 2021-09-19
 
 ### Tests
+
 - update tests
 - moved test location and updated test command
 
 ### Chores
+
 - remove opencollective-postinstall from CLI
 - update node.js to v16.6.1
 - update dependency mocha to v9.0.3
@@ -333,6 +385,7 @@ Contains releases from v1.16.0 onward.
 - update node.js to v15.14.0
 
 ### Other
+
 - 1.16.3
 - check-in missing tests files
 - Update cli tests
@@ -341,12 +394,15 @@ Contains releases from v1.16.0 onward.
 ## v1.16.2 - 2021-07-07
 
 ### Fixes
+
 - update dependency commander to v8
 
 ### Chores
+
 - update dependency mocha to v9
 
 ### Other
+
 - 1.16.2
 - 1.16.1
 - Update README.md
@@ -356,34 +412,42 @@ Contains releases from v1.16.0 onward.
 ## v1.16.1 - 2021-07-07
 
 ### Fixes
+
 - update dependency commander to v8
 
 ### Chores
+
 - update dependency mocha to v9
 
 ### Other
+
 - 1.16.1
 - Remove Travis
 
 ## v1.16.0 - 2021-06-30
 
 ### Features
+
 - don't compile hidden files
 - if we've set `--include-hidden`, don't ignore dotfiles
 - allow inputting file paths not just filenames
 
 ### Fixes
+
 - use Object.assign not spread for babel compatibility
 - set command-line options in `config`
 
 ### Refactors
+
 - factor out isHiddenFile()
 
 ### Tests
+
 - add basic cli tests using --include-hidden
 - explicitly test files beginning with a dot
 
 ### Other
+
 - 1.16.0
 - Revert package.json
 - Add .circleci/config.yml for CircleCI (#142)
