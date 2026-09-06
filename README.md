@@ -1,4 +1,4 @@
-[![CI](https://github.com/jonycheung/deadsimple-less-watch-compiler/actions/workflows/ci.yml/badge.svg)](https://github.com/jonycheung/deadsimple-less-watch-compiler/actions/workflows/ci.yml)
+[![CI](https://github.com/jonycheung/deadsimple-less-watch-compiler/actions/workflows/ci.yml/badge.svg?query=branch%3Amaster)](https://github.com/jonycheung/deadsimple-less-watch-compiler/actions/workflows/ci.yml?query=branch%3Amaster)
 [![Release](https://github.com/jonycheung/deadsimple-less-watch-compiler/actions/workflows/release.yml/badge.svg)](https://github.com/jonycheung/deadsimple-less-watch-compiler/actions/workflows/release.yml)
 [![npm version](https://badge.fury.io/js/less-watch-compiler.svg)](https://badge.fury.io/js/less-watch-compiler)
 [![npm downloads](https://img.shields.io/npm/dm/less-watch-compiler.svg)](https://www.npmjs.com/package/less-watch-compiler)
