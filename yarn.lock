@@ -1341,9 +1341,9 @@ less-plugin-clean-css@^1.6.0:
     clean-css "5.3.3"
 
 less@^4.0.0:
-  version "4.8.1"
-  resolved "https://registry.yarnpkg.com/less/-/less-4.8.1.tgz#eda5a5c92f21507da6e0f88346a76c37e3403f7b"
-  integrity sha512-jQ3lRIo1aUtiWVYXZ7mk4+V4BjCGswF3IxTLJ+4RUta8ZiHh8lhkig2G8dya2eCcyR1dYUvzuV46EkJN8PSwww==
+  version "4.9.1"
+  resolved "https://registry.yarnpkg.com/less/-/less-4.9.1.tgz#5a873974b8e66dec7d4f04243bf1c8a5beef9de7"
+  integrity sha512-orp15PfJvvNDIqJdVWzMI9Sjpjp3VTiw3sfvbB+67LlISTEn8uVT2EdYSuyl02BLvaftv6sdk9Umnxmm5rckmg==
   dependencies:
     copy-anything "^3.0.5"
     parse-node-version "^1.0.1"
@@ -1659,9 +1659,9 @@ prettier@^3.9.5:
   integrity sha512-OpN0zzVdiaiAhxpuuj5efpIS4sY9j7bY6uR5mnj5yPzGkdkjNKSJeUThPb60Jw29QuAZgA4o+/iB49kFiaBX6g==
 
 probe-image-size@^7.2.3:
-  version "7.3.0"
-  resolved "https://registry.yarnpkg.com/probe-image-size/-/probe-image-size-7.3.0.tgz#a07df2e2cffc1057026d5a1bda3a5b11ee970034"
-  integrity sha512-7CaDeBwiAbh6ohXsvLbAZhO7wzsZAmaevfxe39qvCwRh8LyaZfDlBGGLU1CCTgrTLtCOdwBBhjOrIHaIIimHfQ==
+  version "7.4.0"
+  resolved "https://registry.yarnpkg.com/probe-image-size/-/probe-image-size-7.4.0.tgz#c189ae04e9aad1e3fa3a0998a956a7e9aab7f66d"
+  integrity sha512-cdEprVtZxV+awMde9X+4jILBFYh4CARxVrQaMl4wY4YcPWbul9jntXrIW95NInBDyJwcVUP3U0T6yukN8rMBaQ==
   dependencies:
     lodash.merge "^4.6.2"
     needle "^2.5.2"
